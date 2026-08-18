@@ -469,7 +469,8 @@ body.nearRight #panel::before{opacity:1}
 #monBtn{left:50%; transform:translateX(-50%)}
 #panelBtn{right:26px}
 #powerBtn{left:26px; border-color:#4a3232; color:#9a6a5a}
-#powerBtn:hover{color:var(--alarm); border-color:var(--alarm)}
+#powerBtn:hover:not(:disabled){color:var(--alarm); border-color:var(--alarm)}
+#powerBtn:disabled{opacity:1; cursor:not-allowed}
 #powerBtn.cut{background:var(--alarm); color:#0a0d0b; border-color:var(--alarm)}
 body.camsup #powerBtn{opacity:0; pointer-events:none}
 .dock{transition:opacity .14s, color .1s, padding .12s}
@@ -3336,9 +3337,9 @@ function syncChrome(){
   el.monBtn.classList.toggle("engaged", S.monUp);
   el.panelBtn.classList.toggle("engaged", S.panelTab);
   el.panelBtn.disabled = !S.power || rebootActive();
-  el.powerBtn.classList.toggle("cut", !S.power);
   el.monBtn.disabled = rebootActive() || (!S.power && !S.sys.cam.ok);
   const warming = !S.power && performance.now() < S.powerBackAt;
+  el.powerBtn.classList.toggle("cut", !S.power && !warming);
   el.powerBtn.disabled = warming;
   el.powerBtn.textContent = !S.power
     ? (warming ? "..." : "TURN ON LIGHTS  [X]")
