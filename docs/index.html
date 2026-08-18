@@ -503,12 +503,9 @@ body.camsup #powerBtn{opacity:0; pointer-events:none}
 /* Pick a night. Six small buttons rather than a dropdown, because the whole
    interface is buttons and a select element would look like it wandered in
    from a different program. */
-/* Hidden until you ask for it with N, so a first-time player just clocks in. */
-.nights{display:none; gap:6px; align-items:center}
-body.pickNights .nights{display:flex}
-.nights span{font-size:9px; letter-spacing:.24em; color:var(--phos-dim); margin-right:6px}
-.hintN{font-size:8px; letter-spacing:.22em; color:rgba(99,185,142,.55)}
-body.pickNights .hintN{display:none}
+/* The label sits above the row, so the whole picker stays centered. */
+.nights{display:flex; gap:6px; align-items:center; justify-content:center; flex-wrap:wrap; width:100%}
+.nights span{flex-basis:100%; font-size:9px; letter-spacing:.24em; color:var(--phos-dim); text-align:center; margin:0 0 2px}
 /* Specificity, not decoration: `.screen button` is the big filled CLOCK IN
    button and matches these too, at equal weight and later in the file — so
    every night came out full-width and phosphor-filled and you could not see
@@ -518,8 +515,18 @@ body.pickNights .hintN{display:none}
   width:clamp(30px,4.4vh,38px); height:clamp(30px,4.4vh,38px); margin:0; padding:0;
   cursor:pointer; color:#8fe0b4; background:rgba(6,10,7,.9); border:1px solid #46614f;
 }
-.screen .nights button:hover{color:var(--phos); border-color:var(--phos-dim)}
+.screen .nights button:not(:disabled):hover{color:var(--phos); border-color:var(--phos-dim)}
 .screen .nights button.on{background:var(--phos); color:var(--shell); border-color:var(--phos)}
+.screen .nights button:disabled{cursor:not-allowed; color:rgba(235,126,116,.56); background:rgba(34,6,6,.66); border-color:rgba(132,53,48,.58); opacity:.8}
+.stars{font-size:clamp(15px,2.4vh,21px); letter-spacing:.18em; line-height:1; color:#ecd56c; text-shadow:0 0 8px rgba(236,213,108,.34); margin-top:clamp(-11px,-1.1vh,-4px)}
+.stars:empty{display:none}
+
+/* A short, wordless handoff from the shift to the updated home screen. */
+#winScreen{overflow:hidden; background:radial-gradient(circle at 50% 70%, #102016 0%, var(--shell) 58%)}
+#victoryFireworks{position:absolute; inset:0; width:100%; height:100%; pointer-events:none}
+.victoryContent{position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:14px}
+#winNote{font-size:10px; letter-spacing:.42em; color:#ecd56c; text-shadow:0 0 10px rgba(236,213,108,.3)}
+#victoryTime{color:var(--phos); text-shadow:0 0 18px rgba(125,250,176,.42)}
 
 .screen button{font-size:clamp(10px,1.7vh,12px); letter-spacing:.22em; margin-top:4px;
   padding:clamp(12px,2.2vh,16px) clamp(30px,7vw,44px); flex:none;
@@ -692,9 +699,9 @@ body.touch .rebootBtn{padding:16px; font-size:12px}
 
   <div class="screen show" id="titleScreen">
     <h1>FIVE NIGHTS AT<br>ATLANTIC CONCRETE</h1>
-    <div class="hintN">press N to choose a night</div>
     <div class="nights" id="pickTitle"></div>
     <button id="btnStart">CLOCK IN</button>
+    <div class="stars" id="starsTitle"></div>
   </div>
 
   <div class="screen" id="loseScreen">
@@ -702,13 +709,15 @@ body.touch .rebootBtn{padding:16px; font-size:12px}
     <p id="loseNote"></p>
     <div class="nights" id="pickLose"></div>
     <button id="btnRetry">CLOCK IN</button>
+    <div class="stars" id="starsLose"></div>
   </div>
 
   <div class="screen" id="winScreen">
-    <h1>6 AM</h1>
-    <p id="winNote"></p>
-    <div class="nights" id="pickWin"></div>
-    <button id="btnNext">CLOCK IN</button>
+    <canvas id="victoryFireworks" aria-hidden="true"></canvas>
+    <div class="victoryContent">
+      <p id="winNote">SHIFT COMPLETE</p>
+      <h1 id="victoryTime">5 AM</h1>
+    </div>
   </div>
 
   <div class="screen" id="scare"><img id="scareArt" alt=""></div>
@@ -2085,6 +2094,7 @@ function startNight(n){
     requestAnimationFrame(() => { img.style.transition = ""; });
   });
 
+  stopVictory();
   [el.title, el.lose, el.win, el.scare].forEach(s => s.classList.remove("show"));
   document.body.classList.remove("camsup","dark","ventbad","camdown","paneltab",
                                 "warn-left","warn-right","flicker","out","doom","atdoor");
@@ -2287,41 +2297,100 @@ el.sensorBtn.onclick = e => { e.stopPropagation(); mountSensor(S.activeCam); };
 
 /* The picker exists on all three start-from screens, so there is never a state
    where you have to lose on purpose to get back to the one you wanted. */
-const PICKERS = ["pickTitle", "pickLose", "pickWin"];
+const PICKERS = ["pickTitle", "pickLose"];
+const PROGRESS_KEY = "fnaac-unlocked-night";
+const COMPLETED_KEY = "fnaac-completed-night";
+const STAR_DISPLAYS = ["starsTitle", "starsLose"];
+let unlockedNight = 1;
+let completedNight = 0;
+
+function loadProgress(){
+  try {
+    const savedUnlocked = Number.parseInt(localStorage.getItem(PROGRESS_KEY), 10);
+    const savedCompleted = Number.parseInt(localStorage.getItem(COMPLETED_KEY), 10);
+    if (Number.isInteger(savedCompleted)) {
+      completedNight = Math.min(NIGHTS.length, Math.max(0, savedCompleted));
+      unlockedNight = Math.min(NIGHTS.length, completedNight + 1);
+    } else if (Number.isInteger(savedUnlocked)) {
+      // Carry progress saved by the earlier unlock-only version forward.
+      unlockedNight = Math.min(NIGHTS.length, Math.max(1, savedUnlocked));
+      completedNight = unlockedNight - 1;
+    }
+  } catch (_) {
+    // The game still works when browser storage is unavailable.
+  }
+  S.night = unlockedNight;
+}
+
+function saveProgress(){
+  try {
+    localStorage.setItem(PROGRESS_KEY, unlockedNight);
+    localStorage.setItem(COMPLETED_KEY, completedNight);
+  } catch (_) {}
+}
+
+function resetProgress(){
+  unlockedNight = 1;
+  completedNight = 0;
+  saveProgress();
+  S.night = 1;
+  buildPickers();
+}
+
+function unlockNextNight(){
+  completedNight = Math.max(completedNight, S.night);
+  unlockedNight = Math.min(NIGHTS.length, completedNight + 1);
+  saveProgress();
+}
 
 function buildPickers(){
   PICKERS.forEach(id => {
     const host = $(id);
     host.innerHTML = "<span>NIGHT</span>";
     for (let n = 1; n <= NIGHTS.length; n++){
+      // The final two nights arrive as surprises after their prerequisite win.
+      if (n > 5 && n > unlockedNight) continue;
       const b = document.createElement("button");
       b.textContent = n;
       b.dataset.night = n;
-      b.onclick = e => { e.stopPropagation(); S.night = n; markPickers(); };
+      b.onclick = e => {
+        e.stopPropagation();
+        if (n > unlockedNight) return;
+        S.night = n;
+        markPickers();
+      };
       host.appendChild(b);
     }
   });
   markPickers();
 }
 
+function markStars(){
+  const stars = completedNight >= 7 ? 2 : completedNight >= 6 ? 1 : 0;
+  STAR_DISPLAYS.forEach(id => $(id).textContent = "★".repeat(stars));
+}
+
 function markPickers(){
-  PICKERS.forEach(id => $(id).querySelectorAll("button").forEach(b =>
-    b.classList.toggle("on", +b.dataset.night === S.night)));
+  PICKERS.forEach(id => $(id).querySelectorAll("button").forEach(b => {
+    const n = +b.dataset.night;
+    b.disabled = n > unlockedNight;
+    b.classList.toggle("on", n === S.night);
+  }));
   el.nightLabel.textContent = "NIGHT " + S.night;
+  markStars();
 }
 
 const clockIn = () => { initAudio(); startNight(S.night); };
 $("btnStart").onclick = clockIn;
 $("btnRetry").onclick = clockIn;
-$("btnNext").onclick  = clockIn;
 
 addEventListener("keydown", e => {
-  // N reveals the night picker, but only while a screen is up, never mid-shift
-  if (!S.running && (e.key === "n" || e.key === "N")){
-    document.body.classList.toggle("pickNights");
+  if (e.repeat) return;
+  if (!S.running){
+    if (e.key === "]") resetProgress();
     return;
   }
-  if (e.repeat || !S.running) return;
+  if (e.key === "["){ winNight(); return; }
   const k = e.key.toLowerCase();
   if (k === " "){ e.preventDefault(); toggleMonitor(); }
   else if (k === "c") togglePanel();
@@ -2338,7 +2407,7 @@ addEventListener("keydown", e => {
    need the cursor to LEAVE the strip before they will fire again, otherwise
    resting there would strobe the monitor.
 --------------------------------------------------------------------------- */
-const EDGE = { inBottom:false, armedRight:true };
+const EDGE = { inBottom:false, armedRight:true, lastX:null };
 
 addEventListener("mousemove", e => {
   if (!S.running) return;
@@ -2374,8 +2443,10 @@ addEventListener("mousemove", e => {
   // stepping back off the page closes it — and aborts anything mid-cycle
   if (S.panelTab){
     const edge = innerWidth - el.panel.offsetWidth - 30;
-    if (e.clientX < edge) togglePanel();
+    const movingRight = EDGE.lastX === null || e.clientX >= EDGE.lastX;
+    if (e.clientX < edge && !movingRight) togglePanel();
   }
+  EDGE.lastX = e.clientX;
 });
 
 /* Looking around. On a mouse the office follows the cursor; on a touch screen
@@ -3685,6 +3756,111 @@ function jumpscare(unit, why){
   }, 1500);
 }
 
+// Change this value to make the normal victory screen shorter or longer.
+const VICTORY_DURATION_MS = 5000;
+const VICTORY_REDUCED_DURATION_MS = 1100;
+const VICTORY = { raf:0, active:false };
+
+function playVictoryJingle(){
+  if (!actx) return;
+  const startsAt = actx.currentTime + .04;
+  const notes = [
+    [523.25, 0.00, .16, .11], [659.25, .20, .16, .11],
+    [783.99, .40, .16, .12], [1046.50, .64, .34, .13],
+    [783.99, 1.06, .14, .10], [1046.50, 1.24, .22, .12],
+    [1318.51, 1.52, .52, .12], [1046.50, 1.52, .46, .08]
+  ];
+  notes.forEach(([freq, offset, length, volume]) => {
+    const oscillator = actx.createOscillator();
+    const gain = actx.createGain();
+    const start = startsAt + offset;
+    oscillator.type = "triangle";
+    oscillator.frequency.setValueAtTime(freq, start);
+    gain.gain.setValueAtTime(.0001, start);
+    gain.gain.exponentialRampToValueAtTime(volume, start + .018);
+    gain.gain.exponentialRampToValueAtTime(.0001, start + length);
+    oscillator.connect(gain).connect(master || actx.destination);
+    oscillator.start(start);
+    oscillator.stop(start + length + .03);
+  });
+}
+
+function stopVictory(){
+  VICTORY.active = false;
+  if (VICTORY.raf) cancelAnimationFrame(VICTORY.raf);
+  VICTORY.raf = 0;
+}
+
+function showVictory(){
+  stopVictory();
+  const canvas = $("victoryFireworks");
+  const ctx = canvas.getContext("2d");
+  const time = $("victoryTime");
+  const scale = Math.min(devicePixelRatio || 1, 2);
+  const width = canvas.clientWidth || innerWidth;
+  const height = canvas.clientHeight || innerHeight;
+  canvas.width = Math.ceil(width * scale);
+  canvas.height = Math.ceil(height * scale);
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+
+  const particles = [];
+  const colours = ["#ecd56c", "#8fe0b4", "#ff958b", "#f8eee8"];
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const duration = reduceMotion ? VICTORY_REDUCED_DURATION_MS : VICTORY_DURATION_MS;
+  const started = performance.now();
+  let previous = started, nextBurst = 80, bursts = 0;
+  time.textContent = "5 AM";
+  el.winNote.textContent = "SHIFT COMPLETE";
+  el.win.classList.add("show");
+  VICTORY.active = true;
+  playVictoryJingle();
+
+  function burst(){
+    const x = width * (0.18 + Math.random() * 0.64);
+    const y = height * (0.16 + Math.random() * 0.42);
+    const colour = colours[bursts % colours.length];
+    for (let i = 0; i < 30; i++){
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 1.3 + Math.random() * 3.1;
+      particles.push({ x, y, vx:Math.cos(angle) * speed, vy:Math.sin(angle) * speed,
+        life:520 + Math.random() * 460, age:0, colour });
+    }
+  }
+
+  function frame(now){
+    if (!VICTORY.active) return;
+    const elapsed = now - started;
+    const dt = Math.min(2.5, (now - previous) / 16.67);
+    previous = now;
+    if (!reduceMotion && elapsed >= nextBurst && bursts < 10){
+      burst(); bursts++; nextBurst += 420;
+    }
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "rgba(4,8,5,.26)";
+    ctx.fillRect(0, 0, width, height);
+    for (let i = particles.length - 1; i >= 0; i--){
+      const p = particles[i];
+      p.age += dt * 16.67;
+      if (p.age >= p.life){ particles.splice(i, 1); continue; }
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += .045 * dt;
+      ctx.globalAlpha = (1 - p.age / p.life) * .9;
+      ctx.fillStyle = p.colour;
+      ctx.fillRect(p.x, p.y, 2.4, 2.4);
+    }
+    time.textContent = elapsed < duration * .42 ? "5 AM" : "6 AM";
+    if (elapsed >= duration){
+      stopVictory();
+      el.win.classList.remove("show");
+      el.title.classList.add("show");
+      return;
+    }
+    VICTORY.raf = requestAnimationFrame(frame);
+  }
+  VICTORY.raf = requestAnimationFrame(frame);
+}
+
 function winNight(){
   S.running = false;
   S.phantom = null; S.phantomScare = 0; hidePhantom();
@@ -3693,10 +3869,10 @@ function winNight(){
   S.monUp = false; S.panelTab = false; S.panelOpen = false;
   el.monitor.classList.remove("up");
   document.body.classList.remove("camsup", "paneltab", "atdoor");
-  el.winNote.textContent = "";
+  unlockNextNight();
   S.night = Math.min(S.night + 1, NIGHTS.length);   // teed up, still changeable
-  markPickers();
-  el.win.classList.add("show");
+  buildPickers();
+  showVictory();
 }
 
 /* ===========================================================================
@@ -3717,6 +3893,7 @@ if (location.protocol.startsWith("http")){
 
 
 makeNoise();
+loadProgress();
 buildPickers();
 applyDoorVars();
 {
