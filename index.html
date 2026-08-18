@@ -1,0 +1,3704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0d0b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Night Shift">
+<link rel="apple-touch-icon" href="images/icon-180.png">
+<title>NIGHT SHIFT — Facilities Monitoring</title>
+
+<!--
+================================================================================
+  NIGHT SHIFT  —  build 2, "no doors"
+================================================================================
+
+  Runs with zero images. Missing files become labeled placeholders naming the
+  exact filename they wanted, so you can tune mechanics now and shoot later.
+
+  WHAT CHANGED FROM BUILD 1
+    Doors and the power meter are gone. Power is now a binary switch whose only
+    cost is blindness. Defense is influence — audio lures — plus one desperate
+    last resort. Two roamers instead of four.
+
+  THE THREE THINGS YOU EDIT
+    GRAPH    — rooms and how they connect. Coordinates are % of the floorplan.
+    CAMERAS  — which nodes each camera can see, and its photo.
+    NIGHTS   — difficulty curve.
+
+  IMAGES
+    images/floorplan.png       your sketch, cleaned up (optional, shows on map)
+    images/office.jpg          wide panorama from your desk
+    images/cam_XX.jpg          one per camera, panoramas
+    images/ani_warden.png      transparent PNG per animatronic
+    images/scare_warden.jpg    its jumpscare frame
+
+================================================================================
+-->
+
+<style>
+:root{
+  --phos:#7dfab0;
+  --phos-dim:#63b98e;   /* idle button text — was #2f6b4c and barely legible */
+  --amber:#ffc766; --alarm:#ff5f52;
+  --shell:#0a0d0b;
+  --hair:#3a5147;       /* borders — the old #1e2a22 vanished against the shell */
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{
+  height:100%; background:var(--shell); color:var(--phos);
+  font-family:"SF Mono","JetBrains Mono",Consolas,"Courier New",monospace;
+  overflow:hidden; user-select:none; -webkit-user-select:none;
+  /* Chrome inflates the font size of text-heavy blocks on phones unless told
+     not to. That is what made the title screen unreadably large. */
+  -webkit-text-size-adjust:100%; text-size-adjust:100%;
+}
+button{font:inherit}
+
+#stage{position:relative; width:100vw; height:100vh; height:100dvh;
+  overflow:hidden; background:#000}
+
+/* THE CRT SITS ON THE PICTURE, NOT ON THE INTERFACE.
+
+   Its vignette is a heavy multiply — transparent at the middle of the screen,
+   85% black at the edges. At z-index 60 it was painted over everything,
+   including the maintenance panel and the floorplan, so a row of text near the
+   top or bottom of either came out visibly darker than the same text in the
+   middle of the screen. Nothing was wrong with the text; it was being graded
+   like part of the photograph.
+
+   It now sits above the office (z10) and the feed (z20) and below every piece
+   of interface: the monitor's own controls (z42), the HUD (z40), the docks
+   (z45) and the panel (z48). Scanlines and vignette on the imagery, none on
+   anything you have to read. */
+#crt{
+  position:absolute; inset:0; z-index:30; pointer-events:none;
+  background:
+    repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.28) 3px 4px),
+    radial-gradient(ellipse at center,rgba(0,0,0,0) 45%,rgba(0,0,0,.85) 100%);
+  mix-blend-mode:multiply;
+}
+
+/* ---- office ------------------------------------------------------------ */
+#officeView{position:absolute; inset:0; z-index:10; transition:filter .3s}
+/* THE OFFICE SCENE IS THE SHAPE OF THE PHOTOGRAPH.
+
+   The doorway box is a percentage of this element, so if this element's shape
+   follows the browser window then the box's shape does too — and a sprite sized
+   by width with height:auto lands at a different height on every monitor. The
+   aspect ratio is set from the panorama itself once it loads, so the tool and
+   the game are measuring the same rectangle. min-width keeps it covering the
+   screen on windows wider than the photo. */
+#officeScene{
+  position:absolute; top:0; left:0; height:100%;
+  width:auto; min-width:100%; aspect-ratio:3064/1015;
+  transition:transform .18s cubic-bezier(.2,.7,.3,1); will-change:transform;
+}
+#officeArt{position:absolute; inset:0}
+#officeArt img{width:100%; height:100%; object-fit:fill; display:block;
+  filter:var(--grade-office)}
+
+/* Filters land on the PHOTO layer only. The figures in the doorways get their
+   own treatment, otherwise cutting the power would hide the one thing the
+   player still needs to be able to see. */
+/* Power cut. The room is still the room — the photo stays visible under a blue
+   veil instead of being crushed to black, so a figure in a doorway and the
+   walk-by animation both still read. */
+body.dark #officeArt img{filter:brightness(.30) contrast(1.35) saturate(.16) hue-rotate(-14deg)}
+#darkVeil{
+  position:absolute; inset:0; z-index:4; pointer-events:none;
+  background:linear-gradient(180deg, rgba(6,12,20,.70), rgba(3,6,10,.84));
+  opacity:0; transition:opacity .45s;
+}
+body.dark #darkVeil{opacity:1}
+body.ventbad #officeArt img{filter:var(--grade-office) blur(1.3px) saturate(.2)}
+body.dark.ventbad #officeArt img{filter:brightness(.30) blur(1.5px) saturate(.10) contrast(1.4)}
+
+/* ---- the doorway ---------------------------------------------------------
+   Anchored to the actual door in the office panorama rather than the screen
+   edges, so figures appear where a body could physically be. Set by
+   --door-x / --door-w / --door-top / --door-h from OFFICE_DOOR in the config.
+   The box clips, so only the part of them clearing the frame is visible. */
+.doorway{
+  position:absolute;
+  left:var(--door-x); width:var(--door-w);
+  top:var(--door-top); height:var(--door-h);
+  overflow:hidden; pointer-events:none; z-index:3;
+}
+
+/* Placement comes from DOOR_SHOTS, set inline, so it can be dialled in with
+   the calibration tool like everything else. The transform is reserved for
+   mirroring and for the walk-by, or the two would fight. */
+.lurker{
+  position:absolute; height:auto;
+  object-fit:contain; object-position:bottom center;
+  opacity:0; transition:opacity .4s ease;
+  filter:brightness(.5) contrast(1.45) saturate(.3);
+}
+.doorway.right .lurker{transform:scaleX(-1)}
+.doorway.present .lurker{opacity:.95}
+
+/* In the dark they read as a silhouette rather than a lit figure. No glow:
+   nothing in an unlit office emits light, and a halo around the one thing you
+   are trying to make out turns it into a marker for itself. Brightness and
+   contrast do the work — you find the shape against the room, or you do not. */
+body.dark .lurker{
+  filter:brightness(.42) contrast(2.2) saturate(0);
+}
+body.dark .doorway.present .lurker{opacity:.95}
+
+/* the pass-by: they cross the opening and keep going */
+.doorway.walkby .lurker{
+  opacity:.92;
+  animation:crossLeft var(--walkMs,2600ms) cubic-bezier(.35,0,.55,1) forwards;
+}
+.doorway.right.walkby .lurker{animation-name:crossRight}
+/* They set off from exactly where they were standing rather than sliding in
+   from off-frame — the old version blinked out for a moment first, which read
+   as a glitch rather than as something walking away. */
+@keyframes crossLeft{
+  0%  {transform:translateX(0);     opacity:.95}
+  65% {opacity:.95}
+  100%{transform:translateX(190%);  opacity:0}
+}
+@keyframes crossRight{
+  0%  {transform:translateX(0) scaleX(-1);     opacity:.95}
+  65% {opacity:.95}
+  100%{transform:translateX(-190%) scaleX(-1); opacity:0}
+}
+
+/* No glow. A figure in the doorway is the only signal — if you cannot see it,
+   that is the game working. */
+
+/* ---- monitor ----------------------------------------------------------- */
+/* The monitor is always in the DOM and slides up from the bottom edge, the way
+   a hinged panel would. Coming up is fast and slightly overshooting; going down
+   is quicker still, because dropping it is usually a panic. */
+#monitor{
+  position:absolute; inset:0; z-index:20; background:#000;
+  transform:translateY(101%) scale(.985); opacity:0; pointer-events:none;
+  transition:transform .16s cubic-bezier(.4,0,.7,.4), opacity .12s linear;
+  will-change:transform;
+}
+#monitor.up{
+  transform:translateY(0) scale(1); opacity:1; pointer-events:auto;
+  transition:transform .26s cubic-bezier(.2,.9,.3,1.06), opacity .13s linear;
+}
+/* a burst of snow as it settles */
+#monitor.up #static{animation:jitter .09s steps(3) infinite, settle .4s ease-out}
+@keyframes settle{0%{opacity:.85}100%{opacity:.14}}
+/* THE FEED HAS A FIXED SHAPE.
+
+   Sprite sizes are percentages of the pan wrapper, and that wrapper used to be
+   a percentage of the browser WINDOW — so identical numbers rendered about 15%
+   larger in a maximised window than in the calibration tool, which assumes
+   16:9. The feed is now letterboxed to one canonical shape, so a placement
+   means the same thing everywhere and the tool is honestly WYSIWYG. It also
+   reads more like a monitor showing footage than a photo stretched to fit. */
+#camFeed{position:absolute; inset:0; overflow:hidden; background:#000;
+  display:flex; align-items:center; justify-content:center}
+#camBox{position:relative; overflow:hidden; aspect-ratio:16/9; height:100%; width:auto}
+@media (max-aspect-ratio:16/9){ #camBox{width:100%; height:auto} }
+#camPan{position:absolute; top:0; left:0; height:100%; width:130%; will-change:transform}
+#camArt{position:absolute; inset:0}
+/* NIGHT GRADE — these photos were shot in daylight. Until they're reshot in
+   the dark, everything gets pushed down here. One place to change, and
+   deleting the two --grade lines restores the originals. */
+:root{
+  --grade-cam:    brightness(.50) contrast(1.22) saturate(.40) hue-rotate(-10deg);
+  --grade-office: brightness(.56) contrast(1.16) saturate(.46) hue-rotate(-10deg);
+}
+#camPan img.feed{width:100%;height:100%;object-fit:cover;
+  filter:grayscale(.5) var(--grade-cam)}
+#camPan .subject{position:absolute; object-fit:contain; object-position:bottom center;
+  filter:grayscale(.6) contrast(1.1) brightness(.65)}
+
+/* something that was not there. Fades up, holds, fades out. */
+#camPan .subject.phantom{pointer-events:none; opacity:0;
+  animation:phantom 1.15s ease-in-out forwards}
+@keyframes phantom{
+  0%{opacity:0}
+  22%{opacity:.62}
+  62%{opacity:.62}
+  100%{opacity:0}
+}
+
+/* Figures beside your door still get the .atdoor class, so a rule can be hung
+   on it later. It carries no styling of its own — position and scale do the
+   telling now. */
+
+/* THE PHANTOM ON THE FEED.
+
+   He sits in the FRAME rather than in the panorama: he does not drift with the
+   camera sweep the way a body standing in a room does, because he is not in
+   the room. He is on the lens. Low and wide and much too close, filling the
+   bottom of the picture — the shape reads in a fraction of a second, which is
+   all the notice you get. */
+#phantomArt{
+  position:absolute; left:50%; bottom:-6%; transform:translateX(-50%);
+  height:74%; width:auto; z-index:4; pointer-events:none;
+  filter:grayscale(.75) contrast(1.3) brightness(.55);
+  opacity:0; transition:opacity .1s linear;
+}
+#phantomArt.on{opacity:.93}
+/* he is on the picture, so anything that kills the picture kills him too */
+body.camdown #phantomArt, body.transit #phantomArt{opacity:0}
+
+#static{position:absolute; inset:0; opacity:.14; pointer-events:none;
+  background-image:var(--noise); background-size:180px 180px; animation:jitter .09s steps(3) infinite}
+@keyframes jitter{0%{background-position:0 0}33%{background-position:37px -21px}
+  66%{background-position:-19px 44px}100%{background-position:11px 8px}}
+
+/* camera system down: nothing but snow */
+#camDead{position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+  background:#050705; z-index:2; font-size:12px; letter-spacing:.22em; color:var(--alarm)}
+body.camdown #camDead{display:flex}
+body.camdown #camBox{opacity:.06}
+body.camdown #static{opacity:.5}
+
+#camLabel{position:absolute; left:22px; bottom:22px; z-index:3; font-size:13px; letter-spacing:.16em}
+#camLabel .rec{color:var(--alarm); margin-right:10px; animation:blink 1.6s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+#sensorBtn{
+  position:absolute; left:22px; bottom:100px; z-index:5; pointer-events:auto;
+  padding:12px 18px; font-size:11px; letter-spacing:.18em; cursor:pointer;
+  color:#8fe0b4; background:rgba(6,10,7,.94); border:1px solid #46614f;
+}
+#sensorBtn:hover:not(:disabled){color:var(--phos); border-color:var(--phos-dim)}
+#sensorBtn:disabled{opacity:.32; cursor:not-allowed}
+#sensorBtn.engaged{color:var(--shell); background:var(--amber); border-color:var(--amber)}
+
+#audioBtn{
+  position:absolute; left:22px; bottom:58px; z-index:5; pointer-events:auto;
+  padding:12px 18px; font-size:11px; letter-spacing:.18em; cursor:pointer;
+  color:#8fe0b4; background:rgba(6,10,7,.94); border:1px solid #46614f;
+}
+#audioBtn:hover:not(:disabled){color:var(--phos); border-color:var(--phos-dim)}
+#audioBtn:disabled{opacity:.32; cursor:not-allowed}
+#audioBtn.firing{color:var(--shell); background:var(--amber); border-color:var(--amber)}
+
+/* ---- the monitor's own controls ------------------------------------------
+   These sit OUTSIDE #monitor, in their own layer above the CRT, because the
+   vignette is a grade for the footage and not for the interface. The monitor
+   is a stacking context of its own, so nothing inside it can ever rise above
+   the CRT — the controls have to live out here to be lit evenly.
+
+   Geometry is unchanged: #monUI covers the same rectangle #monitor does, so
+   every left/right/bottom offset means what it always meant. It carries the
+   monitor's slide so they still arrive together, and nothing in it is
+   clickable unless the monitor is actually up. */
+#monUI{
+  position:absolute; inset:0; z-index:42; pointer-events:none;
+  opacity:0; transform:translateY(2%);
+  transition:transform .16s cubic-bezier(.4,0,.7,.4), opacity .12s linear;
+}
+body.camsup #monUI{
+  opacity:1; transform:translateY(0);
+  transition:transform .26s cubic-bezier(.2,.9,.3,1.06), opacity .13s linear;
+}
+#monUI > *{pointer-events:none}
+body.camsup #monUI > *{pointer-events:auto}
+
+/* ---- floorplan --------------------------------------------------------- */
+/* No frame, no caption. The floorplan floats over the feed and you can see
+   through it, because it is a thing you glance at rather than read. */
+#map{position:absolute; right:20px; bottom:20px; z-index:4; width:min(390px,44vw);
+  padding:0; background:none; border:none}
+#map h4{font-size:10px; font-weight:400; letter-spacing:.28em; color:#8fe0b4; margin-bottom:9px}
+#mapPlan{position:relative; width:100%; aspect-ratio:662/776;
+  border:1px solid rgba(70,97,79,.5); background-color:rgba(6,10,7,.3);
+  background-image:var(--plan,none); background-size:contain;
+  background-repeat:no-repeat; background-position:center}
+/* No floorplan drawing supplied. The hatching that used to fill the gap was
+   solid, which quietly cancelled the panel's transparency — and it is redundant
+   now that the rooms themselves are drawn. What is left is a whisper of texture
+   you can still see straight through. */
+#mapPlan.noplan{background-image:repeating-linear-gradient(45deg,
+  rgba(125,250,176,.035) 0 9px, transparent 9px 18px)}
+/* the rooms, drawn behind the buttons */
+.room{position:absolute; border:1px solid rgba(160,182,170,.38); pointer-events:none}
+.room.hall{background:rgba(70,110,150,.08); border-color:rgba(110,160,210,.26)}
+.room.you{background:rgba(250,220,40,.16); border-color:var(--amber); border-width:2px}
+.room.lit{background:rgba(125,250,176,.14); border-color:rgba(125,250,176,.55)}
+.room i{position:absolute; left:3px; top:2px; font-style:normal;
+  font-size:8px; letter-spacing:.05em; color:rgba(190,212,200,.85);
+  text-shadow:0 1px 2px rgba(0,0,0,.9)}
+.room.you i{color:var(--amber)}
+
+.camPin{position:absolute; transform:translate(-50%,-50%); min-width:42px; padding:7px 8px;
+  font-size:11px; letter-spacing:.04em; cursor:pointer; text-align:center; z-index:2;
+  color:#8fe0b4; background:rgba(6,10,7,.72); border:1px solid #46614f;
+  text-shadow:0 1px 2px rgba(0,0,0,.8)}
+.camPin:hover{color:var(--phos); border-color:var(--phos-dim)}
+.camPin.active{color:var(--shell); background:var(--phos); border-color:var(--phos)}
+.camPin.sensor{border-color:var(--amber); color:var(--amber); box-shadow:0 0 0 1px var(--amber) inset}
+.camPin.lured{border-color:var(--amber); color:var(--amber)}
+
+/* something is standing beside your door, seen from inside the office */
+/* No red anywhere. Something standing in a doorway is the signal; a warning
+   light on top of it just tells you what you can already see. */
+@keyframes doorPulse{0%,100%{opacity:.42} 50%{opacity:1}}
+
+/* on a feed, anything standing in a kill square is ringed in red */
+.subject.imminent{animation:imminentPulse 1.15s ease-in-out infinite}
+@keyframes imminentPulse{0%,100%{opacity:.82} 50%{opacity:1}}
+
+/* the Warden just moved. Every feed stutters for a fifth of a second. */
+body.flicker #camFeed{opacity:.28; filter:brightness(1.5) contrast(.7)}
+body.flicker #static{opacity:.55}
+body.flicker #camLabel{opacity:.4}
+
+/* Something is crossing a doorway: every feed drops to snow until it lands. */
+body.transit #camBox{opacity:.04}
+body.transit #static{opacity:.78}
+body.transit #camLabel{color:var(--alarm)}
+body.transit .subject{display:none}
+
+/* a failing camera: the picture comes and goes */
+body.dropout #camBox{opacity:.05}
+body.dropout #static{opacity:.62}
+body.dropout #camLabel{color:var(--alarm)}
+
+/* the seconds before it reaches you */
+body.doom #monitor{animation:doomShake .09s steps(2) infinite}
+body.doom #static{opacity:.42}
+@keyframes doomShake{
+  0%{transform:translate(0,0)} 50%{transform:translate(-3px,2px)} 100%{transform:translate(2px,-2px)}
+}
+
+/* face-down on the floor */
+#outOverlay{position:absolute; inset:0; z-index:58; background:#000; opacity:0;
+  pointer-events:none; transition:opacity .55s}
+body.out #outOverlay{opacity:1; pointer-events:auto}
+
+#alerts div.ok{color:var(--amber)}
+
+/* ---- systems panel ----------------------------------------------------- */
+/* Back in the office where it started. The Auditor already makes looking away
+   expensive, so the panel does not also need to cost you the feed. */
+#panel{position:absolute; top:0; right:0; bottom:0; width:min(400px,88vw); z-index:48;
+  background:#070b08; border-left:1px solid var(--hair); padding:26px 22px;
+  transform:translateX(101%); transition:transform .22s cubic-bezier(.3,.9,.3,1);
+  overflow-y:auto}
+body.paneltab #panel{transform:translateX(0)}
+
+/* the tab you reach for, and the strip on the right that opens it */
+body.paneltab #monBtn{opacity:0; pointer-events:none}
+body.camsup #panelBtn{opacity:0; pointer-events:none}
+#panel h3{font-size:11px; font-weight:400; letter-spacing:.3em; color:#8fe0b4; margin-bottom:22px}
+.sysRow{border:1px solid #46614f; padding:14px; margin-bottom:12px;
+  background:rgba(125,250,176,.035)}
+.sysHead{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:9px}
+.sysName{font-size:11px; letter-spacing:.18em}
+.sysState{font-size:10px; letter-spacing:.14em; color:var(--phos)}
+.sysRow.bad .sysState{color:var(--alarm)}
+.sysRow.busy .sysState{color:var(--amber)}
+.rebootBtn{width:100%; padding:11px; font-size:11px; letter-spacing:.18em; cursor:pointer;
+  color:#8fe0b4; background:rgba(125,250,176,.05); border:1px solid #46614f;
+  transition:color .12s, border-color .12s, background .12s}
+.rebootBtn:hover:not(:disabled){color:var(--phos); border-color:var(--phos-dim)}
+.rebootBtn:disabled{opacity:.3; cursor:not-allowed}
+/* A faulted system lights its own button. The state line already says FAULT,
+   but the panel is read at a glance in the dark and colour carries further
+   than a word does — you should know which row to hit before you have read
+   any of them. */
+.sysRow.bad .rebootBtn{color:#ffb3ac; border-color:var(--alarm);
+  background:rgba(255,95,82,.10)}
+.sysRow.bad .rebootBtn:hover:not(:disabled){color:#fff1ef; border-color:#ff8b80;
+  background:rgba(255,95,82,.20)}
+.bar{height:3px; background:#152018; margin-top:9px}
+.bar i{display:block; height:100%; background:var(--amber); width:0}
+#rebootAll{margin-top:6px; border-color:var(--phos-dim); color:var(--phos)}
+
+/* The strip at the bottom you reach into to raise the monitor, and the one on
+   the right that opens the panel. Both are invisible until the cursor nears
+   them, so the office stays uncluttered. */
+#pullTab{
+  position:absolute; left:0; right:0; bottom:0; height:5%; z-index:44;
+  pointer-events:none; opacity:0; transition:opacity .2s;
+  background:linear-gradient(0deg, rgba(125,250,176,.16), transparent 85%);
+  display:flex; align-items:flex-end; justify-content:center; padding-bottom:6px;
+}
+#pullTab span{font-size:13px; color:var(--phos); letter-spacing:.4em}
+body.nearBottom #pullTab{opacity:1}
+body.camsup #pullTab{opacity:0}
+
+#panel::before{
+  content:""; position:absolute; left:-14px; top:0; bottom:0; width:14px;
+  background:linear-gradient(270deg, rgba(125,250,176,.14), transparent);
+  opacity:0; transition:opacity .2s;
+}
+body.nearRight #panel::before{opacity:1}
+
+/* while a reboot is running you are pinned to the panel */
+#panel.held{border-left:2px solid var(--amber)}
+
+
+/* ---- HUD --------------------------------------------------------------- */
+#hud{position:absolute; inset:0; z-index:40; pointer-events:none}
+#clock{position:absolute; top:18px; right:26px; font-size:30px; letter-spacing:.04em; line-height:1}
+#clock small{display:block; font-size:9px; letter-spacing:.3em; color:var(--phos-dim); margin-top:6px; text-align:right}
+/* Real seconds, under the hour that is not made of them. The clock face moves
+   once every 45 seconds and tells you nothing about the gap you are timing —
+   how long since the last flicker, how long a reboot really costs, how long
+   she has been out of sight. This is the stopwatch for all of that. */
+#shiftTimer{font-size:13px; letter-spacing:.2em; color:#8fe0b4; margin-top:4px;
+  font-variant-numeric:tabular-nums}
+/* The air has no gauge. You are told it is failing by a sound, and you either
+   recognise it or you do not. */
+#alerts{position:absolute; top:78px; left:26px; font-size:10px; letter-spacing:.14em; line-height:2.2}
+#alerts div{color:var(--alarm)}
+#alerts div.warn{color:var(--amber)}
+
+/* ---- controls ---------------------------------------------------------- */
+.dock{position:absolute; bottom:0; z-index:45; pointer-events:auto;
+  padding:14px 0 20px; width:190px; font-size:11px; letter-spacing:.2em; cursor:pointer;
+  color:#8fe0b4; background:rgba(6,10,7,.94); border:1px solid #46614f; border-bottom:none;
+  transition:color .1s, padding .12s}
+.dock:hover:not(:disabled){color:var(--phos); padding-bottom:26px}
+.dock:disabled{opacity:.3; cursor:not-allowed}
+.dock.engaged{color:var(--shell); background:var(--phos); border-color:var(--phos)}
+#monBtn{left:50%; transform:translateX(-50%)}
+#panelBtn{right:26px}
+#powerBtn{left:26px; border-color:#4a3232; color:#9a6a5a}
+#powerBtn:hover{color:var(--alarm); border-color:var(--alarm)}
+#powerBtn.cut{background:var(--alarm); color:#0a0d0b; border-color:var(--alarm)}
+body.camsup #powerBtn{opacity:0; pointer-events:none}
+.dock{transition:opacity .14s, color .1s, padding .12s}
+
+/* ---- screens ----------------------------------------------------------- */
+.screen{position:absolute; inset:0; z-index:70; display:none; flex-direction:column;
+  align-items:center; justify-content:center; background:var(--shell);
+  text-align:center; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  gap:clamp(8px,2.2vh,22px);
+  padding:clamp(14px,3vh,32px) clamp(16px,4vw,40px);
+}
+/* centred content taller than the screen clips its own top and becomes
+   unreachable; safe centring falls back to the start edge instead */
+@supports (justify-content:safe center){ .screen{justify-content:safe center} }
+
+/* A landscape phone gives about 480px of height. The title card has to fit
+   inside that with room to spare, or the start button ends up below the fold
+   on whichever device has one more toolbar than you tested against. */
+@media (max-height:620px){
+  .screen h1{font-size:clamp(18px,min(5vw,8.5vh),40px); letter-spacing:.14em}
+  .screen p{font-size:clamp(9px,1.5vh,11px); line-height:1.7; max-width:70ch}
+  .keys{font-size:clamp(7px,1.05vh,8px); line-height:1.75}
+  .screen{gap:clamp(6px,1.6vh,14px); padding:clamp(10px,2vh,20px) clamp(14px,3vw,30px)}
+  .screen button{padding:clamp(11px,1.9vh,14px) clamp(26px,6vw,38px); margin-top:2px}
+}
+.screen.show{display:flex}
+.screen h1{font-size:clamp(20px,min(6.5vw,11vh),60px); font-weight:400;
+  letter-spacing:.18em; line-height:1.12}
+.screen p{font-size:clamp(10px,min(1.6vh,12px),12px); letter-spacing:.09em;
+  color:var(--phos-dim); max-width:62ch; line-height:1.85}
+/* Pick a night. Six small buttons rather than a dropdown, because the whole
+   interface is buttons and a select element would look like it wandered in
+   from a different program. */
+/* Hidden until you ask for it with N, so a first-time player just clocks in. */
+.nights{display:none; gap:6px; align-items:center}
+body.pickNights .nights{display:flex}
+.nights span{font-size:9px; letter-spacing:.24em; color:var(--phos-dim); margin-right:6px}
+.hintN{font-size:8px; letter-spacing:.22em; color:rgba(99,185,142,.55)}
+body.pickNights .hintN{display:none}
+/* Specificity, not decoration: `.screen button` is the big filled CLOCK IN
+   button and matches these too, at equal weight and later in the file — so
+   every night came out full-width and phosphor-filled and you could not see
+   which one was selected. Qualifying with .screen puts these back on top. */
+.screen .nights button{
+  font:inherit; font-size:clamp(10px,1.6vh,12px); letter-spacing:.06em;
+  width:clamp(30px,4.4vh,38px); height:clamp(30px,4.4vh,38px); margin:0; padding:0;
+  cursor:pointer; color:#8fe0b4; background:rgba(6,10,7,.9); border:1px solid #46614f;
+}
+.screen .nights button:hover{color:var(--phos); border-color:var(--phos-dim)}
+.screen .nights button.on{background:var(--phos); color:var(--shell); border-color:var(--phos)}
+
+.screen button{font-size:clamp(10px,1.7vh,12px); letter-spacing:.22em; margin-top:4px;
+  padding:clamp(12px,2.2vh,16px) clamp(30px,7vw,44px); flex:none;
+  cursor:pointer; color:var(--shell); background:var(--phos); border:none}
+.keys{font-size:clamp(7px,min(1.15vh,9px),9px); letter-spacing:.13em;
+  color:var(--phos-dim); line-height:1.9}
+
+#scare{z-index:90; background:#000; padding:0; gap:0; overflow:hidden}
+/* THE FACE IS THE PICTURE. EVERYTHING HERE PROTECTS THE TOP OF IT.
+
+   A window wider than the frame crops the height, and object-position decides
+   which band survives. At 44% it took the crop off the top, which is the one
+   place there is something to lose — the head. At 18% the crop comes off the
+   torso instead, where there is nothing to see. The frames themselves carry
+   about 9% headroom, so the shake has room to move without ever reaching the
+   scalp. */
+#scare img{width:100%; height:100%; object-fit:cover; object-position:center 18%; will-change:transform}
+/* The shake stays inside a 4% overscan and only ever pushes the picture DOWN,
+   so no edge of the stage is exposed and the face cannot ride up out of shot. */
+#scare.show img{animation:violent .07s steps(2) infinite}
+@keyframes violent{0%{transform:translate(0,6px) scale(1.04)}25%{transform:translate(-12px,14px) scale(1.04)}
+  50%{transform:translate(10px,4px) scale(1.04)}75%{transform:translate(-7px,9px) scale(1.05)}
+  100%{transform:translate(8px,15px) scale(1.04)}}
+
+.ph{width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+  background:repeating-linear-gradient(45deg,#0e130f 0 11px,#141a15 11px 22px);
+  border:1px dashed var(--phos-dim); color:var(--phos-dim); font-size:11px;
+  letter-spacing:.14em; text-align:center; padding:16px; line-height:1.9}
+
+/* ---- phone ---------------------------------------------------------------
+   The touch handlers already exist; these are the things a phone needs that a
+   trackpad does not — room for the notch, a power control you can hit without
+   aiming, and a floorplan measured against screen HEIGHT, because a landscape
+   phone has plenty of width and almost no height. */
+body.touch{
+  -webkit-tap-highlight-color:transparent;
+  overscroll-behavior:none;
+}
+/* Insets go on the controls, never on the page. Padding the body pushed the
+   whole 100vh stage down and clipped everything along the bottom edge — which
+   is where the start button lives. */
+body.touch #powerBtn{ left:calc(16px + env(safe-area-inset-left));
+                      bottom:calc(16px + env(safe-area-inset-bottom)); }
+body.touch #audioBtn{ left:calc(126px + env(safe-area-inset-left));
+                      bottom:calc(18px + env(safe-area-inset-bottom)); }
+body.touch #sensorBtn{left:calc(126px + env(safe-area-inset-left));
+                      bottom:calc(76px + env(safe-area-inset-bottom)); }
+body.touch #map{ right:calc(12px + env(safe-area-inset-right));
+                 bottom:calc(12px + env(safe-area-inset-bottom)); }
+body.touch #clock{ right:calc(16px + env(safe-area-inset-right));
+                   top:calc(10px + env(safe-area-inset-top)); }
+body.touch #alerts{left:calc(16px + env(safe-area-inset-left));
+                   top:calc(56px + env(safe-area-inset-top)); }
+body.touch #camLabel{left:calc(16px + env(safe-area-inset-left)); }
+body.touch #officeScene{transition:none}      /* a finger should not lag */
+
+/* POWER is the only timed action, so it is the only round one */
+body.touch #powerBtn{
+  left:16px; bottom:16px; width:96px; height:96px; padding:0;
+  border-radius:50%; font-size:10px; line-height:1.4; letter-spacing:.1em;
+  display:flex; align-items:center; justify-content:center; text-align:center;
+  border:2px solid #7a4a44; background:rgba(34,12,10,.94); color:#ffb0a6;
+}
+body.touch #powerBtn:hover{padding:0}
+body.touch #powerBtn.cut{background:var(--alarm); color:#0a0d0b; border-color:var(--alarm)}
+
+body.touch #audioBtn{left:126px; bottom:18px}
+body.touch #sensorBtn{left:126px; bottom:76px}
+
+body.touch #map{width:auto; right:12px; bottom:12px; padding:9px}
+body.touch #mapPlan{height:min(54vh,290px); width:auto; aspect-ratio:662/776}
+body.touch #map h4{font-size:8px; margin-bottom:6px}
+body.touch .room i{font-size:7px}
+
+body.touch #clock{font-size:19px; top:10px; right:16px}
+body.touch #shiftTimer{font-size:11px; margin-top:3px}
+body.touch body.touch #alerts{top:56px; left:16px; font-size:9px; line-height:1.9}
+body.touch #commitBox{top:12px; padding:8px 12px}
+body.touch #commitBar{width:160px}
+body.touch #camLabel{left:16px; bottom:120px}
+body.touch #panel{width:min(340px,76vw); padding:20px 16px}
+
+/* The panoramas are 3:1. Portrait cannot show enough of one to play. */
+#rotate{
+  position:absolute; inset:0; z-index:95; display:none;
+  flex-direction:column; align-items:center; justify-content:center; gap:16px;
+  background:var(--shell); text-align:center; padding:30px;
+}
+#rotate i{font-size:38px; font-style:normal; animation:tip 2.4s ease-in-out infinite}
+#rotate b{font-size:14px; letter-spacing:.24em; font-weight:400; color:var(--phos)}
+#rotate span{font-size:11px; letter-spacing:.13em; color:#8ab8a0; line-height:2; max-width:32ch}
+@keyframes tip{50%{transform:rotate(90deg)}}
+@media (orientation:portrait){ body.touch #rotate{display:flex} }
+
+@media (prefers-reduced-motion: reduce){
+  #static,#camLabel .rec,#scare.show{animation:none}
+  #crt{background:radial-gradient(ellipse at center,rgba(0,0,0,0) 50%,rgba(0,0,0,.8) 100%)}
+}
+/* On a touch screen the pull tab is a real, permanent handle rather than a
+   hover hint, and the controls grow to finger size. */
+body.touch #pullTab{opacity:.5}
+body.touch.camsup #pullTab{opacity:0}
+body.touch .dock{width:132px; font-size:11px; padding:16px 0 22px}
+body.touch #audioBtn, body.touch #sensorBtn{padding:15px 20px; font-size:12px}
+body.touch .camPin{min-width:52px; padding:10px 8px; font-size:12px}
+body.touch .rebootBtn{padding:16px; font-size:12px}
+
+@media (max-width:700px){
+  #clock{font-size:20px; top:14px; right:16px}
+  #shiftTimer{font-size:11px}
+  #alerts{top:64px; left:16px}
+  .dock{width:118px; font-size:9px; letter-spacing:.12em}
+  #map{width:52vw; right:12px; bottom:12px}
+}
+</style>
+</head>
+
+<body>
+<div id="stage">
+
+  <div id="officeView">
+    <div id="officeScene">
+      <div id="officeArt"></div>
+      <div class="doorway left"  id="doorLeft"><img class="lurker" alt=""></div>
+      <div class="doorway right" id="doorRight"><img class="lurker" alt=""></div>
+      <div id="darkVeil"></div>
+  <div id="pullTab"><span>▲</span></div>
+    </div>
+  </div>
+
+  <div id="monitor">
+    <div id="camFeed"><div id="camBox">
+      <div id="camPan"><div id="camArt"></div></div>
+    </div></div>
+    <div id="static"></div>
+    <img id="phantomArt" alt="">
+    <div id="camDead">CAMERA SYSTEM OFFLINE</div>
+  </div>
+
+  <!-- The monitor's controls, lifted out of the monitor so the CRT vignette
+       grades the footage and leaves the interface alone. Same rectangle, same
+       offsets, same slide — see #monUI. -->
+  <div id="monUI">
+    <div id="camLabel"><span class="rec">●REC</span><span id="camName"></span></div>
+    <button id="audioBtn">PLAY AUDIO CUE &nbsp;[F]</button>
+    <button id="sensorBtn">MOUNT SENSOR &nbsp;[M]</button>
+    <div id="map">
+      <div id="mapPlan"></div>
+    </div>
+  </div>
+
+  <!-- Lives outside the monitor. Inside it, the monitor's own transform and
+       pointer-events:none took the panel with it and nothing ever appeared. -->
+  <div id="panel">
+    <h3>MAINTENANCE PANEL</h3>
+    <div id="sysList"></div>
+    <button class="rebootBtn" id="rebootAll">REBOOT ALL SYSTEMS</button>
+  </div>
+
+  <div id="hud">
+    <div id="clock"><span id="clockHour">12 AM</span>
+      <small id="shiftTimer">00:00</small>
+      <small id="nightLabel">NIGHT 1</small></div>
+    <div id="alerts"></div>
+  </div>
+
+  <button class="dock" id="powerBtn">CUT POWER &nbsp;[X]</button>
+  <button class="dock" id="monBtn">MONITOR &nbsp;[SPACE]</button>
+  <button class="dock" id="panelBtn">PANEL &nbsp;[C]</button>
+
+  <div class="screen show" id="titleScreen">
+    <h1>WELCOME TO THE<br>NIGHT SHIFT</h1>
+    <div class="hintN">press N to choose a night</div>
+    <div class="nights" id="pickTitle"></div>
+    <button id="btnStart">CLOCK IN</button>
+  </div>
+
+  <div class="screen" id="loseScreen">
+    <h1>SHIFT ENDED</h1>
+    <p id="loseNote"></p>
+    <div class="nights" id="pickLose"></div>
+    <button id="btnRetry">CLOCK IN</button>
+  </div>
+
+  <div class="screen" id="winScreen">
+    <h1>6 AM</h1>
+    <p id="winNote"></p>
+    <div class="nights" id="pickWin"></div>
+    <button id="btnNext">CLOCK IN</button>
+  </div>
+
+  <div class="screen" id="scare"><img id="scareArt" alt=""></div>
+  <div id="outOverlay"><span>&nbsp;</span></div>
+  <div id="rotate">
+    <i>▯</i><b>TURN THE PHONE</b>
+    <span>The building was photographed in panorama. Sideways is the only way
+    you see enough of it to survive.</span>
+  </div>
+
+  <div id="crt"></div>
+</div>
+
+<script>
+"use strict";
+
+/* ===========================================================================
+   1. THE BUILDING
+   Coordinates are percentages of your floorplan image, so they line up with
+   the sketch exactly. Edges only need to be listed once — the reverse is
+   generated automatically, which is one less thing to get wrong.
+   =========================================================================== */
+
+const OFFICE_AT = { x:40.0, y:58.8 };
+
+const GRAPH = {
+  // spawn nodes, outside the building. No camera covers these on purpose.
+  gW:{ x:6.9,  y:12.9, edges:["n04"], outside:true },
+  gE:{ x:92.9, y:16.4, edges:["n22"], outside:true },
+  gS:{ x:67.5, y:99.0, edges:["n19"], outside:true },
+
+  // --- north rooms, each opening onto the north hall ---
+  n01:{ x:26.6, y:10.3, edges:["n20"] },
+  n02:{ x:50.0, y:10.3, edges:["n05"] },
+  n03:{ x:71.0, y:10.6, edges:["n21"] },
+
+  // --- north hall ---
+  n04:{ x:17.0, y:16.5, edges:["n20"] },                  // west end
+  n20:{ x:30.0, y:16.2, edges:["n05"] },                  // outside NW room
+  n05:{ x:50.0, y:17.7, edges:["n21","n07"] },            // outside N room
+  n21:{ x:70.0, y:17.0, edges:["n22"] },                  // outside NE room
+  n22:{ x:85.0, y:16.5, edges:["n08"] },                  // east end
+
+  // --- second tier. 06 and 09 are dead-end pockets off the center room. ---
+  n06:{ x:33.1, y:22.9, edges:["n07"] },                  // upper annex   (NO CAMERA)
+  n07:{ x:46.4, y:33.2, edges:["n09","n11"] },            // center room
+  n08:{ x:79.2, y:22.4, edges:[] },                       // east closet
+  n09:{ x:75.5, y:32.9, edges:[] },                       // east gallery  (NO CAMERA)
+
+  // --- the center hall ---
+  // north end: the junction for the north office and the east wing
+  n11:{ x:48.6, y:43.0, edges:["nDL","n12","n10"] },
+
+  // THE TWO SQUARES THAT MATTER. Directly left and right of your door, and
+  // the last place anything stands before it reaches you.
+  nDL:{ x:48.6, y:54.0, edges:["nDR","OFFICE"] },         // hall, LEFT of your door
+  nDR:{ x:48.8, y:64.0, edges:["n14","n15","OFFICE"] },   // hall, RIGHT of your door
+
+  // south end: the junction for the south office, the dock and the south hall
+  n14:{ x:49.2, y:74.0, edges:["n15","n16","n17","n18"] },
+
+  // --- the two offices flanking yours. Reached from the hall's two ends, so
+  //     something in here is close, but not yet beside you. ---
+  n10:{ x:39.4, y:44.2, edges:[] },                       // NORTH OFFICE
+  n16:{ x:39.7, y:73.5, edges:[] },                       // SOUTH OFFICE
+
+  // --- east wing ---
+  n12:{ x:57.4, y:39.0, edges:["n13"] },
+  n13:{ x:57.1, y:54.8, edges:[] },                       // dead end off 12
+  n15:{ x:58.9, y:65.1, edges:[] },                       // between DR and 14
+  n17:{ x:62.7, y:77.7, edges:[] },                       // dead end off 14
+
+  // --- south hall, now a loop back to the dock end ---
+  n25:{ x:33.0, y:85.0, edges:["n18","n19"] },
+  n18:{ x:49.8, y:84.8, edges:["n19"] },
+  n19:{ x:64.2, y:92.5, edges:[] },
+
+  OFFICE:{ x:OFFICE_AT.x, y:OFFICE_AT.y, edges:[] }
+};
+
+/* Cameras.
+
+   sees      nodes this feed covers properly
+   peek      nodes it can only just make out — small, dim, at the frame edge
+   unstable  a failing feed. Constant dropout, and the motion sensor will not
+             hold on it. This is deliberately the ONE camera that looks at the
+             two squares beside your door: the thing you most want to check is
+             the thing you can least rely on. Your warning comes instead from
+             the two ordinary cameras in the offices either side of yours.
+   pan       width comes from each photo's real aspect ratio. 102 means the
+             photo isn't wide enough to sweep, so it reads as a fixed camera.
+*/
+const CAMERAS = {
+  C01:{ name:"1A  NORTH-WEST ROOM", pin:{x:36.3,y:8.7},  sees:["n01"],
+        art:"images/cam_01.jpg", pan:{width:102,period:34000,phase:0.0} },
+  C02:{ name:"1B  NORTH ROOM",      pin:{x:60.1,y:8.8},  sees:["n02"],
+        art:"images/cam_02.jpg", pan:{width:102,period:29000,phase:1.7} },
+  C03:{ name:"1C  NORTH-EAST ROOM", pin:{x:80.7,y:8.7},  sees:["n03"],
+        art:"images/cam_03.jpg", pan:{width:131,period:37000,phase:3.1} },
+  // gW is outside the building — visible from the hall camera through the
+  // west end, so you can watch one arrive before it is even indoors
+  C04:{ name:"2A  NORTH HALL",      pin:{x:81.7,y:16}, sees:["gW","n04","n20","n05","n21","n22"],
+        art:"images/cam_04.jpg", pan:{width:102,period:44000,phase:0.8} },
+  C05:{ name:"2B  CENTER ROOM",     pin:{x:54.7,y:32}, sees:["n07"],
+        art:"images/cam_05.jpg", pan:{width:132,period:31000,phase:2.2} },
+  C06:{ name:"2C  EAST CLOSET",     pin:{x:80,y:26.3}, sees:["n08"],
+        art:"images/cam_06.jpg", pan:{width:102,period:26000,phase:4.4} },
+
+  // the one you need and cannot trust
+  C07:{ name:"3A  OFFICE HALL",     pin:{x:50,y:42.9}, sees:["n11","nDL","nDR","n14","n18"],
+        unstable:true,
+        art:"images/cam_07.jpg", pan:{width:102,period:39000,phase:5.0} },
+
+  C08:{ name:"3B  NORTH OFFICE",    pin:{x:39.2,y:47}, sees:["n10"], peek:["nDL"],
+        art:"images/cam_08.jpg", pan:{width:162,period:28000,phase:1.1} },
+  C09:{ name:"4A  EAST WING",       pin:{x:64,y:54.6}, sees:["n12","n13"],
+        art:"images/cam_09.jpg", pan:{width:149,period:41000,phase:2.9} },
+  C10:{ name:"4B  EAST STORE",      pin:{x:64.3,y:66}, sees:["n15"],
+        art:"images/cam_10.jpg", pan:{width:122,period:33000,phase:0.4} },
+  C11:{ name:"4C  EAST DOCK",       pin:{x:64.2,y:79.4}, sees:["n17"],
+        art:"images/cam_11.jpg", pan:{width:125,period:30000,phase:3.6} },
+  C12:{ name:"5A  SOUTH OFFICE",    pin:{x:38.9,y:79.3}, sees:["n16"], peek:["nDR"],
+        art:"images/cam_12.jpg", pan:{width:137,period:27000,phase:5.4} },
+  C13:{ name:"6A  SOUTH HALL",      pin:{x:49.7,y:86}, sees:["n25","n18","n19"],
+        art:"images/cam_13.jpg", pan:{width:123,period:43000,phase:2.0} }
+};
+
+/* Where the door actually is in office.jpg, as percentages of the panorama.
+   Measured off the photo: the frame runs x 36.3-44.3, its head beam sits at
+   y 36.5, and the floor is hidden behind the monitor at about y 50.5 — so a
+   figure standing there shows head and shoulders and nothing else. */
+const OFFICE_DOOR = { x:39.4, w:5.6, top:39.3, h:12 };
+
+const OFFICE_ART   = "images/office.jpg";
+const FLOORPLAN_ART= "images/floorplan.png";
+
+/* ---------------------------------------------------------------------------
+   WHERE A BODY STANDS IN EACH SHOT
+
+   Placement is per NODE, not per camera, because a camera that covers two
+   nodes is looking at two different parts of the room — C04 sees both ends of
+   the north hall and they are nowhere near each other in the panorama.
+
+   left/bottom/width are percentages of the FULL panorama, not the screen, so
+   a figure stays nailed to its spot while the camera sweeps past it.
+   flip:true mirrors the sprite so it faces into the room.
+   dim scales brightness — use it for nodes far from the lens.
+
+   Tune these once per photo, with the game running. Anything missing falls
+   back to DEFAULT_SHOT, which is centre-frame and will look wrong on purpose
+   so you notice it.
+--------------------------------------------------------------------------- */
+/* clipT/R/B/L cut percentages off each edge of the sprite, so a figure can sit
+   behind a desk, be swallowed by a door frame, or lean out from a wall showing
+   only half of itself. Cropping happens in the sprite's own space, so it holds
+   as the camera sweeps. */
+const DEFAULT_SHOT = { left:42, bottom:12, width:16, flip:false, dim:1,
+                       clipT:0, clipR:0, clipB:0, clipL:0 };
+
+/* Calibrated in the tool against the real photographs.
+
+   Note n18: it is the only node two cameras look at from genuinely different
+   places — the far end of a corridor on C07, the middle of the room on C13 —
+   so it carries one entry per camera and no plain one. A plain "n18" would
+   mean "n18 as C07 sees it" and would quietly drive C13 as well, which is how
+   the south hall framing was lost once already. Same in SHOTS_UNIT.
+
+   This note lives ABOVE the block rather than inside it because the
+   calibration tool regenerates everything between the braces on write. */
+const SHOTS = {
+  n01 :{ left:40, bottom:14, width:17 },
+  n02 :{ left:44, bottom:14, width:17 },
+  n03 :{ left:38, bottom:14, width:17, flip:true },
+  n04 :{ left:10, bottom:22, width:10, dim:0.7 },
+  n20 :{ left:26, bottom:20, width:12, dim:0.8 },
+  n05 :{ left:44, bottom:17, width:15 },
+  n21 :{ left:62, bottom:15, width:18 },
+  n22 :{ left:76, bottom:13, width:21 },
+  n06 :{ left:36, bottom:13, width:18 },
+  n07 :{ left:46, bottom:14, width:17 },
+  n08 :{ left:44, bottom:12, width:20 },
+  n09 :{ left:40, bottom:15, width:16 },
+  nDR :{ left:42, bottom:12, width:65.9 },
+  nDL :{ left:33, bottom:22, width:18 },
+  n14 :{ left:36, bottom:32, width:12, dim:0.8 },
+  n11 :{ left:38, bottom:40, width:8, dim:0.7 },
+  n10 :{ left:44, bottom:12, width:19 },
+  n16 :{ left:42, bottom:12, width:19, flip:true },
+  n12 :{ left:24, bottom:20, width:13, dim:0.8 },
+  n13 :{ left:58, bottom:14, width:18, flip:true },
+  n15 :{ left:42, bottom:14, width:17 },
+  n17 :{ left:38, bottom:16, width:16 },
+  n25 :{ left:18, bottom:20, width:12, dim:0.8 },
+  n19 :{ left:62, bottom:14, width:18, flip:true },
+  gW  :{ left:31, bottom:54.1, width:2.8, flip:true, dim:0.55, clipR:36, clipB:54, clipL:38 },
+  "n18@C07":{ left:42, bottom:12, width:16 },
+  "n18@C13":{ left:41.5, bottom:23, width:7.5 }
+};
+
+/* ---------------------------------------------------------------------------
+   PER-ANIMATRONIC PLACEMENT
+
+   SHOTS above is the shared placement for a node — where a body stands in that
+   shot. Anything listed here overrides it for one animatronic only, so the two
+   of them can occupy a room differently: the Warden filling a doorway head-on
+   while the Auditor hangs back against the far wall, or one crowding the lens
+   in the hall while the other keeps its distance.
+
+   Only the keys you name are overridden; everything else falls through to
+   SHOTS. Leave a unit's object empty to have it use the shared placement
+   everywhere. The calibration tool writes this block for you.
+--------------------------------------------------------------------------- */
+const SHOTS_UNIT = {
+  warden: {
+    nDR :{ left:42, bottom:12, width:16, clipL:2 },
+    nDL :{ left:40.3, bottom:3.9, width:14 },
+    n01 :{ left:3.9, bottom:-24.6, width:26.2 },
+    n02 :{ left:-5.1, bottom:-56.9, width:31.6 },
+    n03 :{ left:15.9, bottom:8.7, width:12.5, flip:true },
+    n05 :{ left:25.8, bottom:21.3, width:11.7 },
+    n20 :{ left:30.2, bottom:43.4, width:6.5, dim:0.8 },
+    n21 :{ left:34.1, bottom:-6.7, width:18 },
+    n04 :{ left:27.4, bottom:47.6, width:5.4, dim:0.7 },
+    n22 :{ left:7.6, bottom:-129.9, width:56.7 },
+    n07 :{ left:39.6, bottom:9.5, width:13.3 },
+    n08 :{ left:17.6, bottom:-57.2, width:35 },
+    n14 :{ left:38.7, bottom:34.4, width:6.5, dim:0.8 },
+    n11 :{ left:41.9, bottom:-77.2, width:35.5, dim:0.7 },
+    n10 :{ left:62.6, bottom:-29.6, width:14.8 },
+    n12 :{ left:47.7, bottom:31.9, width:5.8, dim:0.8 },
+    n13 :{ left:14.5, bottom:-41.9, width:18, flip:true },
+    n15 :{ left:14.3, bottom:-15.9, width:17 },
+    n17 :{ left:20, bottom:-5.8, width:16 },
+    n16 :{ left:71.6, bottom:-30.7, width:19, flip:true },
+    "n18@C07":{ left:38, bottom:49.7, width:2.2, clipB:52 },
+    "n18@C13":{ left:18.7, bottom:-80.4, width:33.6 },
+    n25 :{ left:69.6, bottom:22.9, width:6.9, dim:0.8 },
+    n19 :{ left:18.2, bottom:24.6, width:6.3, flip:true },
+    n06 :{ left:36, bottom:13, width:18 },
+    n09 :{ left:40, bottom:15, width:16 }
+  },
+  auditor: {
+    nDR :{ left:38.8, bottom:15.3, width:12.6, flip:true },
+    nDL :{ left:39.7, bottom:3.4, width:16, flip:true },
+    n01 :{ left:68.8, bottom:-52.1, width:35.8 },
+    n02 :{ left:-7.3, bottom:-55.2, width:35.8 },
+    n03 :{ left:15.3, bottom:8.7, width:14.1, flip:true },
+    n05 :{ left:25.2, bottom:21.5, width:13.2 },
+    n20 :{ left:29.9, bottom:43.1, width:7.3, dim:0.8 },
+    n21 :{ left:32.8, bottom:-9.4, width:21.7 },
+    n04 :{ left:27.2, bottom:47.1, width:6.1, dim:0.7 },
+    n22 :{ left:38.9, bottom:-130.8, width:60.3 },
+    n07 :{ left:24.2, bottom:5.6, width:17 },
+    n08 :{ left:56, bottom:-3.4, width:24.1 },
+    n14 :{ left:38.2, bottom:35, width:7.3, dim:0.8 },
+    n11 :{ left:42.7, bottom:-64.8, width:37.7, dim:0.7 },
+    n10 :{ left:62.2, bottom:-23.8, width:15.8 },
+    n12 :{ left:47.5, bottom:31.8, width:6.6, dim:0.8 },
+    n13 :{ left:12.2, bottom:-51.3, width:23.1, flip:true },
+    n15 :{ left:55.3, bottom:-21.6, width:21.8 },
+    n17 :{ left:61.3, bottom:-3.2, width:16 },
+    n16 :{ left:20.2, bottom:20.3, width:13.9, flip:true },
+    "n18@C07":{ left:37.6, bottom:47.9, width:3, clipT:2, clipB:54 },
+    "n18@C13":{ left:14.8, bottom:-94, width:43.1 },
+    n25 :{ left:69.1, bottom:22.9, width:7.8, dim:0.8 },
+    n19 :{ left:17.4, bottom:24.3, width:7.6, flip:true },
+    gW  :{ left:30.8, bottom:53.5, width:3.1, dim:0.55, clipR:36, clipB:54, clipL:36 }
+  }
+};
+
+/* A node visible from two cameras needs a placement in each — n18 is down the
+   hall on one feed and across the room on the other. A key of "node@CAM"
+   overrides the plain one, but only on that camera.
+
+   DEFAULT_SHOT < SHOTS[node] < SHOTS[node@cam] < unit[node] < unit[node@cam]
+
+   MIND THE PRECEDENCE. A per-unit PLAIN key outranks a shared node@CAM one,
+   so calibrating a two-camera node without naming the camera silently applies
+   that one framing to both feeds. That is what happened to n18: a pass on the
+   office hall wrote a 2.2%-wide figure at the end of a corridor into the plain
+   key, which then also drove the south hall, where it rendered as a sliver too
+   small to see. Both are now spelled out per camera and neither can overwrite
+   the other. */
+function shotFor(u, node, camId){
+  const per  = SHOTS_UNIT[u.id] || {};
+  const key  = node + "@" + (camId || S.activeCam);
+  return Object.assign({}, DEFAULT_SHOT,
+    SHOTS[node] || {}, SHOTS[key] || {},
+    per[node]  || {}, per[key]  || {});
+}
+
+/* The rooms themselves, traced off the floorplan sketch as percentages. Drawn
+   behind the camera pins so the map reads as a building rather than a scatter
+   of buttons. `hall` shades it; `you` is your office. */
+const ROOMS = [
+  { x1:16.6, y1:1.7, x2:42, y2:12.2, name:"OFFICE 1" },
+  { x1:42.7, y1:1.7, x2:65.3, y2:12.2, name:"OFFICE 2" },
+  { x1:66, y1:2.3, x2:86.1, y2:12.6, name:"OFFICE 3" },
+  { x1:16.6, y1:12.2, x2:87.2, y2:20, name:"NORTH HALL", hall:true },
+  { x1:29.2, y1:20.4, x2:42.7, y2:35.8, name:"OFFICE 4" },
+  { x1:43.1, y1:20.4, x2:60.1, y2:35.8, name:"CENTER" },
+  { x1:74.5, y1:20.4, x2:84, y2:27.3, name:"BATHROOM" },
+  { x1:60.4, y1:29.4, x2:78.6, y2:35.8, name:"SERVER ROOM" },
+  { x1:33.5, y1:35.8, x2:45.8, y2:50.3, name:"OFFICE 5" },
+  { x1:34.4, y1:50.5, x2:45.6, y2:67, name:"YOU", you:true },
+  { x1:33.5, y1:67.7, x2:45.8, y2:82.5, name:"OFFICE 7" },
+  { x1:46.1, y1:35.8, x2:52.9, y2:83.1, name:"HALL", hall:true },
+  { x1:53.2, y1:35.8, x2:69.5, y2:58, name:"BREAK ROOM" },
+  { x1:53.2, y1:58.2, x2:69.5, y2:69.6, name:"OFFICE 6" },
+  { x1:53.2, y1:70.2, x2:69.5, y2:82.5, name:"OFFICE 8" },
+  { x1:28.7, y1:83.1, x2:70.5, y2:96.6, name:"ENGINEERING", hall:true }
+];
+
+/* ---------------------------------------------------------------------------
+   WHO STANDS IN THE DOORWAY, AND WHERE
+
+   Percentages of the doorway opening, not of the panorama. The sprite is far
+   taller than the opening, so a large negative `bottom` is normal — it puts
+   the head in frame and leaves the body below the sill.
+
+   DOOR_SHOTS is shared; DOOR_SHOTS_UNIT overrides it per animatronic, exactly
+   like SHOTS and SHOTS_UNIT. The calibration tool writes both.
+--------------------------------------------------------------------------- */
+const DOOR_SHOTS = {
+  left :{ left:-38.6, bottom:-221.6, width:113.2 },
+  right:{ left:30.3, bottom:-221.6, width:113.2 }
+};
+
+const DOOR_SHOTS_UNIT = {
+  warden: {
+      left :{ left:-39.4, bottom:-213.4, width:100 },
+      right:{ left:41, bottom:-215.7, width:100 }
+  },
+  auditor: {}
+};
+
+function doorShot(u, side){
+  const per = (DOOR_SHOTS_UNIT[u.id] || {})[side];
+  return Object.assign({}, DOOR_SHOTS[side], per || {});
+}
+
+/* Which edge of your office panorama each hall square appears at. If your desk
+   faces the other way, swap these two values. */
+const DOOR_SIDE = { nDL:"left", nDR:"right" };
+
+/* ===========================================================================
+   2. TUNING
+   =========================================================================== */
+
+const CONFIG = {
+  hourMs: 45000,
+  officePan: 0.42,
+  camPan: { width:128, period:33000, reach:0.9 },
+
+  // audio lure. chance = strength * falloff^(rooms between them and the noise)
+  lureCommitMoves: 7,      // a cue that lands carries HER a long way
+  lureCommitWarden: 3,     // he is markedly less biddable
+  lureStrength: 0.92,
+  lureFalloff:  0.60,      // 1 room .55 · 2 rooms .33 · 3 rooms .20 · 4 rooms .12
+  lureHoldMs:   9000,      // how long a cue keeps working
+  lureCooldownMs: 9000,    // she is lethal now, so the tool that steers her
+                           // has to be available when you actually need it.
+                           // Measured at 8000 the relay was still recharging
+                           // on nearly half the arrivals it was needed for.
+  ventLureStrength: 0.40,  // the fans coming back on, pointed at your office
+  sensorMoveCooldownMs: 1200, // debounce, so remounting doesn't spam the chirp
+
+  /* Every time the Warden takes a step the feeds stutter. It tells you
+     something moved without telling you where — and because only he does it,
+     a quiet monitor means the Auditor is the one on the move. */
+  flickerMs: 420,
+  entryStaggerMs: 24000,   // gap between the first and second arrival
+
+  botDwellMs: 1400,        // how long the bot holds a feed before moving on
+  botHuntMs:  9000,        // how long a flicker keeps it hunting the Warden
+  botHuntCooldownMs: 9000, // quiet period after a hunt, so flickers cannot chain
+  botHallCheckMs: 6500,    // how often it glances down the office hall
+  botDoorCheckMs: 850,     // monitor DOWN, eyes on the doorways, after a flicker
+  botWatchMaxMs: 4200,     // longest unbroken hold on the Auditor before the
+                           // stall has decayed far enough to be worth breaking
+  botWatchRestMs: 3000,    // and how long it stays off her, letting it recover
+
+
+  /* Room tone. Fires on a random gap, from a pool that means nothing. Raise
+     ambienceMinMs to quieten the building down. */
+  ambienceMinMs: 26000,
+  ambienceMaxMs: 78000,
+  ambienceScale: [1.0, 0.92, 0.80, 0.66, 0.52, 0.40, .05],  // gaps shrink by night
+  ambienceFirstMs: 20000,
+
+  // the last resort
+  // Reaction, not luck. The moment one of them reaches a door a clock starts,
+  // and where you cut the power inside that window sets your odds. Never
+  // cutting it is always fatal.
+  passByFast: 0.95,        // power already off, or killed the instant they arrived
+  passBySlow: 0.30,        // cut at the last possible moment
+  /* Free reaction time after he arrives, before the odds start decaying. At
+     2200 the flicker told you he had moved, and simply dropping the monitor
+     and hitting the breaker landed inside the window every time — the reflex
+     was free. It now has to be a reflex. */
+  cutGraceMs: 1100,
+  darkCamMs: 5000,         // how long the feeds last on residual power
+  ventAlarmMs: 3600,       // gap between air warnings, tightening as it thins
+  /* A system that has just come back is left alone for a while. Watching the
+     cameras fault again in the second after an eight-second reboot reads as
+     the game cheating rather than as bad luck, and there is nothing to be done
+     about it either way. Faults still arrive on schedule — they just pick
+     something else, or nothing. */
+  faultGraceMs: 15000,
+  passBySteps: 4,          // how many rooms it carries on before settling
+  walkByMs: 2600,          // how long they take to cross your doorway
+  powerRestoreMs: 2600,    // breaker warm-up, so you can't strobe it
+  passOutMs: 6500,         // how long you're face-down when the air runs out
+  passOutO2: 40,           // what you come round with
+  doomMs: 3400,            // dread before the cut, if you're hiding in the monitor
+
+  // air
+  o2Drain: 4.2,            // % per second while ventilation is offline
+  o2Regen: 7.0,
+  /* Long enough that a cycle is a real commitment, short enough that a fault
+     during a bad stretch is a problem you can still solve. */
+  rebootOneMs: 6800,
+  rebootAllMs: 12000
+};
+
+/* Simulated at 6000 runs per night against a player who never plays a cue and
+   never mounts the sensor. These are the values AFTER the intra-night ramp is
+   applied, so they describe a whole night rather than its opening minute:
+
+     night 1 — first knock ~3AM, ~4 arrivals      night 4 — ~1AM, ~14
+     night 2 — ~2AM, ~7                           night 5 — ~1AM, ~18
+     night 3 — ~1AM, ~10                          night 6 — 12AM, ~21
+
+   Arrivals per hour on night 1 run 0.0 · 0.0 · 0.4 · 1.0 · 1.4 · 1.6 — the
+   opening is still quiet, but the last two hours are where it is won or lost.
+
+     enterMs     how long they loiter OUTSIDE before entering.
+     idleChance  odds a movement cycle passes with nothing happening.
+     approach    odds a step is toward you rather than anywhere else.
+     moveMs      base interval, before rhythm, jitter and the ramp.
+     breachMs    your reaction window once something reaches nDL or nDR. */
+const NIGHTS = [
+  /* failEveryMs is longer than it was across the board. The Phantom faults
+     systems too, and two independent sources of the same interruption stack
+     into a night that is nothing but reboots. */
+  { moveMs:9000, approach:0.50, doubleStep:0.32, idleChance:0.34, breachMs:7000, respiteMs:16000, enterMs:44000, failEveryMs:50000, failChance:0.25 },
+  { moveMs:8000, approach:0.57, doubleStep:0.34, idleChance:0.28, breachMs:6600, respiteMs:14000, enterMs:34000, failEveryMs:44000, failChance:0.35 },
+  { moveMs:7000, approach:0.64, doubleStep:0.36, idleChance:0.22, breachMs:6200, respiteMs:12500, enterMs:24000, failEveryMs:37000, failChance:0.48 },
+  { moveMs:6200, approach:0.71, doubleStep:0.38, idleChance:0.16, breachMs:5800, respiteMs:11000, enterMs:15000, failEveryMs:31000, failChance:0.60 },
+  { moveMs:5500, approach:0.78, doubleStep:0.40, idleChance:0.10, breachMs:5400, respiteMs: 9500, enterMs: 9000, failEveryMs:25500, failChance:0.70 },
+  { moveMs:4800, approach:0.84, doubleStep:0.42, idleChance:0.06, breachMs:5000, respiteMs: 9000, enterMs: 5000, failEveryMs:22000, failChance:0.80 },
+
+  /* NIGHT SEVEN. Not a seventh step on the same staircase — the week ends at
+     six and this is the one after it. He moves faster than the base rate has
+     ever been and hardly ever idles, her doorway pause is down to two seconds,
+     the Phantom is on you every twenty-odd, and the breach window is short
+     enough that the breaker has to be muscle memory. It is meant to be beaten
+     rarely. */
+  { moveMs:4100, approach:.95, doubleStep:0.46, idleChance:0.02, breachMs:4300, respiteMs: 7500, enterMs: 2500, failEveryMs:19000, failChance:0.88 }
+];
+
+/* ---------------------------------------------------------------------------
+   THE AUDITOR'S COMMITMENT
+
+   She does not run on a countdown. When she reaches a doorway a meter starts:
+   it rises while you are NOT watching her and falls while you are. Fill it and
+   she comes in. Drain it past zero and she goes away.
+
+   The power cut does nothing to her. Watching is the only thing that does, and
+   watching costs you everything else you could be doing with those seconds —
+   which is the entire reason to open the cameras at all.
+
+   A camera fault gives no protection: the meter keeps rising because you still
+   cannot watch her. The answer is to reboot the array and then hold her, which
+   has to fit inside killMs. Simulated at 6.8s to reboot plus 4s to hold,
+   against 15s on night one down to 10s on night six.
+
+   Verified by simulation over 6000 nights per configuration:
+     a player who never opens the cameras dies on 100% of nights, every night
+     a competent player survives 89% of night 1 falling to 46% of night 6
+     and spends roughly 60% of the night holding a feed
+--------------------------------------------------------------------------- */
+/* Staring at one feed forever was the whole optimal strategy, so it stops
+   working. Hold a unit on screen and its stall decays; look away and it
+   recovers. You cannot park on her — you can only buy stretches of time, and
+   the price of each one is going and doing something else in between. */
+const FATIGUE = {
+  fullMs:   9000,   // continuous watching before the stall is at its weakest
+  floor:    0.28,   // how much of the stall survives at that point
+  recover:  1.7     // how much faster it comes back than it wore off
+};
+
+const AUDITOR = {
+  /* Reaching a doorway is still a crisis. She stands there for a moment first,
+     but an aimed audio cue gives one last chance: if she takes it, she leaves
+     immediately. The Warden never gets this doorway escape. She can still
+     ignore a cue, so prevention and watching remain the safer answers. */
+  /* How long she stands there first. Enough to react once — find the feed,
+     aim it, fire — and not enough to think about it. */
+  doorMs:   [3600, 3400, 3200, 3000, 2800, 2600, 2200],
+
+  /* HER PACE. This is the number that decides whether she is a threat at all.
+
+     It multiplies the night's move interval, and it also carries her rhythm
+     of 1.27, so 6.5 meant a step every 39 SECONDS on night six — around seven
+     for the whole night, against seven rooms of building to cross, before the
+     watch stall slowed her further. A player who watched her at all could
+     finish night six having seen her move once. She was not slow, she was
+     stationary.
+
+     It now tightens across the week instead of loosening, and it is set
+     against her entry time below: she walks in far sooner than she used to, so
+     the interval could come back up a little without giving her the night
+     back. Measured over 120 nights per figure, against a player who never
+     plays a cue:
+
+                                    night 1      night 3      night 6
+       watching her half the night  0.2 knocks   0.9 knocks   2.4 knocks
+       never watching her           0.7 knocks   1.7 knocks   3.7 knocks
+
+     The gap between those two rows is the whole point of the character: what
+     watching buys you, and what ignoring her costs. The autopilot, which
+     watches, cues her out on sight and answers the door, survives 100 · 80 ·
+     63 · 55 · 38 · 18 percent across the six nights, 40 nights each — where
+     before these numbers it could finish night six having seen her move
+     once. */
+  moveMult: [4.2, 4.05, 3.9, 3.8, 3.7, 3.6, 2],
+  approach: 0.95,
+  idleMult: 0.5,
+
+  /* HOW LONG SHE WAITS OUTSIDE.
+
+     Her own figure rather than the night's, because the night's was written
+     for him. She walks slowly and she starts up to seven rooms out, so time
+     spent loitering on the pavement is time subtracted from the only part of
+     her that is interesting — and on the late nights it was subtracting most
+     of it. She also skips the second-arrival stagger now: he is the one who
+     can cross the building in a hurry, so he is the one who should be made to
+     wait his turn. */
+  enterMs:  [26000, 19000, 13000, 8000, 4000, 2000, 1000],
+
+  /* Cutting the mains while she is in a doorway. One roll per arrival, and the
+     cue is worth reaching for first — two rooms out it is 26.5%, next door
+     44%. This is the fallback, not the plan. */
+  darkEscape: 0.18
+};
+
+function auditorCfg(){
+  const h = nightIdx();
+  return { doorMs:AUDITOR.doorMs[h], moveMult:AUDITOR.moveMult[h] };
+}
+
+/* THE NIGHT GETS WORSE AS IT GOES.
+
+   Applied per in-game hour elapsed, so 5AM is meaningfully harder than 12AM on
+   every night. This is what stops a night from being one difficulty repeated
+   six times — the shape of the pressure is what you remember. */
+const RAMP = { approach:0.035, idle:0.030, moveMs:0.035 };
+
+/* The night's numbers with the hour's ramp already folded in. Everything that
+   reads difficulty goes through here, never NIGHTS directly. */
+function tuned(){
+  const n = night(), h = Math.min(5, S.hour);
+  return {
+    moveMs:     n.moveMs * Math.pow(1 - RAMP.moveMs, h),
+    approach:   Math.min(0.95, n.approach + RAMP.approach * h),
+    idleChance: Math.max(0, n.idleChance - RAMP.idle * h),
+    doubleStep: n.doubleStep,
+    breachMs:   n.breachMs,
+    respiteMs:  n.respiteMs
+  };
+}
+
+/* ---------------------------------------------------------------------------
+   THE PAIR
+
+   They answer to different defenses, and you cannot apply both at once. The
+   Warden follows sound, so you handle him with the audio cue. The Auditor is
+   nearly deaf to it but freezes while she is on your active feed — she is
+   handled with attention. Since the monitor shows one camera at a time, and
+   playing a cue means being on the camera you want him to walk to, these two
+   are always competing for the same few seconds of your night.
+
+   Per-unit modifiers, all optional:
+     speedMod        multiplies moveMs. 0.85 = moves 15% more often.
+     approachMod     added to the night's approach chance, then clamped.
+     doubleStepMod   added to the night's double-step chance.
+     lureResist      0-1. How much of an audio cue's pull it ignores.
+     watchStall      0-1. How much its move timer slows while you watch it.
+     passByMod       added to the odds of being walked past in the dark.
+     ghost           never renders on a feed at all. Sound only.
+     flickerOnMove   every feed stutters when this one takes a step.
+     walkBySfx       which crossing sound it makes when it passes your door.
+     moveTell        a sound played on every step, but ONLY while the player
+                     is on the monitor. The audible counterpart to
+                     flickerOnMove — one of them is seen, the other heard.
+     chirp           which sensor tone this one sets off, so a mounted sensor
+                     tells you WHICH of them walked in, not merely that
+                     something did. Low double note = Warden, high triple =
+                     Auditor.
+--------------------------------------------------------------------------- */
+const PAIRS = {
+
+  // A - one answers to sound, one answers to being watched. Recommended.
+  soundAndSight: [
+    { id:"warden",  name:"THE WARDEN",  lureResist:0.05, watchStall:0.00, passByMod:+0.05,
+      flickerOnMove:true, chirp:"sensorA", walkBySfx:"walkByA", enterSfx:"enterA" },
+    { id:"auditor", name:"THE AUDITOR", lureResist:0.20, watchStall:0.85, passByMod:-0.05, speedMod:0.95,
+      moveTell:"tellB",   chirp:"sensorB", walkBySfx:"walkByB", enterSfx:"enterB",
+      commitModel:true }
+  ],
+
+  // B - the two defenses split by body instead: audio vs the power cut.
+  lureAndDark: [
+    { id:"warden",  name:"THE WARDEN",  lureResist:0.05, passByMod:+0.08 },
+    { id:"auditor", name:"THE AUDITOR", lureResist:0.55, passByMod:-0.34, speedMod:0.95 }
+  ],
+
+  // C - one is fast and legible, one is slow and never shows on a feed.
+  loudAndQuiet: [
+    { id:"warden",  name:"THE WARDEN",  speedMod:1.20, approachMod:+0.06 },
+    { id:"auditor", name:"THE AUDITOR", speedMod:0.78, ghost:true, lureResist:0.25 }
+  ],
+
+  // D - mechanically identical. Two bodies, one behaviour.
+  identical: [
+    { id:"warden",  name:"THE WARDEN"  },
+    { id:"auditor", name:"THE AUDITOR" }
+  ]
+};
+
+const ACTIVE_PAIR = "soundAndSight";
+
+const ROSTER = PAIRS[ACTIVE_PAIR].map(u => ({
+  speedMod:1, approachMod:0, doubleStepMod:0, lureResist:0, watchStall:0,
+  passByMod:0, ghost:false, flickerOnMove:false, chirp:"sensorA",
+  walkBySfx:"walkByA", moveTell:null, enterSfx:"enterA", commitModel:false,
+  art:"images/ani_" + u.id + ".png",
+  scare:"images/scare_" + u.id + ".jpg",
+  ...u
+}));
+
+/* What each one does while faulted is in section 6 of the design notes; the
+   panel itself only says which are down. A line of explanation under every row
+   is read once and then skipped forever, and it costs a third of the height of
+   a screen you are reading in a hurry. */
+/* ---------------------------------------------------------------------------
+   THE PHANTOM
+
+   The third one, and the only one that is not on the floorplan. He does not
+   walk, he does not approach, and he cannot kill you. He does not arrive,
+   either — he is ALREADY THERE when you get there. The clock below only
+   decides WHEN he is somewhere: it arms him, and the next camera you open has
+   him in it.
+
+   That is the difference between a jump and a dread. A figure fading in while
+   you watch is something happening to you; a figure already standing in the
+   frame you just opened was true before you looked, and it makes every camera
+   change a small gamble. Change camera again and he is gone. Sit there, or
+   drop the monitor with him still up, and he takes the frame.
+
+   What that costs you is not your life, it is your night: two systems down at
+   once, and a noise in your office loud enough to be worth walking to. He is a
+   tax on watching, which is the one thing the Auditor forces you to do, and
+   his whole function is to make the safest habit in the game cost something.
+
+   showMs   how long you have to change camera once he is up
+   gapMs    quiet time between visits, jittered
+   firstMs  how long into the shift the first one can come
+   lure     how loudly the noise he leaves behind calls to the other two
+--------------------------------------------------------------------------- */
+const PHANTOM = {
+  id:"phantom", name:"THE PHANTOM",
+  art:"images/ani_phantom.png",
+  scare:"images/scare_phantom.jpg",
+  firstMs: [62000, 54000, 46000, 38000, 32000, 26000, 1000],
+  gapMs:   [58000, 50000, 43000, 36000, 30000, 25000, 8000],
+  jitter:  0.45,                     // gaps vary by this much either way
+  showMs:  [1700, 1600, 1450, 1300, 1200, 1050,  850],
+  /* He will not be waiting on the feed you just left, so switching away from
+     him is never punished by finding him again immediately. */
+  noRepeatFeed: true,
+  scareMs: 1100,                     // how long the frame holds
+  lure:    0.62,                     // the noise he leaves in your office
+  lureMs:  7000,
+  /* One system on the early nights, two once you know what he is. The camera
+     system is always one of them: he came in through it. */
+  extraFaultFrom: 3
+};
+
+const SYSTEMS = [
+  { id:"cam",   name:"CAMERA SYSTEM" },
+  { id:"audio", name:"AUDIO RELAY" },
+  { id:"vent",  name:"VENTILATION" }
+];
+
+/* ===========================================================================
+   3. GRAPH MATH — symmetry, distances, pathing
+   =========================================================================== */
+
+const ADJ = {};
+Object.keys(GRAPH).forEach(k => ADJ[k] = new Set(GRAPH[k].edges || []));
+Object.keys(GRAPH).forEach(k => (GRAPH[k].edges || []).forEach(e => {
+  if (!ADJ[e]) { console.warn("edge to unknown node:", e); return; }
+  ADJ[e].add(k);                                   // make every edge two-way
+}));
+Object.keys(ADJ).forEach(k => ADJ[k] = [...ADJ[k]]);
+
+function bfs(start){
+  const d = { [start]:0 }, q = [start];
+  while (q.length){
+    const c = q.shift();
+    for (const nb of ADJ[c]) if (d[nb] === undefined){ d[nb] = d[c] + 1; q.push(nb); }
+  }
+  return d;
+}
+
+const DO = bfs("OFFICE");                          // distance from your office
+const DIST_CACHE = {};
+function distFrom(node){ return DIST_CACHE[node] || (DIST_CACHE[node] = bfs(node)); }
+
+// which nodes nobody can see — a real feature of the floorplan, not a bug
+const BLIND = Object.keys(GRAPH).filter(n =>
+  !GRAPH[n].outside && n !== "OFFICE" &&
+  !Object.values(CAMERAS).some(c => c.sees.includes(n)));
+
+const DOORS   = ADJ["OFFICE"];                     // nodes that open onto you
+const SPAWNS  = Object.keys(GRAPH).filter(n => GRAPH[n].outside);
+
+const pick = a => a[Math.floor(Math.random() * a.length)];
+function shuffled(a){
+  const out = [...a];
+  for (let i = out.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+const walkable = n => n !== "OFFICE" && !GRAPH[n].outside;
+
+/* ===========================================================================
+   4. ART LOADING — every missing file names itself
+   =========================================================================== */
+
+/* Once the panorama is decoded, tell the scene its real shape — so swapping in
+   a differently proportioned photo needs no code change. */
+function fitOfficeScene(img){
+  if (!img.naturalWidth) return;
+  el.officeScene.style.aspectRatio = img.naturalWidth + "/" + img.naturalHeight;
+}
+
+function mountArt(container, src, note){
+  container.innerHTML = "";
+  const img = new Image();
+  img.alt = "";
+  img.style.cssText = "width:100%;height:100%;object-fit:cover;display:block";
+  img.onerror = () => container.innerHTML =
+    '<div class="ph">NO SIGNAL<br>' + src + (note ? "<br>" + note : "") + "</div>";
+  img.src = src;
+  container.appendChild(img);
+  return img;
+}
+
+const phantomSprite = new Image();
+phantomSprite.dataset.ok = "0";
+phantomSprite.onload = () => (phantomSprite.dataset.ok = "1");
+phantomSprite.src = PHANTOM.art;
+
+const sprites = {};
+ROSTER.forEach(a => {
+  const i = new Image();
+  i.dataset.ok = "0";
+  i.onload = () => (i.dataset.ok = "1");
+  i.src = a.art;
+  sprites[a.id] = i;
+});
+
+/* ===========================================================================
+   5. SOUND
+
+   Every cue has a filename AND a synthesized fallback. Drop a real file into
+   images/../sounds and it takes over; leave it out and you still hear
+   something. That means you can ship and playtest before you own a single
+   audio asset, and add them one at a time without touching game logic.
+
+   `pan` is -1 (hard left) to +1 (hard right), which is how footsteps end up
+   coming from the correct doorway.
+   =========================================================================== */
+
+let actx = null, hiss = null, master = null, vent = null;
+const buffers = {};
+
+const SFX = {
+  step:      { src:"sounds/step.wav",       vol:0.35, synth:() => thump(90, .18) },
+  stepClose: { src:"sounds/step_close.wav", vol:0.60, synth:() => thump(62, .28) },
+  atDoor:    { src:"sounds/at_door.wav",    vol:0.55, synth:() => breath() },
+  // one per body. The Warden is weight — a slow scrape that takes its time.
+  // The Auditor is quicker and drier, gone before you place it.
+  walkByA:   { src:"sounds/walk_by_warden.wav",  vol:0.68, synth:() => dragHeavy() },
+  walkByB:   { src:"sounds/walk_by_auditor.wav", vol:0.58, synth:() => dragQuick() },
+  // the Auditor's step, heard only while you're on the monitor
+  /* Room tone. None of these mean anything — that is the point. A building
+     this old makes noise, and not being able to tell which sounds matter is
+     most of what keeps you on the cameras. */
+  ambBox:    { src:"sounds/amb_musicbox.wav", vol:0.26, synth:() => musicBox() },
+  ambKnock:  { src:"sounds/amb_knock.wav",    vol:0.32,
+               synth:() => { tone(150,.14,"sine",.16,70);
+                             setTimeout(()=>tone(138,.17,"sine",.13,62),190); } },
+  ambCreak:  { src:"sounds/amb_creak.wav",    vol:0.30,
+               synth:() => noise(1.5,"bandpass",420,.16,undefined,
+                                 t=>Math.sin(t*Math.PI)*(0.5+0.5*Math.sin(t*11))) },
+  ambPipes:  { src:"sounds/amb_pipes.wav",    vol:0.24,
+               synth:() => noise(2.6,"lowpass",190,.20,undefined,
+                                 t=>Math.sin(t*Math.PI)) },
+  ambSigh:   { src:"sounds/amb_sigh.wav",     vol:0.22,
+               synth:() => noise(1.9,"bandpass",520,.15,undefined,
+                                 t=>Math.pow(Math.sin(t*Math.PI),2)) },
+
+  /* Ventilation warning. Two flat tones, industrial and unpleasant, repeating
+     faster as the air runs down. Not a beep you can ignore. */
+  ventAlarm: { src:"sounds/vent_alarm.wav",   vol:0.50,
+               synth:() => { tone(660,.16,"square",.09);
+                             setTimeout(()=>tone(520,.20,"square",.09),190); } },
+
+  ambDoor:   { src:"sounds/amb_door.wav",     vol:0.30,   // a latch, not close
+               synth:() => { tone(320,.05,"square",.07);
+                             setTimeout(()=>noise(.5,"lowpass",300,.20,undefined,
+                                                  t=>Math.pow(1-t,2)),60); } },
+  ambDrip:   { src:"sounds/amb_drip.wav",     vol:0.26,   // water, patient
+               synth:() => [0,760,1580].forEach((d,i)=>
+                 setTimeout(()=>tone(1400-i*90,.05,"sine",.09,540),d)) },
+  ambChair:  { src:"sounds/amb_chair.wav",    vol:0.28,   // weight off a chair
+               synth:() => noise(1.1,"bandpass",300,.20,undefined,
+                                 t=>Math.sin(t*Math.PI)*(1-t*0.4)) },
+  ambFloor:  { src:"sounds/amb_floor.wav",    vol:0.30,   // one floorboard
+               synth:() => { tone(84,.20,"sine",.16,52);
+                             setTimeout(()=>tone(96,.14,"sine",.10,60),260); } },
+  ambDistant:{ src:"sounds/amb_distant.wav",  vol:0.20,   // a voice, too far off
+               synth:() => { tone(228,.42,"sawtooth",.045,196);
+                             setTimeout(()=>tone(262,.36,"sawtooth",.038,214),380); } },
+
+  tellB:     { src:"sounds/move_auditor.wav",    vol:0.42, synth:() => softTell() },
+
+  /* The moment one of them steps in off the street. Distinct per body, played
+     once a night each, and the only sound in the game that tells you something
+     has definitely started. */
+  enterA:    { src:"sounds/enter_warden.wav",    vol:0.62, synth:() => {
+                 tone(96,.55,"sine",.30,44);
+                 setTimeout(()=>noise(1.4,"lowpass",240,.30,undefined,
+                                      t=>Math.sin(t*Math.PI)),140); } },
+  enterB:    { src:"sounds/enter_auditor.wav",   vol:0.55, synth:() => {
+                 tone(1580,.10,"square",.10);
+                 setTimeout(()=>tone(1180,.09,"square",.09),120);
+                 setTimeout(()=>noise(1.1,"bandpass",900,.22,undefined,
+                                      t=>Math.pow(1-t,1.5)),210); } },
+  cue:       { src:"sounds/audio_cue.wav",  vol:0.50, synth:() => cueChirp() },
+  /* Switching feeds. A relay closing and the new picture arriving — short and
+     dry, because you do it constantly and anything with a tail would turn a
+     sweep of the building into a chord. */
+  camSwitch: { src:"sounds/cam_switch.wav", vol:0.20, synth:() => camClunk() },
+  /* Him arriving on the feed. Not an alarm — a swell of interference, the
+     sound of the picture going wrong, so that the thing you actually react to
+     is the shape and not the cue. */
+  phantomIn: { src:"sounds/phantom_in.wav",  vol:0.45, synth:() => {
+                 noise(0.55,"bandpass",1400,.22,undefined,t=>Math.sin(t*Math.PI)**1.2);
+                 tone(88,.5,"sawtooth",.07,58); } },
+  // and him taking it: shorter and flatter than a death, because you live
+  phantomHit:{ src:"sounds/phantom_hit.wav", vol:0.75, synth:() => {
+                 noise(0.75,"bandpass",900,.42,undefined,t=>(1-t)**1.4);
+                 tone(150,.45,"square",.16,52);
+                 setTimeout(()=>noise(0.5,"lowpass",320,.28,undefined,t=>1-t),140); } },
+  fault:     { src:"sounds/fault.wav",      vol:0.40, synth:() => tone(190,.32,"sawtooth",.14,90) },
+  reboot:    { src:"sounds/reboot.wav",     vol:0.35, synth:() => tone(1250,.09,"square",.07) },
+  breaker:   { src:"sounds/breaker.wav",    vol:0.55, synth:() => tone(120,.3,"sine",.28,38) },
+  hourBell:  { src:"sounds/hour.wav",       vol:0.45, synth:() => { tone(660,.5,"triangle",.13);
+                                                setTimeout(()=>tone(880,.6,"triangle",.13),160); } },
+  scream:    { src:"sounds/scream.wav",     vol:0.90, synth:() => screechSynth() },
+  // one chirp per body, so a single mounted sensor answers two questions at
+  // once: something moved, AND which of them it was. Low falling double note
+  // is the Warden; high rising triple is the Auditor.
+  sensorA:   { src:"sounds/sensor_warden.wav",  vol:0.55, synth:() => { tone(760,.10,"square",.10);
+                                                setTimeout(()=>tone(560,.13,"square",.10),105); } },
+  sensorB:   { src:"sounds/sensor_auditor.wav", vol:0.50, synth:() => { tone(1980,.06,"square",.09);
+                                                setTimeout(()=>tone(2400,.06,"square",.09),70);
+                                                setTimeout(()=>tone(2850,.08,"square",.09),140); } },
+  doom:      { src:"sounds/doom.wav",       vol:0.70, synth:() => doomSynth() },
+  passOut:   { src:"sounds/pass_out.wav",   vol:0.60, synth:() => tone(300,1.6,"sine",.22,40) }
+};
+
+function initAudio(){
+  if (actx) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  actx = new AC();
+  master = actx.createGain(); master.gain.value = 1; master.connect(actx.destination);
+
+  // camera hiss, always synthesized
+  const buf = actx.createBuffer(1, actx.sampleRate, actx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  const src = actx.createBufferSource(); src.buffer = buf; src.loop = true;
+
+  /* Room tone for a monitor, not a burst of white noise. The bright band that
+     made the old hiss abrasive is rolled off above 1.1k, the rumble below 160
+     is cut so it doesn't muddy the footsteps, and the level sits well under
+     everything else — it should be something you stop noticing. */
+  const hp = actx.createBiquadFilter();
+  hp.type = "highpass"; hp.frequency.value = 160;
+  const lp = actx.createBiquadFilter();
+  lp.type = "lowpass";  lp.frequency.value = 1100; lp.Q.value = .3;
+  const tilt = actx.createBiquadFilter();
+  tilt.type = "peaking"; tilt.frequency.value = 3200; tilt.gain.value = -14; tilt.Q.value = .7;
+
+  hiss = actx.createGain(); hiss.gain.value = 0;
+  src.connect(hp).connect(lp).connect(tilt).connect(hiss).connect(master);
+  src.start();
+
+  /* THE AIR.
+
+     What the office sounds like when you are sitting in it: moving air and the
+     blade of the fan under it, low enough to stop hearing after a minute. It
+     belongs to the room, so it plays while you are IN the room — raise the
+     cameras and the monitor's own hiss takes over instead.
+
+     It is also the ventilation telling you it is alive. When that system
+     faults the hum stops, and the silence arrives a good while before the
+     alarm does. */
+  const vsrc = actx.createBufferSource(); vsrc.buffer = buf; vsrc.loop = true;
+  const vhp = actx.createBiquadFilter();
+  vhp.type = "highpass"; vhp.frequency.value = 46;
+  const vlp = actx.createBiquadFilter();
+  vlp.type = "lowpass";  vlp.frequency.value = 200; vlp.Q.value = .5;
+  vent = actx.createGain(); vent.gain.value = 0;
+  vsrc.connect(vhp).connect(vlp).connect(vent).connect(master);
+  vsrc.start();
+  // a faint blade under the air, so it reads as machinery rather than as noise
+  const vosc = actx.createOscillator(), vog = actx.createGain();
+  vosc.type = "triangle"; vosc.frequency.value = 61; vog.gain.value = .085;
+  vosc.connect(vog).connect(vent); vosc.start();
+
+  // try to load every file; silence on failure is fine, the synth covers it
+  Object.entries(SFX).forEach(([name, def]) => {
+    fetch(def.src)
+      .then(r => r.ok ? r.arrayBuffer() : Promise.reject())
+      .then(b => actx.decodeAudioData(b))
+      .then(buf => { buffers[name] = buf; })
+      .catch(() => {/* no file, synth handles it */});
+  });
+}
+
+const setHiss = on => hiss && hiss.gain.setTargetAtTime(on ? .018 : 0, actx.currentTime, .14);
+/* Slower than the hiss on purpose. Air takes a moment to stop moving, and a
+   hum that snapped off would read as a sound effect rather than as a room. */
+const setVentHum = on => vent && vent.gain.setTargetAtTime(on ? .052 : 0, actx.currentTime, .55);
+
+/* Play a named cue. opts: {vol, pan, rate} */
+function play(name, opts){
+  if (!actx) return;
+  const def = SFX[name]; if (!def) return;
+  const o = opts || {};
+
+  if (!buffers[name]){ if (def.synth) def.synth(o); return; }
+
+  const s = actx.createBufferSource();
+  s.buffer = buffers[name];
+  s.playbackRate.value = o.rate || 1;
+  const g = actx.createGain();
+  g.gain.value = (def.vol || .5) * (o.vol === undefined ? 1 : o.vol);
+
+  let tail = g;
+  if (o.pan !== undefined && actx.createStereoPanner){
+    const p = actx.createStereoPanner();
+    p.pan.value = Math.max(-1, Math.min(1, o.pan));
+    g.connect(p); tail = p;
+  }
+  s.connect(g); tail.connect(master);
+  s.start();
+}
+
+/* --- synthesized fallbacks --- */
+function tone(freq, dur, type, vol, slideTo){
+  if (!actx) return;
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = type || "sine";
+  o.frequency.setValueAtTime(freq, actx.currentTime);
+  if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, actx.currentTime + dur);
+  g.gain.setValueAtTime(vol || .18, actx.currentTime);
+  g.gain.exponentialRampToValueAtTime(.0001, actx.currentTime + dur);
+  o.connect(g).connect(master || actx.destination);
+  o.start(); o.stop(actx.currentTime + dur + .05);
+}
+
+function noise(dur, filterType, freq, vol, pan, shape){
+  if (!actx) return;
+  const len = Math.floor(actx.sampleRate * dur);
+  const b = actx.createBuffer(1, len, actx.sampleRate);
+  const d = b.getChannelData(0);
+  for (let i = 0; i < len; i++){
+    const t = i / len;
+    d[i] = (Math.random()*2-1) * (shape ? shape(t) : (1 - t));
+  }
+  const s = actx.createBufferSource(); s.buffer = b;
+  const f = actx.createBiquadFilter(); f.type = filterType; f.frequency.value = freq;
+  const g = actx.createGain(); g.gain.value = vol;
+  let tail = g;
+  if (pan !== undefined && actx.createStereoPanner){
+    const p = actx.createStereoPanner(); p.pan.value = pan; g.connect(p); tail = p;
+  }
+  s.connect(f).connect(g); tail.connect(master || actx.destination);
+  s.start();
+}
+
+const thump = (f, v) => tone(f, .13, "sine", v, f * 0.55);
+const breath = () => noise(1.1, "lowpass", 300, .30, undefined, t => Math.sin(t*Math.PI)**2);
+/* the Warden crossing: long, low, weighted, with a slight rise as it passes */
+/* An original eight-note figure on a detuned box. Slightly flat, slightly
+   uneven, and it stops one note before it resolves. */
+function musicBox(){
+  if (!actx) return;
+  const notes = [784, 659, 523, 659, 587, 494, 440, 523];
+  notes.forEach((f, i) => {
+    const t = actx.currentTime + i * 0.34;
+    const detune = 1 - 0.012 * Math.sin(i * 1.7);       // wow and flutter
+    [0, 1].forEach(h => {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = h ? "sine" : "triangle";
+      o.frequency.value = f * detune * (h ? 2 : 1);
+      g.gain.setValueAtTime(.0001, t);
+      g.gain.exponentialRampToValueAtTime(h ? .022 : .05, t + .012);
+      g.gain.exponentialRampToValueAtTime(.0001, t + (h ? .5 : .95));
+      o.connect(g).connect(master || actx.destination);
+      o.start(t); o.stop(t + 1.0);
+    });
+  });
+}
+
+const dragHeavy = () => {
+  noise(1.9, "lowpass", 300, .40, undefined, t => Math.sin(t*Math.PI) ** 0.7);
+  setTimeout(() => tone(74, .5, "sine", .16, 52), 420);
+};
+/* the Auditor crossing: shorter, drier, higher, over before you locate it */
+const dragQuick = () => {
+  noise(0.85, "bandpass", 1250, .30, undefined, t => Math.sin(t*Math.PI) ** 1.6);
+  setTimeout(() => noise(0.4, "highpass", 2600, .16, undefined, t => 1-t), 260);
+};
+/* one Auditor step. Soft on purpose — a hint, not an alarm. */
+const softTell = () => {
+  noise(0.16, "bandpass", 900, .16, undefined, t => (1-t) ** 2);
+  setTimeout(() => tone(392, .13, "triangle", .045), 40);
+};
+const cueChirp = () => { tone(520,.22,"triangle",.12,760); setTimeout(()=>tone(430,.3,"triangle",.1,300),200); };
+/* THE FEED CHANGING.
+
+   Three of them, because it is the sound you will hear more than any other in
+   the game and the right one is a matter of taste rather than of argument.
+   Change CAM_SWITCH to audition:
+
+     "relock"  the default now. A tape head finding the new picture: a short
+               downward whoop of filtered noise with a soft click under it. No
+               mechanism, no clack — it belongs to the signal rather than to
+               the switch, which is what everything else on the monitor sounds
+               like.
+     "relay"   the previous one. A contact closing, then the picture landing.
+               Drier and more mechanical.
+     "tick"    barely there. One damped click and a breath of tape hiss, for
+               when the sweep starts to grate after an hour of play. */
+const CAM_SWITCH = "relock";
+
+const camSwitchFx = {
+  /* noise swept down through a bandpass reads as the picture re-locking. The
+     click is at the START, so the sound follows the button rather than
+     announcing itself after it. */
+  relock(){
+    if (!actx) return;
+    const b = actx.createBuffer(1, actx.sampleRate * 0.26, actx.sampleRate);
+    const d = b.getChannelData(0);
+    for (let i = 0; i < d.length; i++){
+      const t = i / d.length;
+      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 1.7);
+    }
+    const s = actx.createBufferSource(); s.buffer = b;
+    const f = actx.createBiquadFilter();
+    f.type = "bandpass"; f.Q.value = 3.2;
+    f.frequency.setValueAtTime(2600, actx.currentTime);
+    f.frequency.exponentialRampToValueAtTime(420, actx.currentTime + 0.22);
+    const g = actx.createGain(); g.gain.value = 0.16;
+    s.connect(f).connect(g).connect(master || actx.destination);
+    s.start();
+    tone(320, .03, "sine", .022, 190);
+  },
+  relay(){
+    tone(184,.05,"square",.026,124);
+    noise(0.14,"highpass",1900,.040,undefined,t=>(1-t)**2);
+  },
+  tick(){
+    tone(240,.025,"sine",.020,150);
+    noise(0.09,"bandpass",2400,.030,undefined,t=>(1-t)**2.5);
+  }
+};
+
+const camClunk = () => (camSwitchFx[CAM_SWITCH] || camSwitchFx.relock)();
+/* the few seconds before it reaches you: a rising bed of noise under a
+   detuned pair of tones, so it reads as approach rather than as an alarm */
+function doomSynth(){
+  if (!actx) return;
+  noise(3.2, "lowpass", 220, .30, undefined, t => t * t);
+  [58, 61].forEach((f, i) => {
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = "sawtooth"; o.frequency.value = f;
+    g.gain.setValueAtTime(.0001, actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(.16, actx.currentTime + 2.6);
+    g.gain.exponentialRampToValueAtTime(.0001, actx.currentTime + 3.3);
+    o.connect(g).connect(master || actx.destination);
+    o.start(); o.stop(actx.currentTime + 3.4);
+  });
+}
+
+const screechSynth = () => {
+  if (!actx) return;
+  const b = actx.createBuffer(1, actx.sampleRate*1.1, actx.sampleRate);
+  const d = b.getChannelData(0);
+  for (let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length);
+  const s=actx.createBufferSource(); s.buffer=b;
+  const f=actx.createBiquadFilter(); f.type="bandpass"; f.Q.value=1.4;
+  f.frequency.setValueAtTime(2800, actx.currentTime);
+  f.frequency.exponentialRampToValueAtTime(320, actx.currentTime+1);
+  const g=actx.createGain(); g.gain.value=.5;
+  s.connect(f).connect(g).connect(master||actx.destination); s.start();
+};
+
+/* Named helpers used by the game, so call sites stay readable. */
+const chime   = () => play("hourBell");
+const clunk   = () => play("breaker");
+const buzz    = () => play("fault");
+const blip    = () => play("reboot");
+const lureFx  = () => play("cue");
+const screech = () => play("scream");
+
+/* A footstep somewhere in the building. Quieter the further out it is, and
+   panned toward whichever door that route leads to. */
+function footstep(u){
+  const d = DO[u.node];
+  if (d === undefined || d > 4) return;
+  const near = d <= 1;
+  play(near ? "stepClose" : "step", {
+    vol: Math.max(.12, 1 - (d - 1) * 0.26),
+    pan: sideOf(u.node) === "left" ? -0.7 : 0.7,
+    rate: 0.92 + Math.random() * 0.16
+  });
+}
+
+function scrape(u){
+  play("atDoor", { pan: u && sideOf(u.node) === "left" ? -0.6 : 0.6 });
+}
+
+/* ===========================================================================
+   6. STATE
+   =========================================================================== */
+
+const S = {
+  running:false, night:1, hour:0, hourAcc:0, ventHum:false,
+  monUp:false, panelOpen:false, activeCam:"C04",
+  power:true, powerBackAt:0,
+  o2:100,
+  units:[], sys:{}, lure:null, lureReadyAt:0,
+  failAcc:0, lastFrame:0, raf:null, breathAcc:0, flicker:0, ambAcc:0,
+  darkCamAcc:0, boxPlayed:false, ventAlarmAcc:0, transitUntil:0, hallucAcc:0,
+  sensorOn:null,          // camera id the motion sensor is mounted on
+  sensorAcc:0,
+  passedOut:0,            // ms remaining face-down
+  phantom:null,           // {at, acc} — he is on the feed right now
+  phantomAcc:0,           // time until he is somewhere again
+  phantomArmed:false,     // he is somewhere: the next feed you open is it
+  phantomLeft:null,       // the feed you just walked away from him on
+  phantomScare:0,         // ms left of his frame
+  shownSecs:-1,           // last whole second painted on the shift timer
+  doom:null               // {unit, acc} - the kill is coming, you just can't see it
+};
+
+const $ = id => document.getElementById(id);
+const el = {
+  officeScene:$("officeScene"), officeArt:$("officeArt"), shiftTimer:$("shiftTimer"),
+  monitor:$("monitor"), camFeed:$("camFeed"), camBox:$("camBox"),
+  camPan:$("camPan"), camArt:$("camArt"),
+  camName:$("camName"), mapPlan:$("mapPlan"),
+  audioBtn:$("audioBtn"), sensorBtn:$("sensorBtn"),
+  sysList:$("sysList"), panel:$("panel"),
+  clockHour:$("clockHour"), nightLabel:$("nightLabel"),
+  alerts:$("alerts"),
+  title:$("titleScreen"), lose:$("loseScreen"), win:$("winScreen"),
+  scare:$("scare"), scareArt:$("scareArt"),
+  loseNote:$("loseNote"), winNote:$("winNote"),
+  monBtn:$("monBtn"), panelBtn:$("panelBtn"), powerBtn:$("powerBtn")
+};
+const night = () => NIGHTS[nightIdx()];
+/* Every per-night table is indexed through here. It used to be a hard-coded
+   Math.min(5, ...) in five places, which is exactly the sort of thing that
+   silently keeps a seventh night running on the sixth night's numbers. */
+const nightIdx = () => Math.min(NIGHTS.length - 1, S.night - 1);
+
+/* Deliberately not a round ratio — 1 : 1.27 drifts continuously instead of
+   re-syncing every few cycles the way 1 : 1.25 would. */
+const ROSTER_RHYTHM = [1.00, 1.27];
+
+/* ===========================================================================
+   7. BUILD THE UI
+   =========================================================================== */
+
+function makeNoise(){
+  const c = document.createElement("canvas"); c.width = c.height = 90;
+  const g = c.getContext("2d"), d = g.createImageData(90, 90);
+  for (let i = 0; i < d.data.length; i += 4){
+    const v = Math.random() * 255;
+    d.data[i] = d.data[i+1] = d.data[i+2] = v; d.data[i+3] = 255;
+  }
+  g.putImageData(d, 0, 0);
+  document.documentElement.style.setProperty("--noise", "url(" + c.toDataURL() + ")");
+}
+
+/* Push OFFICE_DOOR into CSS custom properties so the doorway box, the sprite
+   clip and the glow all read from one measurement. */
+function applyDoorVars(){
+  const r = document.documentElement.style;
+  r.setProperty("--door-x",   OFFICE_DOOR.x + "%");
+  r.setProperty("--door-w",   OFFICE_DOOR.w + "%");
+  r.setProperty("--door-top", OFFICE_DOOR.top + "%");
+  r.setProperty("--door-h",   OFFICE_DOOR.h + "%");
+}
+
+function buildMap(){
+  el.mapPlan.querySelectorAll(".camPin,.room").forEach(n => n.remove());
+
+  const probe = new Image();
+  probe.onload  = () => { document.documentElement.style.setProperty("--plan","url("+FLOORPLAN_ART+")");
+                          el.mapPlan.classList.remove("noplan"); };
+  probe.onerror = () => el.mapPlan.classList.add("noplan");
+  probe.src = FLOORPLAN_ART;
+
+  // rooms first, so the buttons sit on top of them
+  ROOMS.forEach(r => {
+    const d = document.createElement("div");
+    d.className = "room" + (r.hall ? " hall" : "") + (r.you ? " you" : "");
+    d.dataset.room = r.name;
+    d.style.left = r.x1 + "%"; d.style.top = r.y1 + "%";
+    d.style.width = (r.x2 - r.x1) + "%"; d.style.height = (r.y2 - r.y1) + "%";
+    d.innerHTML = "<i>" + r.name + "</i>";
+    el.mapPlan.appendChild(d);
+  });
+
+  Object.entries(CAMERAS).forEach(([id, cam]) => {
+    const b = document.createElement("button");
+    b.className = "camPin"; b.dataset.cam = id;
+    b.textContent = cam.name.trim().split(/\s+/)[0];
+    b.title = cam.name;
+    b.style.left = cam.pin.x + "%"; b.style.top = cam.pin.y + "%";
+    b.addEventListener("click", e => { e.stopPropagation(); viewCam(id); });
+    el.mapPlan.appendChild(b);
+  });
+
+
+}
+
+function buildPanel(){
+  el.sysList.innerHTML = "";
+  SYSTEMS.forEach(s => {
+    const row = document.createElement("div");
+    row.className = "sysRow"; row.id = "sys_" + s.id;
+    row.innerHTML =
+      '<div class="sysHead"><span class="sysName">' + s.name + '</span>' +
+      '<span class="sysState">NOMINAL</span></div>' +
+      '<button class="rebootBtn" data-sys="' + s.id + '">REBOOT</button>' +
+      '<div class="bar"><i></i></div>';
+    row.querySelector("button").addEventListener("click", e => {
+      e.stopPropagation(); reboot([s.id]);
+    });
+    el.sysList.appendChild(row);
+  });
+  $("rebootAll").addEventListener("click", e => {
+    e.stopPropagation(); reboot(SYSTEMS.map(s => s.id), true);
+  });
+}
+
+/* ===========================================================================
+   8. NIGHT SETUP
+   =========================================================================== */
+
+/* How long one of them loiters outside before the first step. Note that a step
+   still costs a full move interval on top of this, which for her is the better
+   part of half a minute — so her delay is a floor on when she starts walking,
+   not on when she is first seen. */
+function entryDelay(u, i){
+  if (u.commitModel)
+    return AUDITOR.enterMs[nightIdx()] + Math.random() * 4000;
+  return night().enterMs + i * CONFIG.entryStaggerMs + Math.random() * 6000;
+}
+
+function startNight(n){
+  S.running = true; S.night = n; S.hour = 0; S.hourAcc = 0;
+  S.monUp = false; S.panelOpen = false; S.panelTab = false; S.power = true; S.powerBackAt = 0;
+  S.o2 = 100; S.lure = null; S.lureReadyAt = 0; S.failAcc = 0; S.breathAcc = 0;
+  S.sensorOn = null; S.sensorAcc = 0; S.passedOut = 0; S.doom = null; S.flicker = 0;
+  S.ambAcc = CONFIG.ambienceFirstMs; S.darkCamAcc = 0; S.boxPlayed = false;
+  S.shownSecs = -1;
+  S.transitUntil = 0; S.hallucAcc = hallucinationGap();
+  S.phantom = null; S.phantomScare = 0;
+  S.phantomArmed = false; S.phantomLeft = null;
+  S.phantomAcc = PHANTOM.firstMs[nightIdx()] * (0.8 + Math.random() * 0.4);
+  hidePhantom();
+  S.activeCam = "C04";
+
+  S.sys = {};
+  SYSTEMS.forEach(s => S.sys[s.id] = { ok:true, reboot:0, total:0, safeUntil:0 });
+
+  // Two roamers, dropped at distinct outside markers. A Fisher–Yates shuffle
+  // gives all three entrances an equal chance instead of favouring list order.
+  const spots = shuffled(SPAWNS);
+  S.units = ROSTER.slice(0, 2).map((a, i) => ({
+    ...a,
+    node: spots[i % spots.length],
+    // Out of step on purpose. Each one carries its own rhythm multiplier and
+    // re-jitters after every move, so they never settle into lockstep and you
+    // can't learn one clock and get both for free.
+    rhythm: ROSTER_RHYTHM[i % ROSTER_RHYTHM.length],
+    jitter: 1,
+    // They do not walk in together. The second hangs back by a good margin, so
+    // the first half of a night has one thing in the building, not two.
+    acc: -entryDelay(a, i),
+    breaching:false, breachAcc:0, commit:0, respite:0, lastLure:0, darkTried:false,
+    lureTarget:null, lureMoves:0, watchAcc:0,
+    cutFrac:null, seenBySensor:false
+  }));
+
+  /* Whatever killed you is not still standing there when you clock back in.
+     The .present class survives a death — nothing clears it until the first
+     render of the new night — and the fade-out is 400 ms long, so the new
+     shift opened on a figure in your doorway quietly dissolving. Cleared here,
+     with the transition suppressed for one frame so it goes rather than
+     fades. */
+  ["left","right"].forEach(side => {
+    const box = doorEl(side); if (!box) return;
+    box.classList.remove("present","walkby");
+    const img = box.querySelector(".lurker");
+    if (!img) return;
+    img.style.transition = "none";
+    void img.offsetWidth;
+    requestAnimationFrame(() => { img.style.transition = ""; });
+  });
+
+  [el.title, el.lose, el.win, el.scare].forEach(s => s.classList.remove("show"));
+  document.body.classList.remove("camsup","dark","ventbad","camdown","paneltab",
+                                "warn-left","warn-right","flicker","out","doom","atdoor");
+  el.monitor.classList.remove("up");
+
+  const oimg = mountArt(el.officeArt, OFFICE_ART, "(wide panorama from your desk)");
+  if (oimg){ oimg.addEventListener("load", () => fitOfficeScene(oimg)); fitOfficeScene(oimg); }
+  applyDoorVars();
+  el.nightLabel.textContent = "NIGHT " + n;
+  syncChrome();
+
+  S.lastFrame = performance.now();
+  cancelAnimationFrame(S.raf);
+  S.raf = requestAnimationFrame(loop);
+}
+
+/* ===========================================================================
+   9. PLAYER ACTIONS
+   =========================================================================== */
+
+const rebootActive = () => SYSTEMS.some(s => S.sys[s.id].reboot > 0);
+
+/* Walking away mid-cycle aborts it. The system stays broken and the clock goes
+   back to zero, so a reboot is a commitment rather than something you start and
+   wander off from. */
+function cancelReboots(){
+  let any = false;
+  SYSTEMS.forEach(s => {
+    const st = S.sys[s.id];
+    if (st.reboot > 0){ st.reboot = 0; st.total = 0; st.ok = false; any = true; }
+  });
+  if (any) buzz();
+  el.panel.classList.remove("held");
+}
+
+function toggleMonitor(){
+  if (!S.running || S.passedOut > 0 || S.doom) return;
+  // With the mains off the feeds run on whatever is left in the line. They
+  // work briefly, then they do not — and you cannot fix them until it is back.
+  if (!S.power && !S.sys.cam.ok) return;
+  if (rebootActive()) return;                 // pinned to the panel until it finishes
+  // Opening the monitor from the office must close the panel in the same
+  // action. Otherwise its visual state waits for the next pointer movement.
+  if (!S.monUp && S.panelTab){
+    S.panelTab = false; S.panelOpen = false;
+    document.body.classList.remove("paneltab");
+  }
+  S.monUp = !S.monUp;
+  if (!S.monUp){                              // dropping the monitor closes the page too
+    S.panelTab = false; S.panelOpen = false;
+    document.body.classList.remove("paneltab");
+  }
+  el.monitor.classList.toggle("up", S.monUp);
+  document.body.classList.toggle("camsup", S.monUp);
+  setHiss(S.monUp);
+  if (S.monUp) viewCam(S.activeCam);
+  syncChrome();
+}
+
+/* The panel is now a page of the monitor. Opening it requires the monitor to
+   be up, and leaving it aborts anything mid-cycle. */
+function togglePanel(){
+  if (!S.running || !S.power || S.passedOut > 0 || S.doom) return;
+  if (S.panelTab && rebootActive()) cancelReboots();
+  // Drop the monitor FIRST. Lowering it clears the panel flag, so setting the
+  // flag before lowering was immediately undoing itself — the panel opened and
+  // shut in the same frame.
+  if (!S.panelTab && S.monUp) toggleMonitor();
+  S.panelTab = !S.panelTab;
+  S.panelOpen = S.panelTab;
+  document.body.classList.toggle("paneltab", S.panelTab);
+  syncChrome();
+}
+
+function togglePower(){
+  if (!S.running || S.passedOut > 0) return;
+  if (!S.power && performance.now() < S.powerBackAt) return;   // still warming up
+  S.power = !S.power;
+  clunk();
+  if (!S.power){
+    // Killing the mains kills anything mid-cycle with it. This is also your way
+    // out of a reboot you no longer have time to finish.
+    cancelReboots();
+    // Anyone already at a door has their fate decided by how fast this was.
+    S.units.forEach(u => {
+      /* She is unmoved by the mains going off. For him, the first stretch after
+         he arrives is free — reacting at all is the skill, not reacting inside
+         200ms. Only after the grace does hesitation start costing you odds. */
+      if (u.breaching && !u.commitModel && u.cutFrac === null){
+        const win = tuned().breachMs, grace = CONFIG.cutGraceMs;
+        u.cutFrac = Math.max(0, Math.min(1,
+          (u.breachAcc - grace) / Math.max(1, win - grace)));
+      }
+    });
+
+    /* THE LONG SHOT.
+
+       The lights still mean nothing to her in the way they mean something to
+       him — there is no window, no decay curve, no reward for reacting fast.
+       There is one roll, taken once per arrival so the breaker cannot be
+       flicked for a second one, and it usually fails. What it is for is the
+       moment you have nothing else: the relay is down, or the cue is still
+       recharging, and the alternative is standing there doing nothing.
+
+       Aiming a cue at a feed near her is still the answer worth reaching for
+       first, at better than twice these odds. */
+    S.units.forEach(u => { if (u.breaching && u.commitModel) darkRoll(u); });
+    // the monitor stays available — on residual power, and not for long
+    S.panelOpen = false; S.panelTab = false;
+    document.body.classList.remove("paneltab");
+    S.powerBackAt = performance.now() + CONFIG.powerRestoreMs;
+  }
+  document.body.classList.toggle("dark", !S.power);
+  syncChrome();
+}
+
+/* Point-in-rectangle, so a node's room is derived rather than hand-listed. */
+function roomOf(node){
+  const g = GRAPH[node]; if (!g) return null;
+  return ROOMS.find(r => g.x >= r.x1 && g.x <= r.x2 && g.y >= r.y1 && g.y <= r.y2) || null;
+}
+
+function litRooms(camId){
+  const names = new Set();
+  (CAMERAS[camId].sees || []).forEach(n => { const r = roomOf(n); if (r) names.add(r.name); });
+  return names;
+}
+
+function viewCam(id){
+  // The sound is for CHANGING feed, so raising the monitor onto the camera you
+  // were already on stays silent — that action has the hiss coming up instead.
+  const changed = S.activeCam !== id;
+  S.activeCam = id;
+  if (changed && S.monUp && S.sys.cam.ok) play("camSwitch");
+  const cam = CAMERAS[id];
+  el.camName.textContent = cam.name;
+  el.camPan.style.width = (cam.pan.width || CONFIG.camPan.width) + "%";
+  mountArt(el.camArt, cam.art, "");
+  el.camArt.querySelector("img")?.classList.add("feed");
+  updateCamPan();
+  drawSubjects(true);
+  el.mapPlan.querySelectorAll(".camPin").forEach(b =>
+    b.classList.toggle("active", b.dataset.cam === id));
+  // shade whichever rooms this feed actually covers
+  const lit = litRooms(id);
+  el.mapPlan.querySelectorAll(".room").forEach(r =>
+    r.classList.toggle("lit", lit.has(r.dataset.room) && !r.classList.contains("you")));
+
+  // whatever was already on this feed before you opened it
+  phantomOnEntry();
+}
+
+function playCue(){
+  if (!S.running || !S.power || !S.monUp) return;
+  if (!S.sys.audio.ok) { buzz(); return; }
+  if (performance.now() < S.lureReadyAt) { buzz(); return; }
+
+  setLure(CAMERAS[S.activeCam].sees, CONFIG.lureStrength, CONFIG.lureHoldMs,
+          S.activeCam, true);
+  offerLure();                       // decided the moment it plays, not later
+  S.lureReadyAt = performance.now() + CONFIG.lureCooldownMs;
+  lureFx();
+
+  el.audioBtn.classList.add("firing");
+  setTimeout(() => el.audioBtn.classList.remove("firing"), 400);
+}
+
+function reboot(ids, all){
+  if (!S.running || !S.power) return;
+  // One cycle at a time. Three faults means three waits, or one long one.
+  if (rebootActive()) { buzz(); return; }
+  const ms = all ? CONFIG.rebootAllMs : CONFIG.rebootOneMs;
+  let started = false;
+  ids.forEach(id => {
+    const s = S.sys[id];
+    if (s.reboot > 0) return;              // already cycling
+    s.reboot = ms; s.total = ms; s.ok = false;
+    started = true;
+  });
+  if (!started) return;
+  blip();
+
+  /* Ventilation doesn't come back quietly. The fans spin up right over your
+     head, and that noise is coming from exactly where you are — a cue you
+     didn't choose to play, pointed at yourself. */
+  if (ids.includes("vent")){
+    setLure(["OFFICE"],
+            all ? CONFIG.ventLureStrength * 1.35 : CONFIG.ventLureStrength,
+            all ? CONFIG.rebootAllMs : CONFIG.rebootOneMs);
+    offerLure();
+  }
+}
+
+/* --- wiring --- */
+el.monBtn.onclick   = e => { e.stopPropagation(); toggleMonitor(); };
+el.panelBtn.onclick = e => { e.stopPropagation(); togglePanel(); };
+el.powerBtn.onclick = e => { e.stopPropagation(); togglePower(); };
+el.audioBtn.onclick  = e => { e.stopPropagation(); playCue(); };
+el.sensorBtn.onclick = e => { e.stopPropagation(); mountSensor(S.activeCam); };
+
+/* The picker exists on all three start-from screens, so there is never a state
+   where you have to lose on purpose to get back to the one you wanted. */
+const PICKERS = ["pickTitle", "pickLose", "pickWin"];
+
+function buildPickers(){
+  PICKERS.forEach(id => {
+    const host = $(id);
+    host.innerHTML = "<span>NIGHT</span>";
+    for (let n = 1; n <= NIGHTS.length; n++){
+      const b = document.createElement("button");
+      b.textContent = n;
+      b.dataset.night = n;
+      b.onclick = e => { e.stopPropagation(); S.night = n; markPickers(); };
+      host.appendChild(b);
+    }
+  });
+  markPickers();
+}
+
+function markPickers(){
+  PICKERS.forEach(id => $(id).querySelectorAll("button").forEach(b =>
+    b.classList.toggle("on", +b.dataset.night === S.night)));
+  el.nightLabel.textContent = "NIGHT " + S.night;
+}
+
+const clockIn = () => { initAudio(); startNight(S.night); };
+$("btnStart").onclick = clockIn;
+$("btnRetry").onclick = clockIn;
+$("btnNext").onclick  = clockIn;
+
+addEventListener("keydown", e => {
+  // N reveals the night picker, but only while a screen is up, never mid-shift
+  if (!S.running && (e.key === "n" || e.key === "N")){
+    document.body.classList.toggle("pickNights");
+    return;
+  }
+  if (e.repeat || !S.running) return;
+  const k = e.key.toLowerCase();
+  if (k === " "){ e.preventDefault(); toggleMonitor(); }
+  else if (k === "c") togglePanel();
+  else if (k === "x") togglePower();
+  else if (k === "f") playCue();
+  else if (k === "m" && S.monUp) mountSensor(S.activeCam);
+  else if (k === "b") toggleBot();
+});
+
+/* ---------------------------------------------------------------------------
+   REACHING FOR THINGS
+
+   Bottom edge raises and lowers the monitor; right edge opens the panel. Both
+   need the cursor to LEAVE the strip before they will fire again, otherwise
+   resting there would strobe the monitor.
+--------------------------------------------------------------------------- */
+const EDGE = { inBottom:false, armedRight:true };
+
+addEventListener("mousemove", e => {
+  if (!S.running) return;
+
+  if (TOUCH.used) return;                 // a finger is not a hover
+  // A tenth of the screen was enough to swallow a reach for the power switch
+  const nearBottom = e.clientY > innerHeight * 0.955;
+  const nearRight  = e.clientX > innerWidth  * 0.94;
+
+  /* Anything you might be reaching FOR is not part of the strip. The floorplan
+     hangs into the bottom of the screen, and losing the monitor every time you
+     go for one of the lower camera buttons was maddening. */
+  /* The monitor button is deliberately NOT excluded: sliding down onto it
+     should raise the cameras, which is what you were reaching for anyway. The
+     power switch and the panel button are, because hitting those by accident
+     is how you lose a night. */
+  const overUI = !!(e.target && e.target.closest &&
+    e.target.closest("#map, #audioBtn, #sensorBtn, #camLabel, #panel, #powerBtn, #panelBtn"));
+
+  document.body.classList.toggle("nearBottom", nearBottom && !overUI && !S.monUp && !S.panelOpen);
+  document.body.classList.toggle("nearRight",  nearRight  && !overUI && !S.monUp && !S.panelOpen);
+
+  // Fire on the CROSSING into the strip, and only over dead space. Sitting on
+  // a button counts as "already inside", so sliding off it will not re-trigger.
+  if (nearBottom && !EDGE.inBottom && !overUI) toggleMonitor();
+  EDGE.inBottom = nearBottom || overUI;
+
+  // right strip in the OFFICE opens the panel
+  if (nearRight && !S.monUp && !overUI){
+    if (EDGE.armedRight){ EDGE.armedRight = false; if (!S.panelTab) togglePanel(); }
+  } else if (!nearRight) EDGE.armedRight = true;
+
+  // stepping back off the page closes it — and aborts anything mid-cycle
+  if (S.panelTab){
+    const edge = innerWidth - el.panel.offsetWidth - 30;
+    if (e.clientX < edge) togglePanel();
+  }
+});
+
+/* Looking around. On a mouse the office follows the cursor; on a touch screen
+   you drag it, because there is no hover to follow. */
+function lookAt(fraction){
+  const travel = el.officeScene.offsetWidth - innerWidth;
+  el.officeScene.style.transform =
+    "translateX(" + (-fraction*travel*CONFIG.officePan - travel*(1-CONFIG.officePan)/2) + "px)";
+}
+
+addEventListener("mousemove", e => {
+  if (S.monUp || TOUCH.used) return;
+  lookAt(e.clientX / innerWidth);
+});
+
+/* ---------------------------------------------------------------------------
+   TOUCH
+
+   Everything the mouse does by hovering needs a deliberate equivalent: drag to
+   look, swipe up from the bottom for the monitor, swipe down to drop it, swipe
+   in from the right edge for the panel. Every button is already a real button,
+   so those need nothing.
+--------------------------------------------------------------------------- */
+/* Adopt the touch layout up front rather than waiting for the first tap, or
+   the opening seconds are laid out for a mouse that will never arrive. */
+if (matchMedia("(pointer:coarse)").matches || navigator.maxTouchPoints > 0)
+  document.body.classList.add("touch");
+
+const TOUCH = { used:false, x:0, y:0, look:0.5, moved:false, onUI:false };
+
+addEventListener("touchstart", e => {
+  TOUCH.used = true;
+  document.body.classList.add("touch");
+  const t = e.touches[0];
+  TOUCH.x = t.clientX; TOUCH.y = t.clientY; TOUCH.moved = false;
+  TOUCH.onUI = !!(e.target && e.target.closest &&
+    e.target.closest("button, #map, #panel, .screen"));
+}, {passive:true});
+
+addEventListener("touchmove", e => {
+  if (!S.running || TOUCH.onUI) return;
+  const t = e.touches[0];
+  const dx = t.clientX - TOUCH.x, dy = t.clientY - TOUCH.y;
+  if (Math.abs(dx) > 6 || Math.abs(dy) > 6) TOUCH.moved = true;
+
+  // drag the room around when the monitor is down
+  if (!S.monUp && Math.abs(dx) > Math.abs(dy)){
+    TOUCH.look = Math.max(0, Math.min(1, TOUCH.look - dx / innerWidth * 1.4));
+    TOUCH.x = t.clientX;
+    lookAt(TOUCH.look);
+  }
+}, {passive:true});
+
+addEventListener("touchend", e => {
+  if (!S.running || TOUCH.onUI) return;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - TOUCH.x, dy = t.clientY - TOUCH.y;
+
+  // a decisive vertical swipe raises or drops the monitor
+  if (Math.abs(dy) > 60 && Math.abs(dy) > Math.abs(dx)){
+    if (dy < 0 && !S.monUp) toggleMonitor();
+    else if (dy > 0 && S.monUp){
+      if (S.panelTab) togglePanel(); else toggleMonitor();
+    }
+    return;
+  }
+  // a swipe in from the right edge, while watching, turns to the panel
+  if (S.monUp && !S.panelTab && dx < -60 && t.clientX > innerWidth * 0.55){
+    togglePanel(); return;
+  }
+
+  /* Otherwise a horizontal swipe on a feed walks to the next camera. A phone
+     cannot show a readable floorplan and a readable feed at once, so being able
+     to step through them without aiming at a small pin is what makes this
+     playable one-handed. */
+  if (S.monUp && !S.panelTab && Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy)){
+    const ids = Object.keys(CAMERAS);
+    const i = ids.indexOf(S.activeCam);
+    viewCam(ids[(i + (dx < 0 ? 1 : -1) + ids.length) % ids.length]);
+  }
+}, {passive:true});
+
+/* ===========================================================================
+   10. MOVEMENT — the heart of it
+   =========================================================================== */
+
+function activeLure(){
+  if (S.lure && performance.now() > S.lure.until) S.lure = null;
+  return S.lure;
+}
+
+/* How persuasive a noise is from where this one is standing. Falls off a fixed
+   fraction per room, so a sound two rooms away is a suggestion and a sound next
+   door is close to an order. `strength` is what separates a deliberate cue from
+   the incidental clatter of rebooting your own ventilation. */
+function lureOdds(u, lure){
+  const d = distFrom(u.node);
+  const rooms = Math.min(...lure.nodes.map(t => d[t] === undefined ? 99 : d[t]));
+  if (rooms > 6) return 0;
+  return lure.strength * Math.pow(CONFIG.lureFalloff, rooms) * (1 - u.lureResist);
+}
+
+function setLure(nodes, strength, ms, camId, canRecallAuditor = false){
+  S.lure = { nodes, strength, until:performance.now() + ms, cam:camId || null,
+             canRecallAuditor };
+}
+
+function stepToward(from, targets){
+  const opts = ADJ[from].filter(walkable);
+  if (!opts.length) return from;
+  let best = opts[0], bestD = Infinity;
+  for (const o of opts){
+    const d = distFrom(o);
+    const v = Math.min(...targets.map(t => d[t] === undefined ? 99 : d[t]));
+    if (v < bestD){ bestD = v; best = o; }
+  }
+  return best;
+}
+
+/* A pass-by isn't a single sidestep — it keeps walking. Two rooms of distance
+   is what makes the powered-down gamble worth the air you lose taking it. */
+function retreatFrom(node, steps){
+  for (let i = 0; i < steps; i++){
+    const away = ADJ[node].filter(n => walkable(n) && DO[n] > DO[node]);
+    const side = ADJ[node].filter(n => walkable(n) && DO[n] >= DO[node]);
+    const opts = away.length ? away : (side.length ? side : ADJ[node].filter(walkable));
+    if (!opts.length) break;
+    node = pick(opts);
+  }
+  return node;
+}
+
+/* One step. This is the rule that defines the whole game: a weighted coin,
+   not a guarantee. Win the roll and it closes a room; lose it and it goes
+   sideways or back the way it came. */
+/* Which doorway a node leads to. Nodes deeper in the building inherit the side
+   of whichever door they're closest to, so footsteps pan sensibly all night. */
+const SIDE_CACHE = {};
+function sideOf(node){
+  if (SIDE_CACHE[node]) return SIDE_CACHE[node];
+  let best = "left", bestD = Infinity;
+  for (const door in DOOR_SIDE){
+    const d = distFrom(node)[door];
+    if (d !== undefined && d < bestD){ bestD = d; best = DOOR_SIDE[door]; }
+  }
+  return (SIDE_CACHE[node] = best);
+}
+
+const doorEl = side => side === "left" ? $("doorLeft") : $("doorRight");
+
+/* Are you actually looking at this square right now? The panel counts as not
+   looking — that is the whole point of putting it inside the monitor. */
+function watchingNode(node){
+  return S.monUp && !S.panelTab && S.sys.cam.ok &&
+         CAMERAS[S.activeCam].sees.includes(node);
+}
+
+/* Someone is standing in the doorway. Show the sliver of them that clears the
+   frame — this is peripheral vision, not a reveal. */
+function applyDoorShot(img, u, side){
+  const sh = doorShot(u, side);
+  img.style.left   = sh.left + "%";
+  img.style.bottom = sh.bottom + "%";
+  img.style.width  = sh.width + "%";
+  img.style.height = "auto";
+  const cT = sh.clipT || 0, cR = sh.clipR || 0, cB = sh.clipB || 0, cL = sh.clipL || 0;
+  img.style.clipPath = (cT || cR || cB || cL)
+    ? "inset(" + cT + "% " + cR + "% " + cB + "% " + cL + "%)" : "none";
+}
+
+function showLurker(u){
+  const side = DOOR_SIDE[u.node];
+  const box = doorEl(side);
+  if (!box || box.classList.contains("walkby")) return;
+  const img = box.querySelector(".lurker");
+  if (sprites[u.id].dataset.ok !== "1") return;
+  if (img.getAttribute("src") !== u.art) img.src = u.art;
+  applyDoorShot(img, u, side);
+  box.classList.add("present");
+}
+
+function clearLurkers(){
+  ["left","right"].forEach(s => {
+    const b = doorEl(s);
+    if (b && !b.classList.contains("walkby")) b.classList.remove("present");
+  });
+}
+
+/* The pass-by. They cross the doorway and keep going, and you see all of it —
+   which is the payoff for having cut the power and blinded yourself. */
+function playWalkBy(u, fromNode){
+  const side = DOOR_SIDE[fromNode];
+  const box = doorEl(side);
+  if (!box) return;
+  const img = box.querySelector(".lurker");
+  if (sprites[u.id].dataset.ok === "1" && img.getAttribute("src") !== u.art) img.src = u.art;
+  applyDoorShot(img, u, side);
+
+  box.classList.remove("present");
+  box.style.setProperty("--walkMs", CONFIG.walkByMs + "ms");
+  void box.offsetWidth;                       // restart the animation
+  box.classList.add("walkby");
+  play(u.walkBySfx, { pan: side === "left" ? -0.6 : 0.6 });
+
+  /* Something crossing your doorway drags the feeds down with it. The cameras
+     cut to snow until it settles somewhere new — so if you are hiding on the
+     monitor you get told it is moving, and nothing else. The animation runs on
+     the office view regardless of what you are looking at, so dropping the
+     monitor part-way through catches the rest of it. */
+  S.transitUntil = performance.now() + CONFIG.walkByMs;
+
+  setTimeout(() => box.classList.remove("walkby"), CONFIG.walkByMs + 60);
+}
+
+/* SOMETHING HAS ARRIVED BESIDE YOU.
+
+   The scrape belonged here rather than on the next tick of the breathing
+   timer. That timer counted up from zero on a 2400 ms cycle, so a figure could
+   be standing in your doorway — visible on the feed, visible in the office —
+   for over two seconds of silence before the room said anything about it. You
+   could be looking straight at it and still be waiting to be told. Now the
+   arrival is heard as it happens, and the breathing carries on from there. */
+function beginBreach(u){
+  u.breaching = true; u.breachAcc = 0; u.commit = 0;
+  u.darkTried = false;                  // one breaker roll per arrival, not per flick
+  scrape(u);
+  S.breathAcc = 0;
+
+  /* Walking into an office that is ALREADY dark is the same coin as cutting it
+     in her face — otherwise the roll would exist only for players who happened
+     to still have the lights on, and sitting in the dark, which costs you the
+     cameras, would be worth strictly less than nothing. */
+  if (u.commitModel && !S.power) darkRoll(u);
+}
+
+/* The one chance the mains give you against her. Taken once per arrival. */
+function darkRoll(u){
+  if (u.darkTried) return false;
+  u.darkTried = true;
+  if (Math.random() >= AUDITOR.darkEscape) return false;
+  const cameFrom = u.node;
+  u.node = retreatFrom(u.node, CONFIG.passBySteps);
+  u.breaching = false; u.breachAcc = 0; u.acc = 0;
+  u.respite = tuned().respiteMs;
+  playWalkBy(u, cameFrom);
+  return true;
+}
+
+function oneStep(from, approach){
+  const closer = ADJ[from].filter(n => walkable(n) && DO[n] === DO[from] - 1);
+  const other  = ADJ[from].filter(n => walkable(n) && DO[n] >= DO[from]);
+  if (Math.random() < approach) return closer.length ? pick(closer) : (other.length ? pick(other) : from);
+  return other.length ? pick(other) : (closer.length ? pick(closer) : from);
+}
+
+/* A cue used to be a single coin flip on a single step, inside a window that
+   barely covered one move — which is why it appeared to do nothing at all. Now
+   a cue that lands sets a DESTINATION and he commits to it for a few moves.
+   Fewer successes, but a success is worth crossing the building for. */
+function lureAuditorFromDoor(u, lure){
+  // This is deliberately an Auditor-only emergency response. The Warden keeps
+  // his existing doorway rules: audio cannot call him away once he is there.
+  if (u.id !== "auditor" || !u.commitModel || !u.breaching || !lure.canRecallAuditor)
+    return false;
+
+  const next = stepToward(u.node, lure.nodes);
+  if (next === u.node) return false;  // a cue on her doorway cannot draw her away
+  if (Math.random() >= lureOdds(u, lure)) return false;
+
+  const was = u.node;
+  u.node = next;                       // leave now — the doorway timer is too short to wait
+  u.breaching = false; u.breachAcc = 0; u.commit = 0; u.acc = 0;
+  u.lureTarget = lure.nodes;
+  u.lureMoves = Math.max(0, CONFIG.lureCommitMoves - 1); // this departure is move one
+  u.lastLure = performance.now();
+  footstep(u);
+  pingSensor(u, was);
+  if (u.moveTell && S.monUp) play(u.moveTell, { vol:0.55 });
+  return true;
+}
+
+function offerLure(){
+  const lure = activeLure();
+  if (!lure) return;
+  S.units.forEach(u => {
+    if (lureAuditorFromDoor(u, lure)) return;
+    if (u.lureMoves > 0) return;                    // already on his way
+    if (Math.random() < lureOdds(u, lure)){
+      u.lureTarget = lure.nodes;
+      u.lureMoves  = u.commitModel ? CONFIG.lureCommitMoves : CONFIG.lureCommitWarden;
+      u.lastLure   = performance.now();
+    }
+  });
+}
+
+function moveUnit(u){
+  const T = tuned();
+  // she barely wavers; he wanders
+  const approach = u.commitModel
+    ? AUDITOR.approach
+    : Math.max(0, Math.min(1, T.approach + u.approachMod));
+  const dbl      = Math.max(0, Math.min(1, T.doubleStep + u.doubleStepMod));
+
+  // Already committed to a noise: keep walking toward it.
+  if (u.lureMoves > 0 && u.lureTarget){
+    u.node = stepToward(u.node, u.lureTarget);
+    u.lureMoves--;
+    if (u.lureTarget.includes(u.node)) u.lureMoves = 0;   // arrived
+    if (DO[u.node] === 1) beginBreach(u);
+    return;
+  }
+
+  // A weighted step: mostly toward you, sometimes not.
+  u.node = oneStep(u.node, approach);
+
+  // Sometimes it covers two rooms rather than one.
+  if (DO[u.node] > 1 && Math.random() < dbl){
+    u.node = oneStep(u.node, approach);
+  }
+
+  if (DO[u.node] === 1) beginBreach(u);
+}
+
+function stepUnits(dt){
+  for (const u of S.units){
+
+    if (u.respite > 0){ u.respite -= dt; continue; }
+
+    // She arrived. That is the whole event — the pause is for you, not for her.
+    if (u.breaching && u.commitModel){
+      u.breachAcc += dt;
+      if (u.breachAcc >= auditorCfg().doorMs)
+        return kill(u, u.name + " reached the door.");
+      continue;
+    }
+
+    if (u.breaching){
+      u.breachAcc += dt;
+      if (u.breachAcc >= tuned().breachMs){
+        // Lights on when the window closes: there is nothing to discuss.
+        if (S.power) return kill(u, u.name + " walked into a lit office.");
+
+        const frac = u.cutFrac === null ? 0 : u.cutFrac;
+        const odds = Math.max(0, Math.min(1,
+          CONFIG.passByFast - (CONFIG.passByFast - CONFIG.passBySlow) * frac + u.passByMod));
+
+        if (Math.random() < odds){
+          const cameFrom = u.node;
+          u.node = retreatFrom(u.node, CONFIG.passBySteps);
+          u.breaching = false; u.breachAcc = 0; u.acc = 0; u.cutFrac = null;
+          u.respite = tuned().respiteMs;
+          playWalkBy(u, cameFrom);
+        } else {
+          return kill(u, u.name + " found you in the dark.");
+        }
+      }
+      continue;
+    }
+
+    // Being looked at holds some of them in place. This is the only reason
+    // to sit on a camera rather than skim, and it costs you the audio cue.
+    let tick = dt * u.speedMod;
+    const seenNow = watchingNode(u.node);
+    u.watchAcc = Math.max(0, Math.min(FATIGUE.fullMs,
+      u.watchAcc + (seenNow ? dt : -dt * FATIGUE.recover)));
+
+    if (u.watchStall > 0 && !S.doom && seenNow){
+      const wear = u.watchAcc / FATIGUE.fullMs;                 // 0 fresh, 1 spent
+      const effective = u.watchStall * (1 - (1 - FATIGUE.floor) * wear);
+      tick *= (1 - effective);
+      u.stalling = true;
+    } else u.stalling = false;
+
+    u.acc += tick;
+    const paceMult = u.commitModel ? auditorCfg().moveMult : 1;
+    if (u.acc >= tuned().moveMs * paceMult * u.rhythm * u.jitter){
+      u.acc = 0;
+      u.jitter = 0.85 + Math.random() * 0.30;    // re-roll so they keep drifting
+
+      // Some cycles it simply doesn't go anywhere. Early nights are mostly
+      // this: something is in the building, and it is in no hurry.
+      const idleHere = tuned().idleChance * (u.commitModel ? AUDITOR.idleMult : 1);
+      if (Math.random() < idleHere) continue;
+
+      const was = u.node;
+      moveUnit(u);
+      if (u.node !== was){
+        // crossing the threshold from outside into the building
+        if (GRAPH[was].outside && !GRAPH[u.node].outside) play(u.enterSfx);
+        footstep(u);
+        pingSensor(u, was);
+        // Each of them leaks one bit of information per step, but only while
+        // you are actually on the monitor. The Warden stutters the picture;
+        // the Auditor is heard and not seen. Look away and you get neither.
+        if (u.flickerOnMove) S.flicker = CONFIG.flickerMs;
+        if (u.moveTell && S.monUp) play(u.moveTell, { vol:0.55 });
+      }
+    }
+  }
+}
+
+const unitsOn = node => S.units.filter(u => u.node === node);
+const unitsSeenBy = camId => S.units.filter(u => CAMERAS[camId].sees.includes(u.node));
+
+/* ===========================================================================
+   11. SYSTEMS, AIR, CLOCK
+   =========================================================================== */
+
+function stepSystems(dt){
+  for (const id in S.sys){
+    const s = S.sys[id];
+    if (s.reboot > 0){
+      s.reboot -= dt;
+      if (s.reboot <= 0){
+        s.reboot = 0; s.ok = true;
+        s.safeUntil = performance.now() + CONFIG.faultGraceMs;
+        blip();
+      }
+    }
+  }
+
+  // Faults keep arriving whether or not you can do anything about them.
+  S.failAcc += dt;
+  if (S.failAcc >= night().failEveryMs){
+    S.failAcc = 0;
+    if (Math.random() < night().failChance){
+      const candidates = SYSTEMS.filter(s => S.sys[s.id].ok && S.sys[s.id].reboot === 0 &&
+                                              performance.now() >= S.sys[s.id].safeUntil);
+      if (candidates.length){
+        const victim = pick(candidates);
+        S.sys[victim.id].ok = false;
+        buzz();
+      }
+    }
+  }
+
+  const ventOk = S.sys.vent.ok;
+  S.o2 += (ventOk ? CONFIG.o2Regen : -CONFIG.o2Drain) * (dt / 1000);
+  S.o2 = Math.max(0, Math.min(100, S.o2));
+
+  // Running out of air does NOT kill you. It puts you on the floor, which is
+  // far worse: you are still alive, still findable, and can do nothing at all.
+  if (S.o2 <= 0 && !S.passedOut) passOut();
+}
+
+/* ---------------------------------------------------------------------------
+   THINGS THAT ARE NOT THERE
+
+   A figure resolves in a room, stands for a moment, and is gone. It is not on
+   the graph, it cannot hurt you, and it never appears in a doorway — the two
+   squares that matter always tell the truth.
+
+   The point is to spend your attention. By night six you cannot trust a glimpse
+   and have to actually check, which costs the seconds you needed elsewhere.
+   Night one has none at all, so the rules are learned clean first.
+--------------------------------------------------------------------------- */
+const HALLUCINATION = {
+  gapMs:  [0, 52000, 36000, 26000, 18000, 12000, 2000],   // 0 = never
+  jitter: 0.5,        // gaps vary by this much either way
+  holdMs: 4150        // how long one lingers before it fades
+};
+
+function hallucinationGap(){
+  const g = HALLUCINATION.gapMs[nightIdx()];
+  if (!g) return 0;
+  return g * (1 - HALLUCINATION.jitter + Math.random() * HALLUCINATION.jitter * 2);
+}
+
+function stepHallucination(dt){
+  if (!S.hallucAcc) return;                       // disabled on night one
+  S.hallucAcc -= dt;
+  if (S.hallucAcc > 0) return;
+  S.hallucAcc = hallucinationGap();
+
+  // only where you would actually see one, and never in a doorway
+  if (!S.monUp || S.panelTab || !S.sys.cam.ok || S.doom) return;
+  const cam = CAMERAS[S.activeCam];
+  const spots = cam.sees.filter(n => DO[n] !== 1 && !unitsOn(n).length);
+  if (!spots.length) return;
+
+  const node = pick(spots);
+  const who  = pick(ROSTER);
+  if (sprites[who.id].dataset.ok !== "1") return;
+
+  /* It has to be standing where a body would stand. Reading only the shared
+     SHOTS meant a hallucination used the uncalibrated fallback placement —
+     centre frame, one size for every room — so it read as a sprite pasted onto
+     the picture rather than as something in the room, and you could tell a
+     fake from a real one at a glance without checking anything. It now goes
+     through the same shotFor() the real ones do, so it lands on the calibrated
+     spot for that node, on that camera, for that body: same scale, same
+     mirroring, same crop behind the same furniture. The only difference left
+     is that it fades. */
+  const shot = shotFor(who, node, S.activeCam);
+  const s = document.createElement("img");
+  s.className = "subject phantom";
+  s.src = who.art; s.alt = "";
+  s.style.left   = shot.left + "%";
+  s.style.bottom = shot.bottom + "%";
+  s.style.width  = shot.width + "%";
+  s.style.height = "auto";
+  s.style.transform = shot.flip ? "scaleX(-1)" : "none";
+  s.style.filter = "grayscale(.6) contrast(1.1) brightness(" + (0.65 * shot.dim) + ")";
+  const cT = shot.clipT || 0, cR = shot.clipR || 0,
+        cB = shot.clipB || 0, cL = shot.clipL || 0;
+  if (cT || cR || cB || cL)
+    s.style.clipPath = "inset(" + cT + "% " + cR + "% " + cB + "% " + cL + "%)";
+  s.style.animationDuration = HALLUCINATION.holdMs + "ms";
+  el.camPan.appendChild(s);
+  setTimeout(() => s.remove(), HALLUCINATION.holdMs + 60);
+}
+
+/* ---------------------------------------------------------------------------
+   THE PHANTOM, IN FOUR PARTS
+
+   He can only appear on a feed you are watching, so his clock only runs while
+   you are watching one. He picks the camera you are ON — there is no searching
+   for him and no warning, and the answer is always the same: any other camera.
+--------------------------------------------------------------------------- */
+function phantomGap(){
+  const g = PHANTOM.gapMs[nightIdx()];
+  return g * (1 - PHANTOM.jitter + Math.random() * PHANTOM.jitter * 2);
+}
+
+function showPhantom(){
+  if (phantomSprite.dataset.ok !== "1") return;
+  const img = $("phantomArt");
+  if (img.getAttribute("src") !== PHANTOM.art) img.src = PHANTOM.art;
+  img.classList.add("on");
+}
+function hidePhantom(){ $("phantomArt").classList.remove("on"); }
+
+/* You have just opened a feed. If he is armed, he was already standing in it.
+   Called from viewCam, which fires both when you change camera and when you
+   raise the monitor onto one — opening a feed is opening a feed. */
+function phantomOnEntry(){
+  if (!S.phantomArmed || S.phantom || S.phantomScare > 0) return;
+  if (!S.monUp || S.panelTab || !S.sys.cam.ok || !S.power) return;
+  if (S.doom || S.passedOut > 0 || rebootActive()) return;
+  /* Not the feed you just fled him on. Going back to it a second later and
+     finding him standing there again would read as the game following you
+     rather than as him being somewhere. He stays armed, so the next OTHER
+     camera still has him. */
+  if (PHANTOM.noRepeatFeed && S.phantomLeft === S.activeCam) return;
+  S.phantomArmed = false;
+  S.phantomLeft = null;                 // one feed is blocked at a time, not forever
+  S.phantom = { at:S.activeCam, acc:0 };
+  showPhantom();
+  play("phantomIn");
+}
+
+function stepPhantom(dt){
+  // his frame is up: hold it, then hand the office back
+  if (S.phantomScare > 0){
+    S.phantomScare -= dt;
+    if (S.phantomScare <= 0){
+      S.phantomScare = 0;
+      el.scare.classList.remove("show");
+    }
+    return;
+  }
+
+  const canSee = S.monUp && !S.panelTab && S.sys.cam.ok && S.power &&
+                 !S.doom && S.passedOut <= 0 && !rebootActive();
+
+  if (S.phantom){
+    // changed camera, or lost the picture some other way: he is gone
+    if (S.activeCam !== S.phantom.at || !S.sys.cam.ok || S.panelTab){
+      S.phantomLeft = S.phantom.at;
+      S.phantom = null; hidePhantom();
+      S.phantomAcc = phantomGap();
+      return;
+    }
+    // dropped the monitor with him still on it: that is the same as staying
+    if (!S.monUp) return phantomTakes();
+    S.phantom.acc += dt;
+    if (S.phantom.acc >= PHANTOM.showMs[nightIdx()]) return phantomTakes();
+    return;
+  }
+
+  /* The clock runs while you are on the cameras and arms him when it expires.
+     Nothing appears at that moment — he is simply now somewhere, and you find
+     out which feed by opening one. */
+  if (!canSee || S.phantomArmed) return;
+  S.phantomAcc -= dt;
+  if (S.phantomAcc <= 0) S.phantomArmed = true;
+}
+
+/* He takes the frame. Nobody dies: you lose systems, and he leaves a noise in
+   your office that the two who DO kill you can hear. */
+function phantomTakes(){
+  S.phantomLeft = S.phantom ? S.phantom.at : null;
+  S.phantom = null; hidePhantom();
+  S.phantomAcc = phantomGap();
+  S.phantomArmed = false;
+  S.phantomScare = PHANTOM.scareMs;
+
+  el.scareArt.onerror = () => el.scare.innerHTML =
+    '<div class="ph" style="border:none">' + PHANTOM.name + '<br>' + PHANTOM.scare + '</div>';
+  el.scareArt.src = PHANTOM.scare;
+  el.scare.classList.add("show");
+  play("phantomHit");
+
+  // you come out of it in the office, not on the cameras
+  if (S.monUp) toggleMonitor();
+
+  /* The camera system always: he came in through it. A second one from night
+     three, once you have met him and know what the frame means. */
+  const others = SYSTEMS.filter(s => s.id !== "cam" && S.sys[s.id].ok);
+  const hit = ["cam"];
+  if (S.night >= PHANTOM.extraFaultFrom && others.length) hit.push(pick(others).id);
+  hit.forEach(id => {
+    const s = S.sys[id];
+    s.ok = false; s.reboot = 0; s.total = 0; s.safeUntil = 0;
+  });
+  buzz();
+
+  // and the noise, pointed at exactly where you are sitting
+  setLure(["OFFICE"], PHANTOM.lure, PHANTOM.lureMs);
+  offerLure();
+}
+
+const AMBIENCE = ["ambBox","ambKnock","ambCreak","ambPipes","ambSigh",
+                  "ambDoor","ambDrip","ambChair","ambFloor","ambDistant"];
+
+function stepAmbience(dt){
+  S.ambAcc -= dt;
+  if (S.ambAcc > 0) return;
+  /* The building gets noisier as the week goes on. By night six the gaps are
+     less than half what they were, so silence stops being the default state
+     and a sound stops being worth turning your head for. */
+  const squeeze = CONFIG.ambienceScale[nightIdx()];
+  S.ambAcc = (CONFIG.ambienceMinMs +
+              Math.random() * (CONFIG.ambienceMaxMs - CONFIG.ambienceMinMs)) * squeeze;
+  /* The music box is once a night at most, and often not at all. A thing that
+     happens every few minutes is set dressing; a thing that happens once is an
+     event people describe to each other afterwards. */
+  let pool = AMBIENCE.slice(1);
+  if (!S.boxPlayed && Math.random() < 0.10){ pool = ["ambBox"]; S.boxPlayed = true; }
+  play(pick(pool), { pan: Math.random() * 1.6 - 0.8, vol: 0.75 + Math.random() * 0.4 });
+}
+
+function stepClock(dt){
+  S.hourAcc += dt;
+  if (S.hourAcc >= CONFIG.hourMs){
+    S.hourAcc -= CONFIG.hourMs;
+    S.hour++;
+    chime();
+    if (S.hour >= 6) winNight();
+  }
+}
+
+/* ===========================================================================
+   12. LOOP + RENDER
+   =========================================================================== */
+
+function loop(now){
+  const dt = Math.min(now - S.lastFrame, 100);
+  S.lastFrame = now;
+  if (S.running){
+    if (S.doom){ stepDoom(dt); render(dt); S.raf = requestAnimationFrame(loop); return; }
+    stepClock(dt);
+    stepAmbience(dt);
+    stepSystems(dt);
+    if (S.running && S.sensorAcc > 0) S.sensorAcc -= dt;
+    if (S.running) stepHallucination(dt);
+    if (S.running && S.passedOut > 0) stepPassOut(dt);
+    if (S.running) stepPhantom(dt);
+    if (S.running) stepBot(dt);
+    if (S.running) stepUnits(dt);
+    if (S.running) render(dt);
+  }
+  S.raf = requestAnimationFrame(loop);
+}
+
+function render(dt){
+  el.clockHour.textContent = (S.hour === 0 ? 12 : S.hour) + " AM";
+
+  /* The stopwatch. One number in real seconds, redrawn only when it changes,
+     because a value that repaints sixty times a second to say the same thing
+     is sixty layouts nobody asked for. */
+  const secs = Math.floor((S.hour * CONFIG.hourMs + S.hourAcc) / 1000);
+  if (secs !== S.shownSecs){
+    S.shownSecs = secs;
+    el.shiftTimer.textContent =
+      String(Math.floor(secs / 60)).padStart(2, "0") + ":" +
+      String(secs % 60).padStart(2, "0");
+  }
+
+
+  document.body.classList.toggle("ventbad", !S.sys.vent.ok);
+
+  /* The ventilation alarm. It repeats, it gets faster as the air thins, and it
+     is the only warning you get — there is no gauge to glance at any more. */
+  if (!S.sys.vent.ok){
+    S.ventAlarmAcc -= dt;
+    if (S.ventAlarmAcc <= 0){
+      const urgency = Math.max(0, Math.min(1, 1 - S.o2 / 100));
+      S.ventAlarmAcc = CONFIG.ventAlarmMs - urgency * (CONFIG.ventAlarmMs - 900);
+      play("ventAlarm", { vol: 0.55 + urgency * 0.45 });
+    }
+  } else S.ventAlarmAcc = 0;
+
+  /* The air is audible from the office chair and nowhere else: not through the
+     monitor, not with the mains off, not with the fans faulted, and not while
+     you are face down on the floor. */
+  const hum = !S.monUp && S.power && S.sys.vent.ok && S.passedOut <= 0 && !S.doom;
+  if (hum !== S.ventHum){ S.ventHum = hum; setVentHum(hum); }
+
+  document.body.classList.toggle("camdown", !S.sys.cam.ok);
+  document.body.classList.toggle("doom", !!S.doom);
+  document.body.classList.toggle("transit", performance.now() < S.transitUntil);
+
+  /* Watching on residual power burns the array out. The cost is for using it,
+     not for cutting the lights. */
+  if (!S.power && S.monUp && S.sys.cam.ok){
+    S.darkCamAcc += dt;
+    if (S.darkCamAcc >= CONFIG.darkCamMs){
+      S.darkCamAcc = 0;
+      S.sys.cam.ok = false;
+      buzz();
+      if (S.monUp) toggleMonitor();
+    }
+  } else if (S.power) S.darkCamAcc = Math.max(0, S.darkCamAcc - dt * 0.5);
+
+  if (S.flicker > 0){
+    S.flicker -= dt;
+    if (S.flicker <= 0){ S.flicker = 0; }
+  }
+  document.body.classList.toggle("flicker", S.monUp && S.flicker > 0);
+
+  // dropout flicker for the failing door cameras, re-rolled a few times a second
+  S.dropAcc = (S.dropAcc || 0) + dt;
+  if (S.dropAcc > 260){ S.dropAcc = 0; S.dropout = Math.random() < 0.55; }
+  document.body.classList.toggle("dropout",
+    S.monUp && !!CAMERAS[S.activeCam].unstable && S.dropout);
+
+  // panel rows
+  SYSTEMS.forEach(s => {
+    const st = S.sys[s.id], row = $("sys_" + s.id);
+    if (!row) return;
+    const busy = st.reboot > 0;
+    row.classList.toggle("bad", !st.ok && !busy);
+    row.classList.toggle("busy", busy);
+    row.querySelector(".sysState").textContent =
+      busy ? "REBOOTING " + Math.ceil(st.reboot/1000) + "s" : (st.ok ? "NOMINAL" : "FAULT");
+    row.querySelector(".rebootBtn").disabled = rebootActive() || st.ok;
+    row.querySelector(".bar i").style.width =
+      busy ? (100 - (st.reboot / st.total) * 100) + "%" : "0%";
+  });
+  $("rebootAll").disabled = SYSTEMS.every(s => S.sys[s.id].ok) || rebootActive();
+  el.panel.classList.toggle("held", rebootActive());
+
+  // alerts
+  const msgs = [];
+  if (!S.sys.vent.ok)  msgs.push(["VENTILATION FAULT", ""]);
+  if (!S.sys.cam.ok)   msgs.push(["CAMERA FAULT", "warn"]);
+  if (!S.sys.audio.ok) msgs.push(["AUDIO FAULT", "warn"]);
+  if (!S.power)        msgs.push(["MAIN POWER CUT", "warn"]);
+  if (BOT.on)          msgs.push(["AUTOPILOT", "ok"]);
+  if (S.sensorOn)      msgs.push(["SENSOR: " + CAMERAS[S.sensorOn].name.trim().split(/\s+/)[0], "ok"]);
+  el.alerts.innerHTML = msgs.map(m => '<div class="'+m[1]+'">'+m[0]+'</div>').join("");
+
+  // something is in the doorway — you get a sliver of them and a sound
+  const atDoor = S.units.filter(u => u.breaching);
+  clearLurkers();
+  atDoor.forEach(showLurker);
+  document.body.classList.toggle("warn-left",
+    atDoor.some(u => DOOR_SIDE[u.node] === "left"));
+  document.body.classList.toggle("warn-right",
+    atDoor.some(u => DOOR_SIDE[u.node] === "right"));
+
+  if (atDoor.length){
+    S.breathAcc += dt;
+    if (S.breathAcc > 2400){ S.breathAcc = 0; scrape(atDoor[0]); }
+  } else S.breathAcc = 0;
+
+  if (S.monUp){
+    updateCamPan();
+    const lure = activeLure();
+    el.mapPlan.querySelectorAll(".camPin").forEach(b => {
+      const id = b.dataset.cam;
+      b.classList.toggle("lured",  !!lure && lure.cam === id);
+      b.classList.toggle("sensor", S.sensorOn === id);
+    });
+    drawSubjects();
+    const cam = CAMERAS[S.activeCam];
+    el.sensorBtn.disabled = !!cam.unstable;
+    el.sensorBtn.classList.toggle("engaged", S.sensorOn === S.activeCam);
+    el.sensorBtn.textContent = cam.unstable ? "FEED TOO WEAK FOR SENSOR"
+      : S.sensorOn === S.activeCam ? "REMOVE SENSOR  [M]" : "MOUNT SENSOR  [M]";
+    el.audioBtn.disabled = !S.sys.audio.ok || performance.now() < S.lureReadyAt;
+    el.audioBtn.textContent = !S.sys.audio.ok ? "AUDIO RELAY DOWN"
+      : performance.now() < S.lureReadyAt
+        ? "RECHARGING " + Math.ceil((S.lureReadyAt - performance.now())/1000) + "s"
+        : "PLAY AUDIO CUE  [F]";
+  }
+
+  syncChrome();
+}
+
+function updateCamPan(){
+  const cam = CAMERAS[S.activeCam]; if (!cam) return;
+  const p = cam.pan || CONFIG.camPan;
+  // travel is measured against the BOX, not the window
+  const travel = el.camPan.offsetWidth - el.camBox.offsetWidth;
+  if (travel <= 0) return;
+  const raw = Math.sin((performance.now() / (p.period || 33000)) * Math.PI * 2 + (p.phase || 0));
+  el.camPan.style.transform =
+    "translateX(" + (-travel/2 + (raw * travel/2) * CONFIG.camPan.reach) + "px)";
+}
+
+let subjKey = "";
+/* Painter's order down each corridor. The game has no idea where a lens is,
+   so the running order is given: first in the list is furthest away and gets
+   drawn first, so nearer bodies overlap it rather than the other way round. */
+const DRAW_ORDER = {};
+[
+  ["n04","n20","n05","n21","n22"],      // north hall, far end to near
+  ["n14","nDR","nDL","n11"],            // office hall, far end to near
+  ["n25","n19","n18"],                  // south hall, far end to near
+  ["n12","n13"], ["n07","n06"]
+].forEach(run => run.forEach((n, i) => DRAW_ORDER[n] = i));
+
+const depthOf = n => DRAW_ORDER[n] === undefined ? 0 : DRAW_ORDER[n];
+
+function drawSubjects(force){
+  if (!S.sys.cam.ok){ el.camPan.querySelectorAll(".subject").forEach(n=>n.remove()); subjKey=""; return; }
+  const cam = CAMERAS[S.activeCam];
+
+  const solid = unitsSeenBy(S.activeCam);
+  const faint = (cam.peek || []).length
+    ? S.units.filter(u => cam.peek.includes(u.node)) : [];
+
+  const key = S.activeCam + "|" + solid.map(u=>u.id+u.node).join(",")
+                          + "|" + faint.map(u=>u.id+u.node).join(",")
+                          + "|" + (S.dropout ? 1 : 0);
+  if (!force && key === subjKey) return;
+  subjKey = key;
+
+  el.camPan.querySelectorAll(".subject").forEach(n => n.remove());
+
+  // a failing camera shows them only in the gaps between dropouts
+  if (cam.unstable && S.dropout) return;
+
+  solid.slice().sort((a, b) => depthOf(a.node) - depthOf(b.node))
+       .forEach(u => addSubject(u, shotFor(u, u.node, S.activeCam), 1));
+  // peeked figures sit at the edge of frame, small and unconvincing
+  faint.forEach(u => {
+    const b = shotFor(u, u.node, S.activeCam);
+    addSubject(u, Object.assign({}, b, {
+      width:  b.width  * 0.55,
+      bottom: b.bottom + 8
+    }), 0.34);
+  });
+}
+
+function addSubject(u, shotIn, alpha){
+  if (u.ghost) return;
+  if (sprites[u.id].dataset.ok !== "1") return;
+  const shot = Object.assign({}, DEFAULT_SHOT, shotIn || {});
+  const s = document.createElement("img");
+  // DO[node] === 1 means one of the two squares beside your door
+  s.className = "subject" + (DO[u.node] === 1 ? " atdoor" : "");
+  s.src = u.art; s.alt = "";
+  s.style.left   = shot.left + "%";
+  s.style.bottom = shot.bottom + "%";
+  s.style.width  = shot.width + "%";
+  s.style.height = "auto";
+  s.style.opacity = alpha;
+  s.style.transform = shot.flip ? "scaleX(-1)" : "none";
+
+  // The class stays so a rule can be hung on it later, but nothing is drawn.
+  // Where a body is standing should be told by where it is standing.
+  if (DO[u.node] === 1) s.classList.add("imminent");
+  s.style.filter = "grayscale(.6) contrast(1.1) brightness(" + (0.65 * shot.dim) + ")";
+
+  // hidden behind whatever is really in the room
+  const cT = shot.clipT || 0, cR = shot.clipR || 0,
+        cB = shot.clipB || 0, cL = shot.clipL || 0;
+  if (cT || cR || cB || cL)
+    s.style.clipPath = "inset(" + cT + "% " + cR + "% " + cB + "% " + cL + "%)";
+  el.camPan.appendChild(s);
+}
+
+function syncChrome(){
+  el.monBtn.classList.toggle("engaged", S.monUp);
+  el.panelBtn.classList.toggle("engaged", S.panelTab);
+  el.panelBtn.disabled = !S.power || rebootActive();
+  el.powerBtn.classList.toggle("cut", !S.power);
+  el.monBtn.disabled = rebootActive() || (!S.power && !S.sys.cam.ok);
+  const warming = !S.power && performance.now() < S.powerBackAt;
+  el.powerBtn.disabled = warming;
+  el.powerBtn.textContent = !S.power
+    ? (warming ? "BREAKER WARMING" : "RESTORE POWER  [X]")
+    : "CUT POWER  [X]";
+}
+
+/* ===========================================================================
+   12b. THE ONLY WAY TO DIE
+
+   One gate for every death in the game. Nothing kills you unless it is
+   standing in one of your two doorways — no exceptions, no distance kills,
+   no suffocation kill. If you are hiding in the monitor when it happens you
+   get a few seconds of noise first, and dropping the monitor during those
+   seconds does not save you. It only makes it sooner.
+   =========================================================================== */
+
+function kill(unit, why){
+  if (!S.running || S.doom) return;
+  if (!unit || DO[unit.node] !== 1){
+    // Should be unreachable. If it fires, something called kill() from a
+    // place it had no business calling it from.
+    console.warn("kill() blocked: nobody is at a door", unit && unit.node);
+    return;
+  }
+  if (S.monUp){
+    S.doom = { unit, acc:0, why };
+    setHiss(false);
+    play("doom");
+    return;
+  }
+  jumpscare(unit, why);
+}
+
+function stepDoom(dt){
+  S.doom.acc += dt;
+  // Lowering the monitor hands yourself over early.
+  if (!S.monUp || S.doom.acc >= CONFIG.doomMs){
+    const d = S.doom; S.doom = null;
+    jumpscare(d.unit, d.why);
+  }
+}
+
+function passOut(){
+  S.passedOut = CONFIG.passOutMs;
+  S.monUp = false; S.panelOpen = false; S.panelTab = false;
+  el.monitor.classList.remove("up");
+  document.body.classList.remove("camsup", "paneltab");
+  document.body.classList.add("out");
+  setHiss(false);
+  play("passOut");
+}
+
+function stepPassOut(dt){
+  S.passedOut -= dt;
+  // Anything that reaches a door while you are face-down finds you there.
+  const atDoor = S.units.find(u => DO[u.node] === 1);
+  if (atDoor) return jumpscare(atDoor, "It found you on the floor.");
+  if (S.passedOut <= 0){
+    S.passedOut = 0;
+    S.o2 = CONFIG.passOutO2;
+    document.body.classList.remove("out");
+    // you come round with the vents already cycling
+    const v = S.sys.vent;
+    if (!v.ok && v.reboot <= 0){ v.reboot = CONFIG.rebootOneMs; v.total = CONFIG.rebootOneMs; }
+    play("reboot");
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   THE MOTION SENSOR
+
+   One sensor, mounted on one camera. It chirps when something enters that
+   camera's coverage. It replaces the old always-on motion flags, so the map
+   no longer tells you where anything is — you get one question answered per
+   mounting, and you choose the question.
+--------------------------------------------------------------------------- */
+function mountSensor(camId){
+  if (!S.running || !S.power) return;
+  if (CAMERAS[camId].unstable){ buzz(); return; }   // won't hold on a failing feed
+  S.sensorOn = (S.sensorOn === camId) ? null : camId;
+  S.sensorAcc = CONFIG.sensorMoveCooldownMs;
+  S.units.forEach(u => u.seenBySensor = S.sensorOn
+    ? CAMERAS[S.sensorOn].sees.includes(u.node) : false);
+  blip();
+}
+
+function pingSensor(u, wasNode){
+  if (!S.sensorOn || S.sensorAcc > 0) return;
+  const covered = CAMERAS[S.sensorOn].sees;
+  const inNow = covered.includes(u.node);
+  if (inNow && !u.seenBySensor){
+    play(u.chirp);                                 // only on entry, not on loitering
+    // the chirp names which of them it was, so the bot learns a room from it
+    if (BOT.on) BOT.mem[u.id] = { cam:S.sensorOn, t:performance.now(), via:"sensor" };
+  }
+  u.seenBySensor = inNow;
+}
+
+/* ===========================================================================
+   12c. AUTOPILOT
+
+   Press B to hand the office over and watch. The bot drives the same four
+   controls a player has and — with BOT_CHEATS false — is held to the same
+   information: what is on the camera it is currently looking at, the sensor
+   chirps it has heard, the red glow at the door, and the panel. It cannot see
+   through walls. Watching it fail is a decent read on whether the information
+   the game gives you is actually enough to survive on.
+   =========================================================================== */
+
+const BOT_CHEATS = false;
+
+const BOT = { on:false, acc:0, camIdx:0, dwell:0, hunt:0, hallAcc:0,
+              huntBlock:0, sawFlicker:false, mem:{},
+              doorCheck:0, watchAcc:0, restUntil:0, cueAim:null };
+
+function toggleBot(){
+  BOT.on = !BOT.on;
+  BOT.mem = {}; BOT.hunt = 0; BOT.hallAcc = 0; BOT.huntBlock = 0;
+  BOT.doorCheck = 0; BOT.watchAcc = 0; BOT.restUntil = 0; BOT.cueAim = null;
+  document.body.classList.toggle("bot", BOT.on);
+  blip();
+}
+
+/* Which feeds are worth luring toward, and where to look next for a given
+   animatronic. Memory is only ever "I saw it on camera X at time T" — the same
+   thing a player carries in their head, and it goes stale. */
+const farCams = ids => ids.filter(c => !CAMERAS[c].unstable &&
+  Math.max(...CAMERAS[c].sees.map(n => DO[n] === undefined ? 0 : DO[n])) >= 5);
+
+function guessCam(id, ids){
+  const m = BOT.mem[id];
+  // a sighting under 20s old is worth acting on; older than that it has moved
+  if (m && performance.now() - m.t < 20000 && S.activeCam !== m.cam) return m.cam;
+  for (let i = 0; i < ids.length; i++){
+    BOT.camIdx = (BOT.camIdx + 1) % ids.length;
+    if (!CAMERAS[ids[BOT.camIdx]].unstable) return ids[BOT.camIdx];
+  }
+  return ids[0];
+}
+
+/* WHERE TO SHOUT TO GET RID OF HER.
+
+   The opposite problem to cueCamFor. That one is an emergency and takes the
+   best odds it can get at any distance; this one is prevention, so the room
+   has to be worth walking to: five or more out, deep enough that a cue she
+   takes spends most of her seven committed moves getting there and the rest
+   getting back. Among those, the nearest to her, because the odds fall 40% a
+   room and a cue she ignores is eight seconds of cooldown for nothing. */
+function lureCamAway(u){
+  const d = distFrom(u.node);
+  let best = null, bestRooms = 99;
+  for (const id in CAMERAS){
+    const c = CAMERAS[id];
+    if (c.unstable) continue;
+    const out = Math.max(...c.sees.map(x => DO[x] === undefined ? 0 : DO[x]));
+    if (out < 5) continue;
+    const rooms = Math.min(...c.sees.map(x => d[x] === undefined ? 99 : d[x]));
+    if (rooms < 1 || rooms > 5) continue;
+    if (rooms < bestRooms){ bestRooms = rooms; best = id; }
+  }
+  return best;
+}
+
+/* WHERE TO SHOUT WHEN SHE IS AT THE DOOR.
+
+   A cue aimed at the square she is standing on cannot move her — stepToward
+   returns the square she is already on and the escape is refused — so the feed
+   has to be a DIFFERENT room, and a near one: the odds fall by 40% per room,
+   so next door is 44% and two rooms is 26.5%. Unstable feeds are skipped
+   because the bot cannot see what it is aiming at through the dropouts. */
+function cueCamFor(u){
+  const d = distFrom(u.node);
+  let best = null, bestRooms = 99;
+  for (const id in CAMERAS){
+    const c = CAMERAS[id];
+    if (c.unstable || c.sees.includes(u.node)) continue;
+    const rooms = Math.min(...c.sees.map(x => d[x] === undefined ? 99 : d[x]));
+    if (rooms < 1 || rooms > 3) continue;
+    if (rooms < bestRooms){ bestRooms = rooms; best = id; }
+  }
+  return best;
+}
+
+/* Close out a hunt and hold off starting another. */
+function endHunt(){
+  BOT.hunt = 0;
+  BOT.dwell = 500;
+  BOT.huntBlock = performance.now() + CONFIG.botHuntCooldownMs;
+}
+
+function stepBot(dt){
+  if (!BOT.on || !S.running || S.doom || S.passedOut > 0) return;
+
+  /* A flicker means the Warden took a step. He steps every few seconds, so
+     without a cooldown every hunt is interrupted by the next flicker and the
+     bot never stops searching — which is exactly what it was doing. One hunt,
+     then a quiet period, then it may hunt again. */
+  const wardenSeen = BOT.mem.warden && performance.now() - BOT.mem.warden.t < 6000;
+  if (S.flicker > 0 && !BOT.sawFlicker &&
+      BOT.hunt <= 0 && performance.now() > BOT.huntBlock && !wardenSeen){
+    BOT.hunt = CONFIG.botHuntMs;
+    /* Look up from the desk BEFORE searching the feeds. A flicker says he
+       moved and nothing about where to; the two squares that can actually kill
+       you are the two you can see without a camera at all. Checking them first
+       costs under a second and answers the only urgent question. */
+    BOT.doorCheck = CONFIG.botDoorCheckMs;
+  }
+  BOT.sawFlicker = S.flicker > 0;
+
+  if (BOT.hunt  > 0) BOT.hunt  -= dt;
+  if (BOT.dwell > 0) BOT.dwell -= dt;
+  if (BOT.doorCheck > 0) BOT.doorCheck -= dt;
+  BOT.hallAcc += dt;
+
+  /* Watch fatigue, tracked exactly the way a unit tracks it. Holding her on
+     screen wears the stall down over FATIGUE.fullMs; looking away brings it
+     back FATIGUE.recover times faster. The bot needs its own copy because it
+     has to decide when to let go BEFORE the stall is spent, and it is only
+     allowed to know what it is currently looking at. */
+  const holding = S.monUp && !S.panelTab && S.sys.cam.ok &&
+                  unitsSeenBy(S.activeCam).some(u => u.watchStall > 0);
+  BOT.watchAcc = Math.max(0, Math.min(FATIGUE.fullMs,
+    BOT.watchAcc + (holding ? dt : -dt * FATIGUE.recover)));
+
+  BOT.acc += dt;
+  if (BOT.acc < 200) return;
+  BOT.acc = 0;
+
+  // remember whatever is on screen right now
+  if (S.monUp && S.sys.cam.ok){
+    unitsSeenBy(S.activeCam).forEach(u =>
+      BOT.mem[u.id] = { cam:S.activeCam, t:performance.now(), via:"seen" });
+  }
+
+  /* He is on the feed right now. Any other camera, and nothing else matters
+     for the next fifth of a second — including dropping the monitor, which is
+     the one thing that makes it worse. Checked before the doorways for that
+     reason; the doorway check drops the cameras, and doing that with him up
+     hands him the frame. */
+  if (S.phantom && S.phantom.at === S.activeCam && S.monUp){
+    const ids = Object.keys(CAMERAS);
+    const away = ids.filter(c => c !== S.activeCam && !CAMERAS[c].unstable);
+    if (away.length){ viewCam(pick(away)); BOT.dwell = 300; return; }
+  }
+
+  /* AT THE DOOR. The two of them want opposite things done about it.
+
+     He is a reflex: the breaker, immediately, and the odds decay from the
+     moment he arrives. She does not care about the lights beyond one long
+     shot, and cutting them costs the cue outright — the relay needs mains
+     power — so for her the monitor goes UP and a cue goes into a room near
+     her. Only when there is nothing to shout with does the bot take the
+     breaker and the long odds. */
+  const breach = S.units.filter(u => u.breaching);
+  const him = breach.find(u => !u.commitModel);
+  const her = breach.find(u => u.commitModel);
+
+  if (him && S.power){ togglePower(); return; }
+
+  /* The lights are off and she is the one at the door. The relay runs on
+     mains, so sitting in the dark here is choosing to do nothing at all — the
+     breaker roll has already been taken and failed. Get the power back. */
+  if (her && !him && !S.power){
+    if (performance.now() >= S.powerBackAt) togglePower();
+    return;
+  }
+
+  if (her && !him && S.power){
+    const canCue = S.sys.audio.ok && performance.now() >= S.lureReadyAt;
+    if (canCue){
+      if (S.panelOpen){ togglePanel(); return; }
+      if (!S.monUp){ toggleMonitor(); return; }
+      const t = cueCamFor(her);
+      // no dwell and no hesitation: this is the whole of the next two seconds
+      if (t && S.activeCam !== t){ viewCam(t); return; }
+      playCue(); return;
+    }
+    togglePower(); return;
+  }
+
+  if (!breach.length && !S.power){
+    if (performance.now() >= S.powerBackAt) togglePower();
+    return;
+  }
+  if (!S.power) return;
+
+  // a cycle in progress must be held to the end, so sit on the panel
+  if (rebootActive()){ if (!S.panelOpen) togglePanel(); return; }
+
+  const faults = SYSTEMS.filter(s => !S.sys[s.id].ok && S.sys[s.id].reboot <= 0).map(s => s.id);
+  if (faults.length){
+    if (!S.panelOpen){ togglePanel(); return; }
+    reboot([faults.includes("vent") ? "vent" : faults[0]]);
+    return;
+  }
+  if (S.panelOpen){ togglePanel(); return; }
+
+  // the doorway check a flicker just asked for: monitor down, look at the doors
+  if (BOT.doorCheck > 0){
+    if (S.monUp) toggleMonitor();
+    return;
+  }
+
+  if (!S.monUp){ toggleMonitor(); return; }
+
+  const ids = Object.keys(CAMERAS);
+
+  if (!S.sensorOn){
+    const j = ids.find(c => !CAMERAS[c].unstable && CAMERAS[c].sees.length > 2);
+    if (j){ viewCam(j); mountSensor(j); BOT.dwell = 500; return; }
+  }
+
+  const visible   = S.sys.cam.ok ? unitsSeenBy(S.activeCam) : [];
+  const stallHere = visible.find(u => u.watchStall > 0);
+  const wardenHere= visible.find(u => u.flickerOnMove);
+
+  /* PREVENTION, WHICH IS THE ONLY THING THAT ACTUALLY WORKS ON HER.
+
+     Watching buys seconds; a cue she takes buys seven moves of floor. The door
+     is already the losing position — better than even odds of dying there —
+     so the bot answers her while she is still out in the building, the moment
+     it can see her closing and the relay is charged. It aims deep, holds the
+     aim for one tick to actually get there, and fires.
+
+     Fair on information: it fires at a body it can SEE on the feed in front of
+     it, never at one it has only remembered or inferred. */
+  if (BOT.cueAim){
+    if (!S.sys.audio.ok || performance.now() < S.lureReadyAt){ BOT.cueAim = null; }
+    else if (S.activeCam !== BOT.cueAim){ viewCam(BOT.cueAim); return; }
+    else { playCue(); BOT.cueAim = null; BOT.dwell = 400; return; }
+  }
+  const closing = visible.find(u => u.commitModel && DO[u.node] <= 4);
+  if (closing && BOT.hunt <= 0 && S.sys.audio.ok && performance.now() >= S.lureReadyAt){
+    const aim = lureCamAway(closing);
+    if (aim && aim !== S.activeCam){ BOT.cueAim = aim; viewCam(aim); return; }
+    if (aim){ playCue(); BOT.dwell = 400; return; }
+  }
+
+  // glance down the office hall now and then. It is the only feed that shows
+  // the two squares beside the door, unreliable or not.
+  if (BOT.hallAcc > CONFIG.botHallCheckMs && BOT.dwell <= 0){
+    BOT.hallAcc = 0;
+    const hall = ids.find(c => CAMERAS[c].unstable);
+    if (hall && S.activeCam !== hall){ viewCam(hall); BOT.dwell = 1000; return; }
+  }
+
+  // THE HUNT. A flicker pulls it off whatever it was watching — staring at the
+  // Auditor while the Warden closes in is exactly how it used to die.
+  if (BOT.hunt > 0){
+    if (wardenHere){
+      // found him — the hunt is over either way, and it will not restart for a
+      // while, so a burst of flickers cannot pin the bot in search mode
+      if (S.sys.audio.ok && performance.now() >= S.lureReadyAt){
+        const far = farCams(ids);
+        if (far.length){
+          const t = far[Math.floor(Math.random() * far.length)];
+          if (S.activeCam !== t){ viewCam(t); BOT.dwell = 320; return; }
+          playCue();
+        }
+      }
+      endHunt(); return;
+    }
+    if (BOT.dwell > 0) return;
+
+    // give up rather than search forever
+    if (BOT.hunt <= 0){ endHunt(); return; }
+
+    // if the remembered feed came up empty, forget it so the sweep can progress
+    const m = BOT.mem.warden;
+    if (m && m.cam === S.activeCam) m.t = 0;
+
+    BOT.dwell = CONFIG.botDwellMs * 0.9;
+    viewCam(guessCam("warden", ids));
+    return;
+  }
+
+  /* Holding this feed is the only thing stopping her — but only for a while.
+     The stall decays to FATIGUE.floor over FATIGUE.fullMs of unbroken watching,
+     so past botWatchMaxMs the seconds are buying a fraction of what the first
+     ones did, and they are the same seconds he is walking through. It lets go,
+     spends the recovery window looking for him instead, and comes back to her
+     with the stall most of the way restored. Parking on her forever leaves her
+     at 72% of full speed; this cycle holds her nearer 50%. */
+  const resting = performance.now() < BOT.restUntil;
+  if (stallHere && !resting){
+    if (BOT.watchAcc < CONFIG.botWatchMaxMs){ BOT.dwell = CONFIG.botDwellMs; return; }
+    BOT.restUntil = performance.now() + CONFIG.botWatchRestMs;
+    BOT.dwell = 0;                       // break off now, not after another hold
+  }
+
+  if (BOT.dwell > 0) return;
+  BOT.dwell = CONFIG.botDwellMs;
+  viewCam(guessCam(resting ? "warden" : "auditor", ids));
+}
+
+/* ===========================================================================
+   13. ENDINGS
+   =========================================================================== */
+
+function jumpscare(unit, why){
+  if (!S.running) return;
+  S.running = false;
+  S.phantom = null; S.phantomScare = 0; hidePhantom();
+  setHiss(false); setVentHum(false); S.ventHum = false; screech();
+  const u = unit || ROSTER[0];
+
+  el.scareArt.onerror = () => el.scare.innerHTML =
+    '<div class="ph" style="border:none">' + u.name + '<br>' + u.scare + '</div>';
+  el.scareArt.src = u.scare;
+  el.scare.classList.add("show");
+
+  setTimeout(() => {
+    el.scare.classList.remove("show");
+    el.lose.classList.add("show");
+  }, 1500);
+}
+
+function winNight(){
+  S.running = false;
+  S.phantom = null; S.phantomScare = 0; hidePhantom();
+  el.scare.classList.remove("show");
+  setHiss(false); setVentHum(false); S.ventHum = false;
+  S.monUp = false; S.panelTab = false; S.panelOpen = false;
+  el.monitor.classList.remove("up");
+  document.body.classList.remove("camsup", "paneltab", "atdoor");
+  el.winNote.textContent = "";
+  S.night = Math.min(S.night + 1, NIGHTS.length);   // teed up, still changeable
+  markPickers();
+  el.win.classList.add("show");
+}
+
+/* ===========================================================================
+   14. BOOT
+   =========================================================================== */
+
+/* Installable, and playable with the phone in aeroplane mode once it has been
+   opened one time. Silently does nothing when opened straight off the disk,
+   because a service worker needs a real origin. */
+/* Both of these only mean anything over http(s). Attaching the manifest from a
+   file:// page just fills the console with CORS errors that look alarming and
+   are not — so it is attached at runtime, only where it can work. */
+if (location.protocol.startsWith("http")){
+  const m = document.createElement("link");
+  m.rel = "manifest"; m.href = "manifest.json";
+  document.head.appendChild(m);
+}
+
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
+
+makeNoise();
+buildPickers();
+applyDoorVars();
+{
+  const boot = mountArt(el.officeArt, OFFICE_ART, "(wide panorama from your desk)");
+  if (boot){ boot.addEventListener("load", () => fitOfficeScene(boot)); }
+}
+buildMap();
+buildPanel();
+mountArt(el.officeArt, OFFICE_ART, "(wide panorama from your desk)");
+console.log("distance from office:", DO);
+console.log("rooms with no camera:", BLIND);
+</script>
+</body>
+</html>

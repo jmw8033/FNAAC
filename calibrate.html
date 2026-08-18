@@ -1,0 +1,2392 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NIGHT SHIFT — sprite calibration</title>
+<style>
+:root{--phos:#7dfab0;--dim:#2f6b4c;--amber:#ffb547;--alarm:#ff4a3d;--shell:#0a0d0b;--hair:#1e2a22}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--shell);color:var(--phos);
+  font-family:"SF Mono","JetBrains Mono",Consolas,monospace;height:100vh;overflow:hidden;
+  display:grid;grid-template-columns:290px 1fr;user-select:none}
+#side{border-right:1px solid var(--hair);overflow-y:auto;padding:16px}
+h1{font-size:13px;letter-spacing:.24em;font-weight:400;margin-bottom:4px}
+.sub{font-size:9px;letter-spacing:.16em;color:var(--dim);line-height:2;margin-bottom:16px}
+h2{font-size:9px;letter-spacing:.28em;color:var(--dim);font-weight:400;margin:16px 0 8px}
+.node{display:flex;justify-content:space-between;align-items:center;width:100%;
+  padding:8px 10px;margin-bottom:4px;font:inherit;font-size:11px;cursor:pointer;
+  background:transparent;color:var(--dim);border:1px solid var(--hair);text-align:left}
+.node:hover{color:var(--phos);border-color:var(--dim)}
+.node.on{background:var(--phos);color:var(--shell);border-color:var(--phos)}
+.node .d{font-size:9px;opacity:.7}
+.node.kill{border-color:var(--alarm)}
+.node.edited{border-left:3px solid var(--amber)}
+.node.split{border-right:3px solid #6aa9ff}
+.node.split .d::before{content:"◆ "; color:#6aa9ff}
+.node.edited .d::after{content:" ·"; color:var(--amber)}
+#count{font-size:9px;letter-spacing:.16em;color:var(--dim);padding:0 4px}
+.node.kill .d{color:var(--alarm)}
+.node.on.kill .d{color:var(--shell)}
+/* Three stacked rows: the photo gets its own space and nothing is allowed to
+   sit on top of it. The code panel and the controls live below the image, not
+   over it. */
+#stage{display:grid;grid-template-rows:1fr auto auto;overflow:hidden;background:#000;min-height:0}
+#wrap{position:relative;overflow:hidden;min-height:0;
+  display:flex;align-items:center;justify-content:center}
+/* #screen is the player's viewport: it clips. #frame is the pan wrapper that
+   slides inside it, exactly as #camPan does in the game. In photo mode the two
+   are the same size and nothing is cropped. */
+#screen{position:relative;overflow:hidden;box-shadow:0 0 0 1px var(--hair);background:#000}
+#frame{position:absolute;top:0;left:0;height:100%}
+#screen.photo #frame{width:100%}
+/* Door mode: the frame IS the opening, so it has to clip like the real one.
+   Without this the sprite floated over the whole wall. */
+#screen.door #frame{overflow:hidden;outline:1px dashed rgba(255,181,71,.5)}
+#screen.door img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:fill}
+body.doormode #guides{display:none}
+#frame img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#sprite{position:absolute;object-fit:contain;object-position:bottom center;
+  filter:grayscale(.6) contrast(1.1) brightness(.65);pointer-events:none}
+#frame{cursor:grab;touch-action:none}
+#frame.drag{cursor:grabbing}
+#sprite.glow{filter:grayscale(.25) contrast(1.15) brightness(.95)
+  drop-shadow(0 0 9px rgba(255,58,44,.95)) drop-shadow(0 0 26px rgba(255,58,44,.55))}
+#guides{position:absolute;inset:0;pointer-events:none;opacity:.28}
+#guides div{position:absolute;background:var(--phos)}
+#hint{position:absolute;left:14px;top:12px;font-size:10px;letter-spacing:.14em;line-height:2;
+  background:rgba(6,10,7,.72);border:1px solid var(--hair);padding:9px 13px;z-index:5;
+  opacity:.55;transition:opacity .2s}
+#hint:hover{opacity:1;background:rgba(6,10,7,.94)}
+#hint.off{display:none}
+#hint b{color:var(--amber);font-weight:400}
+#read{font-size:11px;letter-spacing:.1em;margin-right:auto;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+/* ---- map editor ---- */
+#mapEdit{position:absolute; inset:0; display:none; align-items:center; justify-content:center}
+body.mapmode #mapEdit{display:flex}
+body.mapmode #screen{display:none}
+
+/* ---- tuning ------------------------------------------------------------- */
+#tuneEdit{position:absolute; inset:0; display:none; overflow-y:auto; padding:18px 22px}
+body.tunemode #tuneEdit{display:block}
+body.tunemode #screen{display:none}
+body.tunemode #hint{display:none}
+#tuneEdit h3{font-size:11px;letter-spacing:.26em;color:var(--phos);
+  margin:22px 0 4px;font-weight:400}
+#tuneEdit h3:first-child{margin-top:0}
+#tuneEdit .note{font-size:10px;letter-spacing:.08em;color:var(--dim);
+  line-height:1.9;margin-bottom:10px;max-width:88ch}
+#tuneEdit .grid{display:flex;flex-wrap:wrap;gap:6px 18px;margin-bottom:6px}
+#tuneEdit label{font-size:10px;letter-spacing:.08em;color:#8fe0b4;
+  display:flex;align-items:center;gap:6px}
+#tuneEdit input[type=number]{width:82px;font:inherit;font-size:11px;
+  background:#0c110e;color:var(--phos);border:1px solid var(--hair);padding:3px 5px}
+#tuneEdit input.changed{border-color:var(--amber);color:var(--amber)}
+#tuneEdit select{font:inherit;font-size:11px;background:#0c110e;color:var(--phos);
+  border:1px solid var(--hair);padding:3px 5px}
+#tuneEdit table{border-collapse:collapse;margin-bottom:8px}
+#tuneEdit th{font-size:9px;letter-spacing:.14em;color:var(--dim);font-weight:400;
+  padding:2px 6px;text-align:left}
+#tuneEdit td{padding:1px 4px}
+#tuneEdit td.rowhead{font-size:10px;letter-spacing:.14em;color:#8fe0b4;padding-right:10px}
+#tuneEdit .arr{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+#tuneEdit .arr input{width:64px}
+#tuneEdit .empty{font-size:11px;letter-spacing:.1em;color:var(--amber);line-height:2}
+#mapBoard{position:relative; aspect-ratio:662/776; height:96%;
+  border:1px solid var(--hair); background:#080b09}
+.mRoom{position:absolute; border:1px solid rgba(150,170,160,.3); cursor:text}
+.mRoom.hall{background:rgba(70,110,150,.12)}
+.mRoom.you{background:rgba(250,220,40,.16); border-color:var(--amber)}
+.mRoom:hover{border-color:var(--phos)}
+.mRoom b{position:absolute; left:calc(3px * var(--pinScale,1)); top:calc(2px * var(--pinScale,1));
+  font-size:calc(8px * var(--pinScale,1)); font-weight:400;
+  letter-spacing:.05em; color:rgba(180,205,190,.85)}
+.mRoom.you b{color:var(--amber)}
+/* The board here is far larger than the floorplan in game, so pins drawn at the
+   same PIXEL size read as much smaller. Everything scales by --pinScale, the
+   ratio between this board and the real one, so what you see is the proportion
+   you will get. */
+.mPin{position:absolute; transform:translate(-50%,-50%);
+  min-width:calc(42px * var(--pinScale,1));
+  padding:calc(7px * var(--pinScale,1)) calc(8px * var(--pinScale,1));
+  font-size:calc(11px * var(--pinScale,1));
+  border-width:calc(1px * var(--pinScale,1));
+  text-align:center; cursor:grab; z-index:3;
+  color:#8fe0b4; background:rgba(6,10,7,.78); border-style:solid; border-color:#46614f}
+.mPin.on{background:var(--phos); color:var(--shell); border-color:var(--phos)}
+.mPin.drag{cursor:grabbing}
+
+
+#out{height:210px;overflow:auto;resize:vertical;
+  background:#050806;border-top:1px solid var(--hair);padding:12px 16px;
+  font-size:11px;line-height:1.7;white-space:pre;color:var(--dim)}
+#out.off{display:none}
+button.act{font:inherit;font-size:10px;letter-spacing:.16em;padding:9px 14px;cursor:pointer;
+  background:transparent;color:var(--dim);border:1px solid var(--hair)}
+.tiny{font-size:9px;letter-spacing:.14em;color:var(--dim);display:flex;align-items:center;gap:5px}
+.tiny select,.tiny input{font:inherit;font-size:10px;background:#0b0f0c;color:var(--phos);
+  border:1px solid var(--hair);padding:4px 6px}
+.tiny input[type=range]{width:110px;padding:0}
+button.act:hover{color:var(--phos);border-color:var(--dim)}
+#bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  padding:9px 14px;border-top:1px solid var(--hair);background:#080b09}
+</style></head><body>
+
+<div id="side">
+  <h1>CALIBRATION</h1>
+  <div class="sub">Drag the figure onto the floor.<br>Wheel resizes. Every value is a
+  percentage of the full panorama, so it stays put while the camera pans.</div>
+  <div id="list"></div>
+</div>
+
+<div id="stage">
+  <div id="wrap">
+    <!-- map editor: drag the camera pins, click a room to rename it -->
+    <div id="mapEdit">
+      <div id="mapBoard"></div>
+    </div>
+    <div id="screen">
+      <div id="frame">
+        <div id="guides"></div>
+      </div>
+    </div>
+    <!-- every number the game runs, read out of index.html and written back -->
+    <div id="tuneEdit"></div>
+    <div id="hint">
+    <b>drag anywhere</b> move &nbsp; <b>wheel</b> size &nbsp; <b>shift+wheel</b> fine<br>
+    <b>F</b> flip &nbsp; <b>[ ]</b> dim &nbsp; <b>arrows</b> nudge &nbsp; <b>shift+arrows</b> far<br>
+    <b>W A S D</b> crop edges in &nbsp; <b>shift</b> + them to give back<br>
+    <b>MAP tab</b> drag camera buttons; click a room name to retype it<br>
+    <b>MOVE DOOR BOX</b> on a DOOR node: drag the opening, wheel to size it<br>
+    <b>G</b> guides &nbsp; <b>Tab</b> other sprite &nbsp; <b>U</b> split/fold<br>
+    <b>0</b> recentre &nbsp; <b>H</b> hide this box<br>
+    <b>TUNING tab</b> every number in CONFIG, NIGHTS, AUDITOR, PHANTOM and the
+    pair themselves — LOAD first, then WRITE writes back only what you changed<br>
+      <span style="color:var(--dim)">push it below the frame for a face at the lens</span>
+    </div>
+  </div>
+
+  <div id="bar">
+    <button class="act" id="download">DOWNLOAD PATCHED</button>
+    <button class="act" id="tab-sprites">SPRITES</button>
+    <button class="act" id="tab-map">MAP</button>
+    <button class="act" id="tab-tuning">TUNING</button>
+    <span id="read"></span>
+    <label class="tiny">VIEW
+      <select id="mode">
+        <option value="camera">as the game crops it</option>
+        <option value="photo">whole photo</option>
+      </select>
+    </label>
+    <label class="tiny">SCREEN
+      <select id="ar">
+        <option value="1.7778">16:9</option>
+        <option value="1.6">16:10</option>
+        <option value="2.3333">21:9</option>
+        <option value="win">this window</option>
+      </select>
+    </label>
+    <label class="tiny"><input type="checkbox" id="boxmode"> MOVE DOOR BOX</label>
+    <label class="tiny">SWEEP
+      <input id="sweep" type="range" min="-1" max="1" step="0.02" value="0">
+    </label>
+    <button class="act" id="who">EDITING: SHARED</button>
+    <button class="act" id="per">SWITCH TO PER-ANIMATRONIC</button>
+    <button class="act" id="load">LOAD FROM index.html</button>
+    <button class="act" id="patch">WRITE ALL INTO index.html</button>
+    <button class="act" id="copy">COPY BLOCKS</button>
+    <button class="act" id="reset">RESET THIS NODE</button>
+    <button class="act" id="fold">HIDE CODE</button>
+    <span id="count"></span>
+  </div>
+  <div id="out"></div>
+</div>
+
+<script>
+const DATA = {
+ "cams": {
+  "C01": {
+   "name": "1A  NORTH-WEST ROOM",
+   "art": "images/cam_01.jpg",
+   "sees": [
+    "n01"
+   ],
+   "peek": [],
+   "pan": 102.0,
+   "unstable": false,
+   "pin": {
+    "x": 20.1,
+    "y": 3.2
+   }
+  },
+  "C02": {
+   "name": "1B  NORTH ROOM",
+   "art": "images/cam_02.jpg",
+   "sees": [
+    "n02"
+   ],
+   "peek": [],
+   "pan": 102.0,
+   "unstable": false,
+   "pin": {
+    "x": 61.6,
+    "y": 3.2
+   }
+  },
+  "C03": {
+   "name": "1C  NORTH-EAST ROOM",
+   "art": "images/cam_03.jpg",
+   "sees": [
+    "n03"
+   ],
+   "peek": [],
+   "pan": 131.0,
+   "unstable": false,
+   "pin": {
+    "x": 83.2,
+    "y": 4.1
+   }
+  },
+  "C04": {
+   "name": "2A  NORTH HALL",
+   "art": "images/cam_04.jpg",
+   "sees": [
+    "gW",
+    "n04",
+    "n20",
+    "n05",
+    "n21",
+    "n22"
+   ],
+   "peek": [],
+   "pan": 102.0,
+   "unstable": false,
+   "pin": {
+    "x": 85.3,
+    "y": 14.2
+   }
+  },
+  "C05": {
+   "name": "2B  CENTER ROOM",
+   "art": "images/cam_05.jpg",
+   "sees": [
+    "n07"
+   ],
+   "peek": [],
+   "pan": 132.0,
+   "unstable": false,
+   "pin": {
+    "x": 58.2,
+    "y": 22.6
+   }
+  },
+  "C06": {
+   "name": "2C  EAST CLOSET",
+   "art": "images/cam_06.jpg",
+   "sees": [
+    "n08"
+   ],
+   "peek": [],
+   "pan": 102.0,
+   "unstable": false,
+   "pin": {
+    "x": 82.2,
+    "y": 25.3
+   }
+  },
+  "C07": {
+   "name": "3A  OFFICE HALL",
+   "art": "images/cam_07.jpg",
+   "sees": [
+    "n11",
+    "nDL",
+    "nDR",
+    "n14",
+    "n18"
+   ],
+   "peek": [],
+   "pan": 102.0,
+   "unstable": true,
+   "pin": {
+    "x": 52.1,
+    "y": 58.5
+   }
+  },
+  "C08": {
+   "name": "3B  NORTH OFFICE",
+   "art": "images/cam_08.jpg",
+   "sees": [
+    "n10"
+   ],
+   "peek": [
+    "nDL"
+   ],
+   "pan": 162.0,
+   "unstable": false,
+   "pin": {
+    "x": 37.2,
+    "y": 40.0
+   }
+  },
+  "C09": {
+   "name": "4A  EAST WING",
+   "art": "images/cam_09.jpg",
+   "sees": [
+    "n12",
+    "n13"
+   ],
+   "peek": [],
+   "pan": 149.0,
+   "unstable": false,
+   "pin": {
+    "x": 66.5,
+    "y": 47.0
+   }
+  },
+  "C10": {
+   "name": "4B  EAST STORE",
+   "art": "images/cam_10.jpg",
+   "sees": [
+    "n15"
+   ],
+   "peek": [],
+   "pan": 122.0,
+   "unstable": false,
+   "pin": {
+    "x": 67.5,
+    "y": 68.7
+   }
+  },
+  "C11": {
+   "name": "4C  EAST DOCK",
+   "art": "images/cam_11.jpg",
+   "sees": [
+    "n17"
+   ],
+   "peek": [],
+   "pan": 125.0,
+   "unstable": false,
+   "pin": {
+    "x": 66.9,
+    "y": 78.5
+   }
+  },
+  "C12": {
+   "name": "5A  SOUTH OFFICE",
+   "art": "images/cam_12.jpg",
+   "sees": [
+    "n16"
+   ],
+   "peek": [
+    "nDR"
+   ],
+   "pan": 137.0,
+   "unstable": false,
+   "pin": {
+    "x": 35.9,
+    "y": 78.0
+   }
+  },
+  "C13": {
+   "name": "6A  SOUTH HALL",
+   "art": "images/cam_13.jpg",
+   "sees": [
+    "n25",
+    "n18",
+    "n19"
+   ],
+   "peek": [],
+   "pan": 123.0,
+   "unstable": false,
+   "pin": {
+    "x": 31.4,
+    "y": 88.0
+   }
+  }
+ },
+ "shots": {
+  "n01": {
+   "left": 40.0,
+   "bottom": 14.0,
+   "width": 17.0,
+   "flip": false
+  },
+  "n02": {
+   "left": 44.0,
+   "bottom": 14.0,
+   "width": 17.0,
+   "flip": false
+  },
+  "n03": {
+   "left": 38.0,
+   "bottom": 14.0,
+   "width": 17.0,
+   "flip": true
+  },
+  "n04": {
+   "left": 10.0,
+   "bottom": 22.0,
+   "width": 10.0,
+   "dim": 0.7,
+   "flip": false
+  },
+  "n20": {
+   "left": 26.0,
+   "bottom": 20.0,
+   "width": 12.0,
+   "dim": 0.8,
+   "flip": false
+  },
+  "n05": {
+   "left": 44.0,
+   "bottom": 17.0,
+   "width": 15.0,
+   "flip": false
+  },
+  "n21": {
+   "left": 62.0,
+   "bottom": 15.0,
+   "width": 18.0,
+   "flip": false
+  },
+  "n22": {
+   "left": 76.0,
+   "bottom": 13.0,
+   "width": 21.0,
+   "flip": false
+  },
+  "n06": {
+   "left": 36.0,
+   "bottom": 13.0,
+   "width": 18.0,
+   "flip": false
+  },
+  "n07": {
+   "left": 46.0,
+   "bottom": 14.0,
+   "width": 17.0,
+   "flip": false
+  },
+  "n08": {
+   "left": 44.0,
+   "bottom": 12.0,
+   "width": 20.0,
+   "flip": false
+  },
+  "n09": {
+   "left": 40.0,
+   "bottom": 15.0,
+   "width": 16.0,
+   "flip": false
+  },
+  "nDR": {
+   "left": 42.0,
+   "width": 65.9,
+   "flip": false
+  },
+  "nDL": {
+   "left": 33.0,
+   "bottom": 22.0,
+   "width": 18.0,
+   "flip": false
+  },
+  "n14": {
+   "left": 36.0,
+   "bottom": 32.0,
+   "width": 12.0,
+   "dim": 0.8,
+   "flip": false
+  },
+  "n11": {
+   "left": 38.0,
+   "bottom": 40.0,
+   "width": 8.0,
+   "dim": 0.7,
+   "flip": false
+  },
+  "n10": {
+   "left": 44.0,
+   "bottom": 12.0,
+   "width": 19.0,
+   "flip": false
+  },
+  "n16": {
+   "left": 42.0,
+   "bottom": 12.0,
+   "width": 19.0,
+   "flip": true
+  },
+  "n12": {
+   "left": 24.0,
+   "bottom": 20.0,
+   "width": 13.0,
+   "dim": 0.8,
+   "flip": false
+  },
+  "n13": {
+   "left": 58.0,
+   "bottom": 14.0,
+   "width": 18.0,
+   "flip": true
+  },
+  "n15": {
+   "left": 42.0,
+   "bottom": 14.0,
+   "width": 17.0,
+   "flip": false
+  },
+  "n17": {
+   "left": 38.0,
+   "bottom": 16.0,
+   "width": 16.0,
+   "flip": false
+  },
+  "n25": {
+   "left": 18.0,
+   "bottom": 20.0,
+   "width": 12.0,
+   "dim": 0.8,
+   "flip": false
+  },
+  "n19": {
+   "left": 62.0,
+   "bottom": 14.0,
+   "width": 18.0,
+   "flip": true
+  },
+  "gW": {
+   "left": 4.0,
+   "bottom": 26.0,
+   "width": 7.0,
+   "dim": 0.55,
+   "flip": false
+  },
+  "n18@C07": {
+   "left": 42.0,
+   "bottom": 12.0,
+   "width": 16.0,
+   "flip": false
+  },
+  "n18@C13": {
+   "left": 41.5,
+   "bottom": 23.0,
+   "width": 7.5,
+   "flip": false
+  }
+ },
+ "unit": {
+  "warden": {
+   "nDR": {
+    "left": 39.5,
+    "bottom": 15.6,
+    "width": 11.1,
+    "flip": false
+   },
+   "nDL": {
+    "left": 40.3,
+    "bottom": 3.9,
+    "width": 14.0,
+    "flip": false
+   },
+   "n01": {
+    "left": 3.9,
+    "bottom": -24.6,
+    "width": 26.2,
+    "flip": false
+   },
+   "n02": {
+    "left": -5.1,
+    "bottom": -56.9,
+    "width": 31.6,
+    "flip": false
+   },
+   "n03": {
+    "left": 15.9,
+    "bottom": 8.7,
+    "width": 12.5,
+    "flip": true
+   },
+   "n05": {
+    "left": 25.8,
+    "bottom": 21.3,
+    "width": 11.7,
+    "flip": false
+   },
+   "n20": {
+    "left": 30.2,
+    "bottom": 43.4,
+    "width": 6.5,
+    "dim": 0.8,
+    "flip": false
+   },
+   "n21": {
+    "left": 34.1,
+    "bottom": -6.7,
+    "width": 18.0,
+    "flip": false
+   },
+   "n04": {
+    "left": 27.4,
+    "bottom": 47.6,
+    "width": 5.4,
+    "dim": 0.7,
+    "flip": false
+   },
+   "n22": {
+    "left": 7.6,
+    "bottom": -129.9,
+    "width": 56.7,
+    "flip": false
+   },
+   "n07": {
+    "left": 39.6,
+    "bottom": 9.5,
+    "width": 13.3,
+    "flip": false
+   },
+   "n08": {
+    "left": 17.6,
+    "bottom": -57.2,
+    "width": 35.0,
+    "flip": false
+   },
+   "n14": {
+    "left": 38.7,
+    "bottom": 34.4,
+    "width": 6.5,
+    "dim": 0.8,
+    "flip": false
+   },
+   "n11": {
+    "left": 41.9,
+    "bottom": -77.2,
+    "width": 35.5,
+    "dim": 0.7,
+    "flip": false
+   },
+   "n10": {
+    "left": 62.6,
+    "bottom": -29.6,
+    "width": 14.8,
+    "flip": false
+   },
+   "n12": {
+    "left": 47.7,
+    "bottom": 31.9,
+    "width": 5.8,
+    "dim": 0.8,
+    "flip": false
+   },
+   "n13": {
+    "left": 14.5,
+    "bottom": -41.9,
+    "width": 18.0,
+    "flip": true
+   },
+   "n15": {
+    "left": 14.3,
+    "bottom": -15.9,
+    "width": 17.0,
+    "flip": false
+   },
+   "n17": {
+    "left": 20.0,
+    "bottom": -5.8,
+    "width": 16.0,
+    "flip": false
+   },
+   "n16": {
+    "left": 71.6,
+    "bottom": -30.7,
+    "width": 19.0,
+    "flip": true
+   },
+   "n18@C07": {
+    "left": 38.0,
+    "bottom": 49.7,
+    "width": 2.2,
+    "clipB": 52.0,
+    "flip": false
+   },
+   "n18@C13": {
+    "left": 18.7,
+    "bottom": -80.4,
+    "width": 33.6,
+    "flip": false
+   },
+   "n25": {
+    "left": 69.6,
+    "bottom": 22.9,
+    "width": 6.9,
+    "dim": 0.8,
+    "flip": false
+   },
+   "n19": {
+    "left": 18.2,
+    "bottom": 24.6,
+    "width": 6.3,
+    "flip": true
+   },
+   "n06": {
+    "left": 36.0,
+    "bottom": 13.0,
+    "width": 18.0,
+    "flip": false
+   },
+   "n09": {
+    "left": 40.0,
+    "bottom": 15.0,
+    "width": 16.0,
+    "flip": false
+   }
+  },
+  "auditor": {
+   "nDR": {
+    "left": 38.8,
+    "bottom": 15.3,
+    "width": 12.6,
+    "flip": true
+   },
+   "nDL": {
+    "left": 39.7,
+    "bottom": 3.4,
+    "width": 16.0,
+    "flip": true
+   },
+   "n01": {
+    "left": 68.8,
+    "bottom": -52.1,
+    "width": 35.8,
+    "flip": false
+   },
+   "n02": {
+    "left": -7.3,
+    "bottom": -55.2,
+    "width": 35.8,
+    "flip": false
+   },
+   "n03": {
+    "left": 15.3,
+    "bottom": 8.7,
+    "width": 14.1,
+    "flip": true
+   },
+   "n05": {
+    "left": 25.2,
+    "bottom": 21.5,
+    "width": 13.2,
+    "flip": false
+   },
+   "n20": {
+    "left": 29.9,
+    "bottom": 43.1,
+    "width": 7.3,
+    "dim": 0.8,
+    "flip": false
+   },
+   "n21": {
+    "left": 32.8,
+    "bottom": -9.4,
+    "width": 21.7,
+    "flip": false
+   },
+   "n04": {
+    "left": 27.2,
+    "bottom": 47.1,
+    "width": 6.1,
+    "dim": 0.7,
+    "flip": false
+   },
+   "n22": {
+    "left": 38.9,
+    "bottom": -130.8,
+    "width": 60.3,
+    "flip": false
+   },
+   "n07": {
+    "left": 24.2,
+    "bottom": 5.6,
+    "width": 17.0,
+    "flip": false
+   },
+   "n08": {
+    "left": 56.0,
+    "bottom": -3.4,
+    "width": 24.1,
+    "flip": false
+   },
+   "n14": {
+    "left": 38.2,
+    "bottom": 35.0,
+    "width": 7.3,
+    "dim": 0.8,
+    "flip": false
+   },
+   "n11": {
+    "left": 42.7,
+    "bottom": -64.8,
+    "width": 37.7,
+    "dim": 0.7,
+    "flip": false
+   },
+   "n10": {
+    "left": 62.2,
+    "bottom": -23.8,
+    "width": 15.8,
+    "flip": false
+   },
+   "n12": {
+    "left": 47.5,
+    "bottom": 31.8,
+    "width": 6.6,
+    "dim": 0.8,
+    "flip": false
+   },
+   "n13": {
+    "left": 12.2,
+    "bottom": -51.3,
+    "width": 23.1,
+    "flip": true
+   },
+   "n15": {
+    "left": 55.3,
+    "bottom": -21.6,
+    "width": 21.8,
+    "flip": false
+   },
+   "n17": {
+    "left": 61.3,
+    "bottom": -3.2,
+    "width": 16.0,
+    "flip": false
+   },
+   "n16": {
+    "left": 20.2,
+    "bottom": 20.3,
+    "width": 13.9,
+    "flip": true
+   },
+   "n18@C07": {
+    "left": 37.6,
+    "bottom": 47.9,
+    "width": 3.0,
+    "clipT": 2.0,
+    "clipB": 54.0,
+    "flip": false
+   },
+   "n18@C13": {
+    "left": 14.8,
+    "bottom": -94.0,
+    "width": 43.1,
+    "flip": false
+   },
+   "n25": {
+    "left": 69.1,
+    "bottom": 22.9,
+    "width": 7.8,
+    "dim": 0.8,
+    "flip": false
+   },
+   "n19": {
+    "left": 17.4,
+    "bottom": 24.3,
+    "width": 7.6,
+    "flip": true
+   }
+  }
+ },
+ "dist": {
+  "OFFICE": 0,
+  "nDR": 1,
+  "nDL": 1,
+  "n15": 2,
+  "n14": 2,
+  "n11": 2,
+  "n18": 3,
+  "n16": 3,
+  "n17": 3,
+  "n10": 3,
+  "n12": 3,
+  "n07": 3,
+  "n19": 4,
+  "n25": 4,
+  "n13": 4,
+  "n05": 4,
+  "n06": 4,
+  "n09": 4,
+  "gS": 5,
+  "n20": 5,
+  "n21": 5,
+  "n02": 5,
+  "n04": 6,
+  "n01": 6,
+  "n03": 6,
+  "n22": 6,
+  "gW": 7,
+  "gE": 7,
+  "n08": 7
+ },
+ "roster": [
+  {
+   "id": "warden",
+   "art": "images/ani_warden.png"
+  },
+  {
+   "id": "auditor",
+   "art": "images/ani_auditor.png"
+  }
+ ],
+ "grade": "brightness(.50) contrast(1.22) saturate(.40) hue-rotate(-10deg)",
+ "reach": 0.9,
+ "officeDoor": {
+  "x": 36.3,
+  "w": 8.0,
+  "top": 36.5,
+  "h": 14.0
+ },
+ "officeArt": "images/office.jpg",
+ "rooms": [
+  {
+   "x1": 16.6,
+   "y1": 1.7,
+   "x2": 42.0,
+   "y2": 12.2,
+   "name": "NW",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 42.7,
+   "y1": 1.7,
+   "x2": 65.3,
+   "y2": 12.2,
+   "name": "N",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 66.0,
+   "y1": 2.3,
+   "x2": 86.1,
+   "y2": 12.6,
+   "name": "NE",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 16.6,
+   "y1": 12.2,
+   "x2": 87.2,
+   "y2": 20.0,
+   "name": "NORTH HALL",
+   "hall": true,
+   "you": false
+  },
+  {
+   "x1": 29.2,
+   "y1": 20.4,
+   "x2": 42.7,
+   "y2": 35.8,
+   "name": "ANNEX",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 43.1,
+   "y1": 20.4,
+   "x2": 60.1,
+   "y2": 35.8,
+   "name": "CENTER",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 74.5,
+   "y1": 20.4,
+   "x2": 84.0,
+   "y2": 27.3,
+   "name": "CLOSET",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 60.4,
+   "y1": 29.4,
+   "x2": 78.6,
+   "y2": 35.8,
+   "name": "GALLERY",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 33.5,
+   "y1": 35.8,
+   "x2": 45.8,
+   "y2": 50.3,
+   "name": "N OFFICE",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 34.4,
+   "y1": 50.5,
+   "x2": 45.6,
+   "y2": 67.0,
+   "name": "YOU",
+   "hall": false,
+   "you": true
+  },
+  {
+   "x1": 33.5,
+   "y1": 67.7,
+   "x2": 45.8,
+   "y2": 82.5,
+   "name": "S OFFICE",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 46.1,
+   "y1": 35.8,
+   "x2": 52.9,
+   "y2": 83.1,
+   "name": "HALL",
+   "hall": true,
+   "you": false
+  },
+  {
+   "x1": 53.2,
+   "y1": 35.8,
+   "x2": 69.5,
+   "y2": 58.0,
+   "name": "E WING",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 53.2,
+   "y1": 58.2,
+   "x2": 69.5,
+   "y2": 69.6,
+   "name": "E STORE",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 53.2,
+   "y1": 70.2,
+   "x2": 69.5,
+   "y2": 82.5,
+   "name": "E DOCK",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 28.7,
+   "y1": 83.1,
+   "x2": 70.5,
+   "y2": 96.6,
+   "name": "SOUTH HALL",
+   "hall": true,
+   "you": false
+  }
+ ],
+ "doorShots": {
+  "left": {
+   "left": -46.0,
+   "bottom": -282.0,
+   "width": 100.0,
+   "flip": false
+  },
+  "right": {
+   "left": 46.0,
+   "bottom": -282.0,
+   "width": 100.0,
+   "flip": false
+  }
+ },
+ "doorUnit": {
+  "warden": {},
+  "auditor": {}
+ }
+};
+const {cams, shots, unit, dist, roster, grade, reach,
+       officeDoor, officeArt, doorShots, doorUnit, rooms} = DATA;
+
+/* Two pseudo-nodes for the office doorway. They behave like any other entry —
+   drag, resize, split per animatronic — but they are measured against the door
+   opening rather than a camera frame. */
+const DOORNODES = { DOOR_L:"left", DOOR_R:"right" };
+const isDoor = n => !!DOORNODES[n];
+
+/* A node visible from two cameras needs a different placement in each — n18 is
+   down the hall on one and across the room on the other. Those get a second
+   entry keyed "node@CAM", which overrides the plain one on that feed only. */
+const nodeCam = {};
+const camsFor = {};
+Object.entries(cams).forEach(([id,c]) => c.sees.forEach(n => {
+  (camsFor[n] ||= []).push(id);
+  if (nodeCam[n] === undefined) nodeCam[n] = id;
+}));
+
+// entry id -> the node it refers to, and the camera it is for
+const entryNode = k => k.split("@")[0];
+const entryCam  = k => k.includes("@") ? k.split("@")[1] : nodeCam[entryNode(k)];
+
+/* ONE ENTRY PER CAMERA, ALWAYS.
+
+   A plain "n18" means "n18 as the first camera in the list sees it", which is
+   a trap: calibrate it while looking at the office hall and the south hall
+   silently inherits a figure framed for the end of a corridor. Worse, a
+   per-animatronic plain key outranks a shared node@CAMERA one, so the per-unit
+   block can quietly shadow a placement you carefully made for the other feed.
+   That is exactly how n18 lost its south hall framing.
+
+   So any node more than one camera sees is split into node@CAM entries the
+   moment the tool opens or loads a file, in the shared table and in every
+   animatronic's override, and the plain key is dropped. Both feeds are then
+   visible in the list, editable separately, and neither can overwrite the
+   other. Nodes only one camera sees keep their plain key — there is nothing to
+   confuse them with.
+
+   Peeked nodes are left alone: the game derives a peek from the owning
+   camera's placement rather than storing one of its own. */
+function splitByCamera(){
+  const tables = [shots, ...roster.map(r => (unit[r.id] ||= {}))];
+  Object.keys(camsFor).forEach(node => {
+    const list = camsFor[node];
+    if (list.length < 2) return;
+    tables.forEach(tab => {
+      const plain = tab[node];
+      list.forEach(cam => {
+        const key = node + "@" + cam;
+        if (!tab[key] && plain) tab[key] = Object.assign({}, plain);
+      });
+      delete tab[node];
+    });
+  });
+}
+splitByCamera();
+
+const S = {node:null, sprite:0, per:false, mode:"camera", ar:"1.7778", sweep:0,
+           mode2:"sprites", boxMode:false};
+
+/* A node counts as "done" when its numbers differ from the ones this session
+   started with. Taken as a snapshot rather than a flag, so loading a file or
+   writing one resets the baseline and the counter means what it says. */
+let SNAP = {};
+function snapKey(n){
+  return JSON.stringify([shots[n] || null, ...roster.map(r => (unit[r.id] || {})[n] || null)]);
+}
+function reSnap(){ SNAP = {}; Object.keys(shots).forEach(n => SNAP[n] = snapKey(n)); }
+const isEdited = n => SNAP[n] !== undefined && SNAP[n] !== snapKey(n);
+const frame  = document.getElementById("frame");
+const screen = document.getElementById("screen");
+const guides = document.getElementById("guides");
+let img = null, sprite = null, showGuides = true;
+
+// ---- node list -----------------------------------------------------------
+const list = document.getElementById("list");
+{
+  const h = document.createElement("h2");
+  h.textContent = "OFFICE DOORWAY";
+  list.appendChild(h);
+  [["DOOR_L","left of your door"],["DOOR_R","right of your door"]].forEach(([id,label]) => {
+    const b = document.createElement("button");
+    b.className = "node kill";
+    b.dataset.node = id;
+    b.innerHTML = "<span>" + id + "</span><span class='d'>" + label + "</span>";
+    b.onclick = () => select(id);
+    list.appendChild(b);
+  });
+}
+
+/* Rebuilt rather than written once, so loading a file with entries this
+   session has never seen puts them in the list instead of leaving them
+   uneditable. Everything is keyed off the ENTRY, so "n18@C13" files under the
+   south hall and is measured from n18. */
+let listHeads = [];
+function buildList(){
+  listHeads.forEach(e => e.remove());
+  listHeads = [];
+  const byCam = {};
+  Object.keys(shots).forEach(k => (byCam[entryCam(k) || "—"] ||= []).push(k));
+
+  Object.keys(byCam).sort().forEach(cam => {
+    const h = document.createElement("h2");
+    h.textContent = cam === "—" ? "NO CAMERA"
+                                : cam + "  " + cams[cam].name.replace(/^\S+\s+/,"");
+    list.appendChild(h); listHeads.push(h);
+    byCam[cam].sort((a,b)=>(dist[entryNode(a)]??9)-(dist[entryNode(b)]??9)).forEach(k => {
+      const d = dist[entryNode(k)];
+      const b = document.createElement("button");
+      b.className = "node" + (d === 1 ? " kill" : "");
+      b.dataset.node = k;
+      b.innerHTML = "<span>"+k+"</span><span class='d'>"+
+        (d === 1 ? "AT DOOR" : (d ?? "?")+" rooms")+"</span>";
+      b.onclick = () => select(k);
+      list.appendChild(b); listHeads.push(b);
+    });
+  });
+}
+buildList();
+
+// ---- selection -----------------------------------------------------------
+function select(n){
+  S.node = n;
+  document.querySelectorAll(".node").forEach(b =>
+    b.classList.toggle("on", b.dataset.node === n));
+  const cam = entryCam(n);
+  frame.querySelectorAll("img").forEach(e => e.remove());
+  screen.querySelectorAll("img.bg").forEach(e => e.remove());
+
+  if (isDoor(n)){
+    img = new Image();
+    img.className = "bg";
+    img.style.filter = "grayscale(.25) brightness(.7) contrast(1.1)";
+    img.onload = () => { layout(); render(); };
+    img.src = officeArt;
+    screen.insertBefore(img, frame);           // behind the door box
+    sprite = new Image();
+    sprite.id = "sprite";
+    sprite.src = roster[S.sprite].art;
+    frame.appendChild(sprite);
+    layout(); render();
+    return;
+  }
+
+  if (!cam){ layout(); render(); return; }
+
+  img = new Image();
+  img.className = "bg";
+  img.style.filter = "grayscale(.5) " + grade;
+  img.onload = () => { layout(); render(); };
+  img.src = cams[cam].art;
+  frame.appendChild(img);
+
+  sprite = new Image();
+  sprite.id = "sprite";
+  sprite.src = roster[S.sprite].art;
+  frame.appendChild(sprite);
+  render();
+}
+
+const uid = () => roster[S.sprite].id;
+const base = () => (shots[S.node] ||= {left:42, bottom:12, width:16, dim:1, flip:false});
+const hasOverride = () => isDoor(S.node)
+  ? !!(doorUnit[uid()] && doorUnit[uid()][DOORNODES[S.node]])
+  : !!(unit[uid()] && unit[uid()][S.node]);
+
+/* What you are editing right now. In SHARED mode that is the node's base
+   placement, used by whichever animatronic has no override of its own. In PER
+   mode it is this one animatronic's override, seeded from the base the first
+   time you touch it. */
+/* Size the screen and the pan wrapper the way the game does.
+
+   CAMERA MODE reproduces it exactly: the screen takes the player's aspect
+   ratio, the pan wrapper is pan.width% of the screen's WIDTH, and the photo is
+   object-fit:cover inside that. This is why a sprite can look one size here and
+   another in game — the percentage is of the wrapper, not of the photo.
+
+   PHOTO MODE just shows the whole picture, useful for seeing what is out of
+   shot but not for judging scale. */
+function layout(){
+  // The doorway is measured against the office panorama: the screen shows the
+  // whole photo and the frame is the door opening itself, clipping like the
+  // real thing does.
+  if (isDoor(S.node)){
+    const wrap = document.getElementById("wrap");
+    const availW = wrap.clientWidth * 0.985, availH = wrap.clientHeight * 0.985;
+    const ar = img && img.naturalWidth ? img.naturalWidth / img.naturalHeight : 3;
+    let w = availW, h = w / ar;
+    if (h > availH){ h = availH; w = h * ar; }
+    screen.classList.remove("photo");
+    screen.classList.add("door");
+    document.body.classList.add("doormode");
+    screen.style.width = w + "px"; screen.style.height = h + "px";
+    frame.style.left   = officeDoor.x + "%";
+    frame.style.width  = officeDoor.w + "%";
+    frame.style.top    = officeDoor.top + "%";
+    frame.style.height = officeDoor.h + "%";
+    frame.style.transform = "none";
+    return;
+  }
+  screen.classList.remove("door");
+  document.body.classList.remove("doormode");
+  frame.style.top = "0"; frame.style.left = "0"; frame.style.height = "100%";
+  const cam = cams[nodeCam[S.node]];
+  const wrap = document.getElementById("wrap");
+  const availW = wrap.clientWidth * 0.985, availH = wrap.clientHeight * 0.985;
+  const photoAR = img && img.naturalWidth ? img.naturalWidth / img.naturalHeight : 16/9;
+
+  if (S.mode === "photo" || !cam){
+    screen.classList.add("photo");
+    let w = availW, h = w / photoAR;
+    if (h > availH){ h = availH; w = h * photoAR; }
+    screen.style.width = w + "px"; screen.style.height = h + "px";
+    frame.style.width = "100%"; frame.style.transform = "none";
+    return;
+  }
+
+  screen.classList.remove("photo");
+  const screenAR = S.ar === "win" ? innerWidth / innerHeight : parseFloat(S.ar);
+  let w = availW, h = w / screenAR;
+  if (h > availH){ h = availH; w = h * screenAR; }
+  screen.style.width = w + "px"; screen.style.height = h + "px";
+
+  const panW = w * (cam.pan / 100);
+  frame.style.width = panW + "px";
+  const travel = panW - w;
+  frame.style.transform = travel > 0
+    ? "translateX(" + (-travel/2 + (S.sweep * travel/2) * reach) + "px)"
+    : "translateX(0)";
+}
+
+/* Resolve the same way the game does: this animatronic's override if it has
+   one, otherwise the shared placement. There is deliberately no "view the
+   shared value while an override exists" state — that would show a number the
+   game never uses and let you spend ten minutes adjusting nothing. */
+function shot(){
+  const u = uid();
+  if (isDoor(S.node)){
+    const side = DOORNODES[S.node];
+    if (doorUnit[u] && doorUnit[u][side]) return doorUnit[u][side];
+    return doorShots[side];
+  }
+  if (unit[u] && unit[u][S.node]) return unit[u][S.node];
+  return base();
+}
+
+/* Split this node off for the current animatronic, or fold it back in. */
+function toggleSplit(){
+  if (!S.node) return;
+  const u = uid();
+  if (isDoor(S.node)){
+    const side = DOORNODES[S.node];
+    doorUnit[u] ||= {};
+    if (doorUnit[u][side]) delete doorUnit[u][side];
+    else doorUnit[u][side] = Object.assign({}, doorShots[side]);
+  } else {
+    unit[u] ||= {};
+    if (unit[u][S.node]) delete unit[u][S.node];
+    else unit[u][S.node] = Object.assign({}, base());
+  }
+  render();
+}
+
+// does any animatronic have its own placement for this node?
+const anySplit = n => isDoor(n)
+  ? roster.some(r => doorUnit[r.id] && doorUnit[r.id][DOORNODES[n]])
+  : roster.some(r => unit[r.id] && unit[r.id][n]);
+
+function render(){
+  if (!S.node || !sprite) return;
+  const s = shot();
+  sprite.style.left = s.left + "%";
+  sprite.style.bottom = s.bottom + "%";
+  sprite.style.width = s.width + "%";
+  sprite.style.height = "auto";
+  sprite.style.transform = s.flip ? "scaleX(-1)" : "none";
+  sprite.style.filter = "grayscale(.6) contrast(1.1) brightness(" + (0.65*(s.dim??1)) + ")";
+  const cT=s.clipT||0, cR=s.clipR||0, cB=s.clipB||0, cL=s.clipL||0;
+  sprite.style.clipPath = (cT||cR||cB||cL)
+    ? "inset("+cT+"% "+cR+"% "+cB+"% "+cL+"%)" : "none";
+  sprite.classList.toggle("glow", dist[S.node] === 1);
+
+  // when the anchor is off-frame the guide pins to the edge and turns amber,
+  // so you can still see which way the figure went
+  // guides are meaningless against a door-sized box, and the amber "off frame"
+  // version of them was the stray line across the office view
+  if (isDoor(S.node)){ guides.innerHTML = ""; }
+  const cx = s.left + s.width/2, offX = cx < 0 || cx > 100, offY = s.bottom < 0 || s.bottom > 100;
+  guides.innerHTML = (showGuides && !isDoor(S.node))
+    ? '<div style="left:'+Math.max(0,Math.min(100,cx))+'%;top:0;bottom:0;width:'+
+        (offX?"2px":"1px")+';background:'+(offX?"var(--amber)":"var(--phos)")+'"></div>' +
+      '<div style="bottom:'+Math.max(0,Math.min(100,s.bottom))+'%;left:0;right:0;height:'+
+        (offY?"2px":"1px")+';background:'+(offY?"var(--amber)":"var(--phos)")+'"></div>'
+    : "";
+
+  // sidebar marks + the progress counter
+  let done = 0;
+  document.querySelectorAll(".node").forEach(b => {
+    const ed = isEdited(b.dataset.node);
+    if (ed) done++;
+    b.classList.toggle("edited", ed);
+    b.classList.toggle("split", anySplit(b.dataset.node));
+  });
+  document.getElementById("count").textContent =
+    done + " / " + Object.keys(shots).length + " MOVED";
+
+  // the mode is not a setting any more — it is simply whether an override
+  // exists, detected on selection so loading a file cannot mislead you
+  S.per = hasOverride();
+  document.getElementById("who").textContent = "SPRITE: " + uid().toUpperCase();
+  const perBtn = document.getElementById("per");
+  perBtn.textContent = S.per ? "FOLD BACK INTO SHARED" : "SPLIT FOR " + uid().toUpperCase();
+  perBtn.style.borderColor = S.per ? "var(--amber)" : "var(--hair)";
+  perBtn.style.color       = S.per ? "var(--amber)" : "var(--dim)";
+
+  const read = document.getElementById("read");
+  read.textContent =
+    S.node + "  left " + s.left.toFixed(1) + "%  bottom " + s.bottom.toFixed(1) +
+    "%  width " + s.width.toFixed(1) + "%" + (s.flip ? "  flipped" : "") +
+    ((s.dim??1) !== 1 ? "  dim " + s.dim : "") +
+    (s.bottom < 0 ? "   ↓ " + Math.abs(s.bottom).toFixed(0) + "% below frame" : "") +
+    (S.per ? "   [" + uid() + " only]" : "   [shared by both]") +
+    ((s.clipT||s.clipR||s.clipB||s.clipL)
+      ? "   crop " + (s.clipT||0)+"/"+(s.clipR||0)+"/"+(s.clipB||0)+"/"+(s.clipL||0) : "");
+  read.style.color = s.bottom < 0 || cxOff(s) ? "var(--amber)" : "var(--phos)";
+  dump();
+}
+
+// ---- drag ----------------------------------------------------------------
+let drag = null;
+/* The whole frame is the drag surface, not the sprite. Once a figure is mostly
+   below the bottom edge there is nothing left to grab, so grabbing anywhere
+   moves it. */
+function startDrag(e){
+  if (!S.node) return;
+  // dragging the opening rather than the figure inside it
+  if (S.boxMode && isDoor(S.node)){
+    e.preventDefault();
+    const r = screen.getBoundingClientRect();
+    boxDrag = {x:e.clientX, y:e.clientY, X:officeDoor.x, Y:officeDoor.top, w:r.width, h:r.height};
+    screen.setPointerCapture(e.pointerId);
+    return;
+  }
+  e.preventDefault();
+  const r = frame.getBoundingClientRect(), s = shot();
+  drag = {x:e.clientX, y:e.clientY, l:s.left, b:s.bottom, w:r.width, h:r.height};
+  frame.classList.add("drag");
+  frame.setPointerCapture(e.pointerId);
+}
+frame.addEventListener("pointerdown", startDrag);
+let boxDrag = null;
+addEventListener("pointermove", e => {
+  if (boxDrag){
+    officeDoor.x   = Math.max(0, Math.min(99, boxDrag.X + (e.clientX - boxDrag.x)/boxDrag.w*100));
+    officeDoor.top = Math.max(0, Math.min(99, boxDrag.Y + (e.clientY - boxDrag.y)/boxDrag.h*100));
+    layout(); render();
+    return;
+  }
+  if (!drag) return;
+  const s = shot();
+  // Deliberately loose. The game never clamps SHOTS, so neither does this —
+  // pushing a figure far below the frame is how you get a face filling the
+  // lens with the body out of shot entirely.
+  /* The doorway box is a sliver of the screen, so a pixel of travel is a large
+     percentage of it — and the useful range runs far outside the box in both
+     directions. Both get much wider limits than a camera frame needs. */
+  const wide = isDoor(S.node);
+  const loL = wide ? -1200 : -300, hiL = wide ? 1200 : 400;
+  const loB = wide ? -2000 : -800, hiB = wide ? 1200 : 400;
+  s.left   = Math.max(loL, Math.min(hiL, drag.l + (e.clientX - drag.x) / drag.w * 100));
+  s.bottom = Math.max(loB, Math.min(hiB, drag.b - (e.clientY - drag.y) / drag.h * 100));
+  render();
+});
+addEventListener("pointerup", () => { drag = null; boxDrag = null;
+                                     frame.classList.remove("drag"); });
+
+frame.addEventListener("wheel", e => {
+  if (!S.node) return;
+  e.preventDefault();
+  if (S.boxMode && isDoor(S.node)){
+    // wheel widens the opening, shift+wheel makes it taller
+    const step = e.deltaY > 0 ? -0.4 : 0.4;
+    if (e.shiftKey) officeDoor.h = Math.max(1, Math.min(90, officeDoor.h + step));
+    else            officeDoor.w = Math.max(1, Math.min(90, officeDoor.w + step));
+    layout(); render();
+    return;
+  }
+  const s = shot();
+  const rate = e.shiftKey ? 1.012 : 1.064;          // shift for fine control
+  s.width = Math.max(1, Math.min(900, s.width * (e.deltaY > 0 ? 1/rate : rate)));
+  render();
+}, {passive:false});
+
+addEventListener("keydown", e => {
+  if (!S.node) return;
+  const s = shot(), step = e.shiftKey ? 8 : 0.6;   // shift for big moves
+  if (e.key === "f" || e.key === "F") s.flip = !s.flip;
+  else if (e.key === "[") s.dim = Math.max(0.2, (s.dim??1) - 0.05);
+  else if (e.key === "]") s.dim = Math.min(1, (s.dim??1) + 0.05);
+  else if (e.key === "g" || e.key === "G") showGuides = !showGuides;
+  else if (e.key === "ArrowLeft")  s.left -= step;
+  else if (e.key === "ArrowRight") s.left += step;
+  else if (e.key === "ArrowUp")    s.bottom += step;
+  else if (e.key === "ArrowDown")  s.bottom -= step;
+  else if (e.key === "Tab"){ e.preventDefault(); S.sprite = (S.sprite+1)%roster.length;
+                             sprite.src = roster[S.sprite].art; render(); return; }
+  else if (e.key === "u" || e.key === "U"){ toggleSplit(); return; }
+  else if (e.key === "h" || e.key === "H"){
+    document.getElementById("hint").classList.toggle("off"); return; }
+  /* Cropping. W/S take the top and bottom in, A/D the left and right; hold
+     shift to give it back. This is how a figure ends up behind a desk or
+     leaning out from behind a door frame rather than floating in front of it. */
+  else if ("wasdWASD".includes(e.key)){
+    const amt = 2, k = e.key.toLowerCase(), give = e.key !== k;
+    const fld = {w:"clipT", s:"clipB", a:"clipL", d:"clipR"}[k];
+    s[fld] = Math.max(0, Math.min(95, (s[fld]||0) + (give ? -amt : amt)));
+  }
+  else if (e.key === "0"){ s.left = 42; s.bottom = 12; s.width = 16; }   // lost it? come back
+  else return;
+  e.preventDefault(); render();
+});
+
+// ---- output --------------------------------------------------------------
+function line(n, override){
+  const s = override || shots[n];
+  const parts = ["left:" + round(s.left), "bottom:" + round(s.bottom), "width:" + round(s.width)];
+  if (s.flip) parts.push("flip:true");
+  if ((s.dim ?? 1) !== 1) parts.push("dim:" + (Math.round(s.dim*100)/100));
+  ["clipT","clipR","clipB","clipL"].forEach(k => {
+    if (s[k]) parts.push(k + ":" + round(s[k]));
+  });
+  // "n18@C07" is not a valid identifier, so it has to go out quoted or the
+  // game file will not parse at all
+  const plain = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(n);
+  return "  " + (plain ? n.padEnd(4) : '"' + n + '"') +
+         ":{ " + parts.join(", ") + " },";
+}
+const round = v => Math.round(v * 10) / 10;
+const cxOff = s => (s.left + s.width/2) < 0 || (s.left + s.width/2) > 100;
+
+function dump(){
+  document.getElementById("out").textContent = (S.mode2 === "map")
+    ? blockRooms() + "\n\n" + blockDoorBox() + "\n\n/* camera pins */\n" + blockPins()
+    : blockShots() + "\n\n" + blockUnit() + "\n\n" + blockDoor() +
+      "\n\n" + blockDoorBox();
+}
+
+function blockShots(){
+  return "const SHOTS = {\n" + Object.keys(shots).map(n => line(n)).join("\n").replace(/,$/, "") + "\n};";
+}
+function doorLine(side, o){
+  return "  " + side.padEnd(5) + ":{ left:" + round(o.left) +
+         ", bottom:" + round(o.bottom) + ", width:" + round(o.width) + " },";
+}
+/* The opening itself, so the box can be dragged onto the real door rather than
+   measured off a screenshot by hand. */
+function blockDoorBox(){
+  return "const OFFICE_DOOR = { x:" + round(officeDoor.x) +
+         ", w:" + round(officeDoor.w) +
+         ", top:" + round(officeDoor.top) +
+         ", h:" + round(officeDoor.h) + " };";
+}
+
+function blockDoor(){
+  const shared = ["left","right"].map(s => doorLine(s, doorShots[s])).join("\n").replace(/,$/, "");
+  const per = roster.map(r => {
+    const o = doorUnit[r.id] || {};
+    const ks = Object.keys(o);
+    const rows = ks.map(s => "  " + doorLine(s, o[s]).trim()).join("\n    ").replace(/,$/, "");
+    return "  " + r.id + ": {" + (ks.length ? "\n    " + rows + "\n  " : "") + "}";
+  }).join(",\n");
+  return "const DOOR_SHOTS = {\n" + shared + "\n};\n\n" +
+         "const DOOR_SHOTS_UNIT = {\n" + per + "\n};";
+}
+
+function blockUnit(){
+  const bodies = roster.map(r => {
+    const o = unit[r.id] || {};
+    const ks = Object.keys(o);
+    const rows = ks.map(n => "    " + line(n, o[n]).trim()).join("\n").replace(/,$/, "");
+    return "  " + r.id + ": {" + (ks.length ? "\n" + rows + "\n  " : "") + "}";
+  });
+  return "const SHOTS_UNIT = {\n" + bodies.join(",\n") + "\n};";
+}
+function flash(id, msg, back){
+  const b = document.getElementById(id);
+  b.textContent = msg;
+  setTimeout(() => b.textContent = back, 2600);
+}
+
+document.getElementById("copy").onclick = () => {
+  navigator.clipboard?.writeText(blockShots() + "\n\n" + blockUnit() + "\n\n" + blockDoor());
+  flash("copy", "COPIED — PASTE ALL FOUR BLOCKS", "COPY BLOCKS");
+};
+
+/* Chrome and Edge can write the file back directly. Everything else falls back
+   to the clipboard, because a browser cannot touch your disk unasked. */
+/* One routine that knows how to rewrite the game file, shared by the direct
+   write and the download fallback. Returns null if this is not the game. */
+/* Refuse to hand back something the browser cannot run. Cheap, but it would
+   have caught the unquoted key that stopped the game loading. */
+function sane(block, label){
+  try { new Function("return " + block.replace(/^const \w+ = /, "").replace(/;$/, "")); }
+  catch (e){
+    flash("patch", "REFUSED — " + label + " would not parse", "WRITE ALL INTO index.html");
+    console.error(label, e, block);
+    return false;
+  }
+  return true;
+}
+
+function patchText(text){
+  if (!/const SHOTS = \{/.test(text)) return null;
+  const sb = blockShots(), ub = blockUnit(), db = blockDoor();
+  if (!sane(sb, "SHOTS") || !sane(ub, "SHOTS_UNIT") ||
+      !sane(blockRooms(), "ROOMS") || !sane(blockDoorBox(), "OFFICE_DOOR")) return null;
+
+  text = applyTuning(text);
+  text = text.replace(/const SHOTS = \{[\s\S]*?\s\};/, () => sb);
+  text = /const SHOTS_UNIT = \{/.test(text)
+    ? text.replace(/const SHOTS_UNIT = \{[\s\S]*?\s\};/, () => ub)
+    : text.replace(sb, () => sb + "\n\n" + ub);
+
+  // rooms, replaced wholesale
+  text = text.replace(/const ROOMS = \[[\s\S]*?\s\];/, () => blockRooms());
+
+  // the doorway opening itself
+  text = text.replace(/const OFFICE_DOOR = \{[^}]*\};/, () => blockDoorBox());
+
+  /* Camera pins, spliced in by index. A RegExp built from a string loses a
+     backslash on the way through generation, and the pattern silently stops
+     matching — which is exactly why pin positions never wrote. */
+  Object.entries(cams).forEach(([id, c]) => {
+    const at = text.indexOf(id + ":{");
+    if (at === -1) return;
+    const p = text.indexOf("pin:{", at);
+    if (p === -1) return;
+    const e = text.indexOf("}", p);
+    if (e === -1) return;
+    text = text.slice(0, p) + "pin:{x:" + round(c.pin.x) + ",y:" + round(c.pin.y)
+         + text.slice(e);
+  });
+
+  // the doorway pair travels together: index arithmetic, no escapes to lose
+  const dstart = text.indexOf("const DOOR_SHOTS = {");
+  const dend   = text.indexOf("};", text.indexOf("const DOOR_SHOTS_UNIT = {"));
+  if (dstart !== -1 && dend !== -1)
+    text = text.slice(0, dstart) + db + text.slice(dend + 2);
+
+  return text;
+}
+
+document.getElementById("patch").onclick = async () => {
+  if (!window.showOpenFilePicker){
+    navigator.clipboard?.writeText(blockShots() + "\n\n" + blockUnit());
+    flash("patch", "BROWSER CANNOT WRITE FILES — COPIED INSTEAD", "WRITE ALL INTO index.html");
+    return;
+  }
+  try{
+    const [h] = await window.showOpenFilePicker({
+      types:[{description:"the game file", accept:{"text/html":[".html"]}}]
+    });
+    let text = await (await h.getFile()).text();
+    const patched = patchText(text);
+    if (!patched){
+      flash("patch", "THAT FILE HAS NO SHOTS BLOCK", "WRITE ALL INTO index.html"); return;
+    }
+    const w = await h.createWritable();
+    await w.write(patched); await w.close();
+    reSnap();
+    flash("patch", "WROTE " + Object.keys(shots).length + " NODES" +
+          (tuneCount() ? " AND " + tuneCount() + " TUNING VALUES" : ""),
+          "WRITE ALL INTO index.html");
+    return;
+  }catch(err){
+    /* The picker only exists in a secure context, and anything thrown INSIDE
+       the try was previously reported as "cancelled" too — which is why this
+       looked like a permissions problem when it was often a code one. */
+    if (err && err.name === "AbortError"){
+      flash("patch", "CANCELLED", "WRITE ALL INTO index.html");
+    } else {
+      console.error(err);
+      flash("patch", "COULD NOT WRITE — " + (err && err.message ? err.message : "unknown"),
+            "WRITE ALL INTO index.html");
+      downloadPatched();
+    }
+  }
+};
+
+/* Works from file://, from plain http, from anywhere: read the file through a
+   normal file input, patch it in memory, hand back a download. No permissions
+   involved. */
+function downloadPatched(){
+  const inp = document.createElement("input");
+  inp.type = "file"; inp.accept = ".html";
+  inp.onchange = () => {
+    inp.files[0].text().then(text => {
+      const out = patchText(text);
+      if (!out){ flash("patch", "THAT FILE HAS NO SHOTS BLOCK", "WRITE ALL INTO index.html"); return; }
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([out], {type:"text/html"}));
+      a.download = "index.html";
+      a.click();
+      flash("patch", "DOWNLOADED — REPLACE YOUR index.html", "WRITE ALL INTO index.html");
+    });
+  };
+  inp.click();
+}
+document.getElementById("download").onclick = downloadPatched;
+
+/* Read SHOTS and SHOTS_UNIT back out of the game file, so you can stop, play,
+   and pick the work up again instead of starting from the built-in values. */
+/* Everything that is NOT a sprite placement: the doorway opening, the room
+   rectangles and their names, and each camera's pin. Baked in when this tool
+   was generated, but the file moves on — so LOAD has to re-read them or the
+   next write quietly reverts whatever you changed by hand.
+
+   Regex literals only, for the usual reason. */
+/* The doorway placements were the one block LOAD never re-read, which is why
+   the opening came in correctly and the figures inside it did not. */
+function parseDoorBlocks(text){
+  const one = b => {
+    const o = {};
+    b.replace(/(left|bottom|width|dim|clipT|clipR|clipB|clipL)\s*:\s*(-?[\d.]+)/g,
+              (_, k, v) => { o[k] = parseFloat(v); return ""; });
+    o.flip = /flip:true/.test(b);
+    return o;
+  };
+
+  const db = text.match(/const DOOR_SHOTS = \{([\s\S]*?)\s\};/);
+  if (db){
+    db[1].replace(/(left|right)\s*:\s*\{([^}]*)\}/g,
+                  (_, side, b) => { doorShots[side] = one(b); return ""; });
+  }
+
+  const du = text.match(/const DOOR_SHOTS_UNIT = \{([\s\S]*?)\s\};/);
+  roster.forEach(r => doorUnit[r.id] = {});
+  if (du){
+    const segs = splitUnits(du[1]);
+    roster.forEach(r => {
+      if (!segs[r.id]) return;
+      segs[r.id].replace(/(left|right)\s*:\s*\{([^}]*)\}/g,
+                         (_, side, b) => { doorUnit[r.id][side] = one(b); return ""; });
+    });
+  }
+}
+
+function parseWorld(text){
+  parseDoorBlocks(text);
+  const od = text.match(/const OFFICE_DOOR = \{\s*x:(-?[\d.]+),\s*w:(-?[\d.]+),\s*top:(-?[\d.]+),\s*h:(-?[\d.]+)\s*\}/);
+  if (od){
+    officeDoor.x = +od[1]; officeDoor.w = +od[2];
+    officeDoor.top = +od[3]; officeDoor.h = +od[4];
+  }
+
+  const rb = text.match(/const ROOMS = \[([\s\S]*?)\s\];/);
+  if (rb){
+    const list = [];
+    rb[1].replace(/\{\s*x1:(-?[\d.]+),\s*y1:\s*(-?[\d.]+),\s*x2:(-?[\d.]+),\s*y2:\s*(-?[\d.]+),\s*name:"([^"]*)"([^}]*)\}/g,
+      (_, x1, y1, x2, y2, name, rest) => {
+        list.push({ x1:+x1, y1:+y1, x2:+x2, y2:+y2, name,
+                    hall:/hall:true/.test(rest), you:/you:true/.test(rest) });
+        return "";
+      });
+    if (list.length){ rooms.length = 0; list.forEach(r => rooms.push(r)); }
+  }
+
+  /* DOOR_SHOTS and its per-animatronic overrides. Without these a LOAD brought
+     in the right doorway BOX and left the figures inside it at whatever was
+     baked in when this tool was generated — the box looked right and the
+     sprites did not. */
+  const dsb = text.match(/const DOOR_SHOTS = \{([\s\S]*?)\s\};/);
+  if (dsb){
+    const got = parseBlock(dsb[1]);
+    ["left","right"].forEach(side => { if (got[side]) doorShots[side] = got[side]; });
+  }
+  const dub = text.match(/const DOOR_SHOTS_UNIT = \{([\s\S]*?)\s\};/);
+  if (dub){
+    const segs = splitUnits(dub[1]);
+    roster.forEach(r => {
+      doorUnit[r.id] = {};
+      if (segs[r.id]){
+        const o = parseBlock(segs[r.id]);
+        ["left","right"].forEach(side => { if (o[side]) doorUnit[r.id][side] = o[side]; });
+      }
+    });
+  }
+
+  Object.keys(cams).forEach(id => {
+    const at = text.indexOf(id + ":{");
+    if (at === -1) return;
+    const seg = text.slice(at, at + 500);
+    const nm = seg.match(/name:"([^"]*)"/);
+    if (nm) cams[id].name = nm[1];
+    const pn = seg.match(/pin:\{x:(-?[\d.]+),\s*y:(-?[\d.]+)\}/);
+    if (pn){ cams[id].pin.x = +pn[1]; cams[id].pin.y = +pn[2]; }
+  });
+}
+
+function parseBlock(body){
+  const out = {};
+  // Regex LITERALS only. Building these with new RegExp("...") means the
+  // escapes live inside a string, where \s collapses to a plain "s" and the
+  // pattern silently stops matching anything.
+  body.replace(/"?([\w@$]+)"?\s*:\{([^}]*)\}/g, (_, name, b) => {
+    const o = {};
+    b.replace(/(left|bottom|width|dim|clipT|clipR|clipB|clipL)\s*:\s*(-?[\d.]+)/g,
+              (__, k, v) => { o[k] = parseFloat(v); return ""; });
+    o.flip = /flip:true/.test(b);
+    out[name] = o;
+    return "";
+  });
+  return out;
+}
+
+/* Split "warden: { ... }, auditor: { ... }" into named chunks by counting
+   braces. A regex would need a newline escape to find the closing brace, and
+   escapes inside generated code are exactly what broke this the first time. */
+function splitUnits(body){
+  const segs = {}, re = /(\w+)\s*:\s*\{/g;
+  let m;
+  while ((m = re.exec(body))){
+    let depth = 1, i = re.lastIndex;
+    while (i < body.length && depth > 0){
+      const c = body[i];
+      if (c === "{") depth++;
+      else if (c === "}") depth--;
+      i++;
+    }
+    segs[m[1]] = body.slice(re.lastIndex, i - 1);
+    re.lastIndex = i;
+  }
+  return segs;
+}
+
+/* Anything the file did not specify falls back to a sane value, so one odd
+   entry can never leave a node half-defined and freeze the renderer. */
+const SHOT_DEFAULT = {left:42, bottom:12, width:16, dim:1, flip:false,
+                      clipT:0, clipR:0, clipB:0, clipL:0};
+const normalise = o => Object.assign({}, SHOT_DEFAULT, o);
+
+document.getElementById("load").onclick = async () => {
+  const apply = text => {
+    const ms = text.match(/const SHOTS = \{([\s\S]*?)\s\};/);
+    if (!ms){ flash("load", "NO SHOTS BLOCK IN THAT FILE", "LOAD FROM index.html"); return; }
+
+    const raw = parseBlock(ms[1]);
+    const names = Object.keys(raw);
+    if (!names.length){ flash("load", "COULD NOT READ ANY NODES", "LOAD FROM index.html"); return; }
+
+    // how many arrived without the numbers that matter — surfaced, not swallowed
+    const partial = names.filter(n =>
+      raw[n].left === undefined || raw[n].bottom === undefined || raw[n].width === undefined).length;
+
+    Object.keys(shots).forEach(k => delete shots[k]);
+    names.forEach(n => shots[n] = normalise(raw[n]));
+
+    // per-animatronic overrides: pull each id's segment out by name
+    const segs = {};
+    const mu = text.match(/const SHOTS_UNIT = \{([\s\S]*?)\s\};/);
+    if (mu){
+      Object.assign(segs, splitUnits(mu[1]));
+    }
+    roster.forEach(r => {
+      unit[r.id] = {};
+      if (segs[r.id]){
+        const o = parseBlock(segs[r.id]);
+        Object.keys(o).forEach(n => unit[r.id][n] = normalise(o[n]));
+      }
+    });
+
+    // the world around the sprites, so a load is a complete refresh
+    parseWorld(text);
+    const tuned = readTuning(text);
+    mapBuilt = false;
+    if (S.mode2 === "map") buildMapEditor();
+
+    // the file may still carry plain keys for a two-camera node; split them
+    splitByCamera();
+    buildList();
+
+    reSnap();
+    flash("load", partial
+      ? "LOADED " + names.length + " NODES, " + partial + " INCOMPLETE"
+      : "LOADED " + names.length + " NODES AND " + tuned + " TUNING BLOCKS",
+      "LOAD FROM index.html");
+    if (!shots[S.node]) S.node = Object.keys(shots)[0];
+    select(S.node);
+  };
+
+
+  if (window.showOpenFilePicker){
+    try{
+      const [h] = await window.showOpenFilePicker({
+        types:[{description:"the game file", accept:{"text/html":[".html"]}}]
+      });
+      apply(await (await h.getFile()).text());
+    }catch(e){ flash("load", "CANCELLED", "LOAD FROM index.html"); }
+  } else {
+    const inp = document.createElement("input");
+    inp.type = "file"; inp.accept = ".html";
+    inp.onchange = () => inp.files[0].text().then(apply);
+    inp.click();
+  }
+};
+
+document.getElementById("per").onclick = toggleSplit;
+document.getElementById("mode").onchange = e => { S.mode = e.target.value; layout(); render(); };
+document.getElementById("boxmode").onchange = e => { S.boxMode = e.target.checked; render(); };
+document.getElementById("ar").onchange   = e => { S.ar   = e.target.value; layout(); render(); };
+document.getElementById("sweep").oninput = e => { S.sweep = parseFloat(e.target.value); layout(); };
+document.getElementById("who").onclick = () => {
+  S.sprite = (S.sprite + 1) % roster.length;
+  if (sprite) sprite.src = roster[S.sprite].art;
+  render();
+};
+document.getElementById("reset").onclick = () => {
+  if (!S.node) return;
+  if (hasOverride()) delete unit[uid()][S.node];   // drop back to the shared one
+  else shots[S.node] = {left:42, bottom:12, width:16, dim:1, flip:false};
+  render();
+};
+
+/* Folding the code panel changes how much room the photo has, so re-fit it. */
+/* ---------------------------------------------------------------------------
+   MAP EDITOR
+
+   The camera buttons sit on top of the room labels in game, and there was no
+   way to move them without hand-editing two different blocks. Here the pins
+   drag and the names are editable text, and both write straight back.
+--------------------------------------------------------------------------- */
+const board = document.getElementById("mapBoard");
+let mapBuilt = false;
+
+/* Width of the floorplan as the game draws it: #map is min(390px, 44vw), and
+   #mapPlan fills it. Keep these in step if that rule changes. */
+const GAME_MAP_PX = 390;
+
+function syncPinScale(){
+  const w = board.clientWidth || 1;
+  board.style.setProperty("--pinScale", (w / GAME_MAP_PX).toFixed(3));
+}
+
+function buildMapEditor(){
+  board.innerHTML = "";
+  syncPinScale();
+  rooms.forEach((r, i) => {
+    const d = document.createElement("div");
+    d.className = "mRoom" + (r.hall ? " hall" : "") + (r.you ? " you" : "");
+    d.style.left = r.x1 + "%"; d.style.top = r.y1 + "%";
+    d.style.width = (r.x2 - r.x1) + "%"; d.style.height = (r.y2 - r.y1) + "%";
+    const b = document.createElement("b");
+    b.contentEditable = "true"; b.spellcheck = false; b.textContent = r.name;
+    b.addEventListener("input", () => { r.name = b.textContent.trim().toUpperCase(); dump(); });
+    b.addEventListener("keydown", e => { e.stopPropagation(); if (e.key === "Enter"){ e.preventDefault(); b.blur(); } });
+    d.appendChild(b);
+    board.appendChild(d);
+  });
+
+  Object.entries(cams).forEach(([id, c]) => {
+    const el = document.createElement("div");
+    el.className = "mPin"; el.textContent = id;
+    el.style.left = c.pin.x + "%"; el.style.top = c.pin.y + "%";
+    el.title = c.name;
+    el.addEventListener("pointerdown", e => {
+      e.preventDefault(); e.stopPropagation();
+      const r = board.getBoundingClientRect();
+      const move = ev => {
+        c.pin.x = Math.max(0, Math.min(100, (ev.clientX - r.left) / r.width * 100));
+        c.pin.y = Math.max(0, Math.min(100, (ev.clientY - r.top) / r.height * 100));
+        el.style.left = c.pin.x + "%"; el.style.top = c.pin.y + "%";
+        dump();
+      };
+      const up = () => { removeEventListener("pointermove", move);
+                         removeEventListener("pointerup", up);
+                         el.classList.remove("drag"); };
+      el.classList.add("drag");
+      addEventListener("pointermove", move); addEventListener("pointerup", up);
+    });
+    board.appendChild(el);
+  });
+  mapBuilt = true;
+}
+
+function setMode(m){
+  S.mode2 = m;
+  document.body.classList.toggle("mapmode",  m === "map");
+  document.body.classList.toggle("tunemode", m === "tuning");
+  [["tab-map","map"],["tab-sprites","sprites"],["tab-tuning","tuning"]].forEach(([id,k]) =>
+    document.getElementById(id).style.color = m === k ? "var(--phos)" : "var(--dim)");
+  if (m === "map" && !mapBuilt) buildMapEditor();
+  else if (m === "map") syncPinScale();
+  else if (m === "tuning") buildTuneEditor();
+  dump();
+}
+addEventListener("resize", () => { if (S.mode2 === "map") syncPinScale(); });
+document.getElementById("tab-map").onclick     = () => setMode("map");
+document.getElementById("tab-sprites").onclick = () => setMode("sprites");
+document.getElementById("tab-tuning").onclick  = () => setMode("tuning");
+
+/* ===========================================================================
+   TUNING — every number the game runs, edited here and written back
+
+   The placement editors above own their data: the tool holds SHOTS in memory
+   and regenerates the whole block on write. That cannot work for the tuning
+   constants. CONFIG, NIGHTS, AUDITOR and PHANTOM are more comment than code —
+   the reasoning for each number lives beside it, and regenerating those blocks
+   would throw all of it away the first time somebody nudged a value.
+
+   So nothing is regenerated here. The file is read, the numbers are located by
+   position, and only the digits that were actually changed are spliced out and
+   replaced. Comments, ordering, spacing and anything this tool does not
+   understand come through untouched.
+
+   Finding them safely needs one trick: a masked copy of the text with every
+   comment and string literal blanked to spaces of the same length. Offsets
+   stay identical, so a match found in the mask is spliced into the original —
+   and `moveMs` mentioned in a comment can never be mistaken for the real one.
+   =========================================================================== */
+
+const TUNE_BLOCKS = [
+  { name:"CONFIG", header:"const CONFIG = {", open:"{", close:"}",
+    note:"Global tuning: the clock, lures, the breaker, air, reboots, and the "
+       + "autopilot's own limits." },
+  { name:"NIGHTS", header:"const NIGHTS = [", open:"[", close:"]", rows:true,
+    note:"One row per night. moveMs is the base move interval, breachMs your "
+       + "reaction window once something is at a door, enterMs how long they "
+       + "loiter outside, failEveryMs how often a fault is rolled for." },
+  { name:"AUDITOR", header:"const AUDITOR = {", open:"{", close:"}",
+    note:"Hers alone. Arrays are per night; moveMult multiplies the night's "
+       + "move interval and is the single number that decides whether she is a "
+       + "threat at all." },
+  { name:"PHANTOM", header:"const PHANTOM = {", open:"{", close:"}",
+    note:"The one on the feeds. showMs is how long you have to change camera "
+       + "once you have opened one he is waiting in." },
+  { name:"FATIGUE", header:"const FATIGUE = {", open:"{", close:"}",
+    note:"How fast watching stops working, and how fast it comes back." },
+  { name:"HALLUCINATION", header:"const HALLUCINATION = {", open:"{", close:"}",
+    note:"Figures that are not there. A gap of 0 means never." },
+  { name:"RAMP", header:"const RAMP = {", open:"{", close:"}",
+    note:"Applied per in-game hour, so 5 AM is harder than 12 AM on every night." },
+  { name:"ANIMATRONICS", header:"soundAndSight: [", open:"[", close:"]", rows:true,
+    note:"The pair themselves. lureResist is how much of a cue they ignore, "
+       + "watchStall how much being watched slows them, passByMod their odds "
+       + "in a dark doorway, speedMod a multiplier on their move interval." }
+];
+
+/* Comments and strings blanked, offsets preserved. */
+function maskCode(s){
+  const out = s.split("");
+  let i = 0;
+  const blank = (a, b) => { for (let k = a; k < b; k++) if (out[k] !== "\n") out[k] = " "; };
+  while (i < s.length){
+    const c = s[i], d = s[i + 1];
+    if (c === "/" && d === "*"){
+      let j = s.indexOf("*/", i + 2); j = j === -1 ? s.length : j + 2;
+      blank(i, j); i = j; continue;
+    }
+    if (c === "/" && d === "/"){
+      let j = s.indexOf("\n", i); j = j === -1 ? s.length : j;
+      blank(i, j); i = j; continue;
+    }
+    if (c === '"' || c === "'" || c === "`"){
+      let j = i + 1;
+      while (j < s.length && s[j] !== c){ if (s[j] === "\\") j++; j++; }
+      blank(i, Math.min(j + 1, s.length)); i = j + 1; continue;
+    }
+    i++;
+  }
+  return out.join("");
+}
+
+function matchBracket(mask, from, open, close){
+  let depth = 0;
+  for (let i = from; i < mask.length; i++){
+    if (mask[i] === open) depth++;
+    else if (mask[i] === close){ depth--; if (!depth) return i; }
+  }
+  return -1;
+}
+
+const NUM_AT = /^[-+]?\d*\.?\d+/;
+
+/* Every number and boolean inside one block, by path, with the exact span of
+   the literal so it can be spliced later. Descends one level into nested
+   objects and into arrays of objects, which is as deep as the game's tables
+   ever go. */
+function scanFields(mask, from, to, prefix, out){
+  const re = /([A-Za-z_$][\w$]*)\s*:\s*/g;
+  re.lastIndex = from;
+  let m;
+  while ((m = re.exec(mask)) && m.index < to){
+    const path = prefix + m[1];
+    let p = re.lastIndex;
+    const c = mask[p];
+
+    if (c === "{"){                                   // nested object
+      const end = matchBracket(mask, p, "{", "}");
+      if (end === -1) return;
+      scanFields(mask, p + 1, end, path + ".", out);
+      re.lastIndex = end + 1;
+      continue;
+    }
+    if (c === "["){                                   // array
+      const end = matchBracket(mask, p, "[", "]");
+      if (end === -1) return;
+      const body = mask.slice(p + 1, end);
+      if (/\{/.test(body)){                            // array of objects
+        let i = p + 1, idx = 0;
+        while (i < end){
+          const o = mask.indexOf("{", i);
+          if (o === -1 || o > end) break;
+          const oe = matchBracket(mask, o, "{", "}");
+          scanFields(mask, o + 1, oe, path + "[" + idx + "].", out);
+          idx++; i = oe + 1;
+        }
+      } else if (/^[\s\d.,+-]*$/.test(body) && /\d/.test(body)){
+        out.push({ path, kind:"arr", start:p + 1, end,
+                   value: body.split(",").map(v => v.trim()).filter(v => v !== "") });
+      }
+      re.lastIndex = end + 1;
+      continue;
+    }
+
+    const rest = mask.slice(p, p + 24);
+    const num = rest.match(NUM_AT);
+    if (num){
+      out.push({ path, kind:"num", start:p, end:p + num[0].length, value:num[0] });
+      re.lastIndex = p + num[0].length;
+      continue;
+    }
+    const bool = rest.match(/^(true|false)/);
+    if (bool){
+      out.push({ path, kind:"bool", start:p, end:p + bool[0].length, value:bool[0] });
+      re.lastIndex = p + bool[0].length;
+      continue;
+    }
+    // a string or something this tool does not edit: skip the value entirely
+  }
+}
+
+function scanBlock(text, spec){
+  const mask = maskCode(text);
+  const at = mask.indexOf(spec.header);
+  if (at === -1) return null;
+  const open = mask.indexOf(spec.open, at + spec.header.length - 1);
+  const end = matchBracket(mask, open, spec.open, spec.close);
+  if (end === -1) return null;
+  const fields = [];
+  if (spec.rows){
+    let i = open + 1, idx = 0;
+    while (i < end){
+      const o = mask.indexOf("{", i);
+      if (o === -1 || o > end) break;
+      const oe = matchBracket(mask, o, "{", "}");
+      scanFields(mask, o + 1, oe, "[" + idx + "].", fields);
+      idx++; i = oe + 1;
+    }
+  } else {
+    scanFields(mask, open + 1, end, "", fields);
+  }
+  return { start:open, end, fields };
+}
+
+/* What was read out of the file, and what has been changed since. */
+let tuneRead = null;                 // {BLOCK: [{path, kind, value}]}
+const tuneEdits = {};                // {BLOCK: {path: newValue}}
+
+function readTuning(text){
+  tuneRead = {};
+  Object.keys(tuneEdits).forEach(k => delete tuneEdits[k]);
+  let found = 0;
+  TUNE_BLOCKS.forEach(spec => {
+    const b = scanBlock(text, spec);
+    if (!b || !b.fields.length) return;
+    tuneRead[spec.name] = b.fields.map(f => ({ path:f.path, kind:f.kind, value:f.value }));
+    found++;
+  });
+  if (S.mode2 === "tuning") buildTuneEditor();
+  return found;
+}
+
+function tuneCount(){
+  return Object.values(tuneEdits).reduce((a, o) => a + Object.keys(o).length, 0);
+}
+
+function setTune(block, path, value, input){
+  const orig = (tuneRead[block] || []).find(f => f.path === path);
+  const same = orig && String(orig.value) === String(value);
+  tuneEdits[block] = tuneEdits[block] || {};
+  if (same) delete tuneEdits[block][path];
+  else tuneEdits[block][path] = value;
+  if (input) input.classList.toggle("changed", !same);
+  const tag = document.getElementById("tuneCount");
+  if (tag) tag.textContent = tuneCount() ? tuneCount() + " CHANGED" : "";
+}
+
+function numInput(block, f, value, cb){
+  const i = document.createElement("input");
+  i.type = "number"; i.step = "any"; i.value = value;
+  i.oninput = () => cb(i.value.trim() === "" ? value : i.value.trim(), i);
+  return i;
+}
+
+function buildTuneEditor(){
+  const host = document.getElementById("tuneEdit");
+  host.innerHTML = "";
+
+  if (!tuneRead){
+    host.innerHTML = '<div class="empty">Press <b>LOAD FROM index.html</b> first.<br>' +
+      'These are read out of the game file rather than baked into this tool, so ' +
+      'what you see is always what the game is actually running — and writing ' +
+      'back can never revert a number you changed by hand.</div>';
+    return;
+  }
+
+  const head = document.createElement("div");
+  head.className = "note";
+  head.innerHTML = 'Only the values you change are written. Everything else in ' +
+    'the file — comments, ordering, anything this tool does not understand — is ' +
+    'left exactly as it is. <span id="tuneCount" style="color:var(--amber)"></span>';
+  host.appendChild(head);
+
+  TUNE_BLOCKS.forEach(spec => {
+    const fields = tuneRead[spec.name];
+    if (!fields || !fields.length) return;
+
+    const h = document.createElement("h3");
+    h.textContent = spec.name;
+    host.appendChild(h);
+    if (spec.note){
+      const nt = document.createElement("div");
+      nt.className = "note"; nt.textContent = spec.note;
+      host.appendChild(nt);
+    }
+
+    if (spec.rows){
+      /* One row per night, or per animatronic. Columns are the union of every
+         key any row carries, so a row missing one simply leaves a gap. */
+      const rows = {};
+      fields.forEach(f => {
+        const m = f.path.match(/^\[(\d+)\]\.(.+)$/);
+        if (!m) return;
+        (rows[m[1]] = rows[m[1]] || {})[m[2]] = f;
+      });
+      const cols = [];
+      Object.values(rows).forEach(r => Object.keys(r).forEach(k =>
+        cols.includes(k) || cols.push(k)));
+
+      const tbl = document.createElement("table");
+      const hr = document.createElement("tr");
+      hr.appendChild(document.createElement("th"));
+      cols.forEach(c => { const th = document.createElement("th");
+                          th.textContent = c; hr.appendChild(th); });
+      tbl.appendChild(hr);
+
+      Object.keys(rows).sort((a,b)=>a-b).forEach(idx => {
+        const tr = document.createElement("tr");
+        const td0 = document.createElement("td");
+        td0.className = "rowhead";
+        td0.textContent = spec.name === "NIGHTS" ? "NIGHT " + (+idx + 1) : "#" + (+idx + 1);
+        tr.appendChild(td0);
+        cols.forEach(c => {
+          const td = document.createElement("td");
+          const f = rows[idx][c];
+          if (f) td.appendChild(numInput(spec.name, f, f.value,
+                    (v, i) => setTune(spec.name, f.path, v, i)));
+          tr.appendChild(td);
+        });
+        tbl.appendChild(tr);
+      });
+      host.appendChild(tbl);
+      return;
+    }
+
+    const grid = document.createElement("div");
+    grid.className = "grid";
+    fields.forEach(f => {
+      const lab = document.createElement("label");
+      lab.appendChild(document.createTextNode(f.path));
+
+      if (f.kind === "arr"){
+        const box = document.createElement("span");
+        box.className = "arr";
+        f.value.forEach((v, i) => {
+          const inp = numInput(spec.name, f, v, (val, el) => {
+            const now = (tuneEdits[spec.name] || {})[f.path];
+            const arr = now ? String(now).split(",").map(s => s.trim()) : f.value.slice();
+            arr[i] = val;
+            setTune(spec.name, f.path, arr.join(", "), el);
+            // the whole array is one edit, so light every box in it
+            [...box.querySelectorAll("input")].forEach(x =>
+              x.classList.toggle("changed", !!(tuneEdits[spec.name] || {})[f.path]));
+          });
+          box.appendChild(inp);
+        });
+        lab.appendChild(box);
+        grid.appendChild(lab);
+        return;
+      }
+
+      if (f.kind === "bool"){
+        const sel = document.createElement("select");
+        ["true","false"].forEach(v => {
+          const o = document.createElement("option");
+          o.value = o.textContent = v;
+          if (v === f.value) o.selected = true;
+          sel.appendChild(o);
+        });
+        sel.onchange = () => setTune(spec.name, f.path, sel.value, sel);
+        lab.appendChild(sel);
+        grid.appendChild(lab);
+        return;
+      }
+
+      lab.appendChild(numInput(spec.name, f, f.value,
+                     (v, i) => setTune(spec.name, f.path, v, i)));
+      grid.appendChild(lab);
+    });
+    host.appendChild(grid);
+  });
+
+  const tag = document.getElementById("tuneCount");
+  if (tag) tag.textContent = tuneCount() ? tuneCount() + " CHANGED" : "";
+}
+
+/* Splice the changed numbers into the file. Located fresh in the text being
+   written rather than trusting offsets from the read, and applied back to
+   front so each splice cannot move the next one. */
+function applyTuning(text){
+  if (!tuneRead || !tuneCount()) return text;
+  TUNE_BLOCKS.forEach(spec => {
+    const edits = tuneEdits[spec.name];
+    if (!edits || !Object.keys(edits).length) return;
+    const b = scanBlock(text, spec);
+    if (!b) return;
+    const jobs = [];
+    b.fields.forEach(f => {
+      if (!(f.path in edits)) return;
+      const v = edits[f.path];
+      jobs.push({ start:f.start, end:f.end,
+                  text: f.kind === "arr" ? String(v).split(",").map(s => s.trim()).join(", ")
+                                         : String(v) });
+    });
+    jobs.sort((a, b2) => b2.start - a.start)
+        .forEach(j => { text = text.slice(0, j.start) + j.text + text.slice(j.end); });
+  });
+  return text;
+}
+
+function blockRooms(){
+  const rows = rooms.map(r => {
+    const p = [`x1:${round(r.x1)}`, `y1:${round(r.y1)}`, `x2:${round(r.x2)}`, `y2:${round(r.y2)}`,
+               `name:"${r.name}"`];
+    if (r.hall) p.push("hall:true");
+    if (r.you)  p.push("you:true");
+    return "  { " + p.join(", ") + " }";
+  });
+  return "const ROOMS = [\n" + rows.join(",\n") + "\n];";
+}
+function blockPins(){
+  return Object.entries(cams)
+    .map(([id, c]) => "  " + id + "  pin:{x:" + round(c.pin.x) +
+                      ",y:" + round(c.pin.y) + "}")
+    .join("\n");
+}
+
+document.getElementById("fold").onclick = () => {
+  const out = document.getElementById("out");
+  out.classList.toggle("off");
+  document.getElementById("fold").textContent =
+    out.classList.contains("off") ? "SHOW CODE" : "HIDE CODE";
+  requestAnimationFrame(() => S.node && select(S.node));
+};
+
+addEventListener("resize", () => { if (S.node){ layout(); render(); } });
+reSnap();
+select(Object.keys(shots).find(n => dist[n] === 1) || Object.keys(shots)[0]);
+</script>
+</body></html>
