@@ -1684,6 +1684,16 @@ const SFX = {
                  noise(0.75,"bandpass",900,.42,undefined,t=>(1-t)**1.4);
                  tone(150,.45,"square",.16,52);
                  setTimeout(()=>noise(0.5,"lowpass",320,.28,undefined,t=>1-t),140); } },
+  /* Separate system failures should be recognizable before the panel is open:
+     the camera tears down in a burst of interference, while the audio relay
+     gives a low, mechanical cutout. */
+  camFault:  { src:"sounds/camera_fault.wav", vol:0.48, synth:() => {
+                 noise(.24,"bandpass",1650,.20,undefined,t=>1-t);
+                 tone(1180,.18,"square",.11,320);
+                 setTimeout(()=>tone(380,.16,"sawtooth",.10,110),115); } },
+  audioFault:{ src:"sounds/audio_fault.wav",  vol:0.48, synth:() => {
+                 tone(210,.20,"square",.13,74);
+                 setTimeout(()=>noise(.32,"lowpass",240,.18,undefined,t=>1-t),70); } },
   fault:     { src:"sounds/fault.wav",      vol:0.40, synth:() => tone(190,.32,"sawtooth",.14,90) },
   reboot:    { src:"sounds/reboot.wav",     vol:0.35, synth:() => tone(1250,.09,"square",.07) },
   breaker:   { src:"sounds/breaker.wav",    vol:0.55, synth:() => tone(120,.3,"sine",.28,38) },
@@ -1950,6 +1960,14 @@ const buzz    = () => play("fault");
 const blip    = () => play("reboot");
 const lureFx  = () => play("cue");
 const screech = () => play("scream");
+
+/* Camera and audio failures each have their own cue; other systems retain the
+   existing general fault tone. */
+function playSystemFault(id){
+  if (id === "cam") return play("camFault");
+  if (id === "audio") return play("audioFault");
+  buzz();
+}
 
 /* A footstep somewhere in the building. Quieter the further out it is, and
    panned toward whichever door that route leads to. */
@@ -2957,7 +2975,7 @@ function stepSystems(dt){
       if (candidates.length){
         const victim = pick(candidates);
         S.sys[victim.id].ok = false;
-        buzz();
+        playSystemFault(victim.id);
       }
     }
   }
@@ -3155,9 +3173,10 @@ function phantomTakes(){
   if (S.night >= PHANTOM.extraFaultFrom && others.length) hit.push(pick(others).id);
   hit.forEach(id => {
     const s = S.sys[id];
+    const wasOk = s.ok;
     s.ok = false; s.reboot = 0; s.total = 0; s.safeUntil = 0;
+    if (wasOk) playSystemFault(id);
   });
-  buzz();
 
   // and the noise, pointed at exactly where you are sitting
   setLure(["OFFICE"], PHANTOM.lure, PHANTOM.lureMs);
@@ -3268,7 +3287,7 @@ function render(dt){
     if (S.darkCamAcc >= CONFIG.darkCamMs){
       S.darkCamAcc = 0;
       S.sys.cam.ok = false;
-      buzz();
+      playSystemFault("cam");
       if (S.monUp) toggleMonitor();
     }
   } else if (S.power) S.darkCamAcc = Math.max(0, S.darkCamAcc - dt * 0.5);
