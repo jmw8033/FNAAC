@@ -121,6 +121,36 @@ body.dark #darkVeil{opacity:1}
 body.ventbad #officeArt img{filter:var(--grade-office) blur(1.3px) saturate(.2)}
 body.dark.ventbad #officeArt img{filter:brightness(.30) blur(1.5px) saturate(.10) contrast(1.4)}
 
+/* Ventilation and Phantom warnings gently fade the office lights without
+   reaching the monitor or panel. It is deliberately lighter than a real power cut. */
+#warningVeil{
+  position:absolute; inset:0; z-index:4; pointer-events:none;
+  background:linear-gradient(180deg, rgba(6,12,20,.46), rgba(3,6,10,.58));
+  opacity:0;
+}
+body.warningLights:not(.dark) #officeArt img{
+  animation:warningOfficeLights var(--warning-light-cycle,850ms) ease-in-out infinite alternate;
+}
+body.warningLights:not(.dark):not(.ventbad) #officeArt img{
+  --warning-lit-filter:var(--grade-office);
+  --warning-dim-filter:brightness(.48) contrast(1.22) saturate(.22) hue-rotate(-10deg);
+}
+body.warningLights:not(.dark).ventbad #officeArt img{
+  --warning-lit-filter:var(--grade-office) blur(1.3px) saturate(.2);
+  --warning-dim-filter:brightness(.48) blur(1.5px) saturate(.12) contrast(1.3);
+}
+body.warningLights:not(.dark) #warningVeil{
+  animation:warningVeil var(--warning-light-cycle,850ms) ease-in-out infinite alternate;
+}
+@keyframes warningOfficeLights{
+  from{filter:var(--warning-lit-filter)}
+  to{filter:var(--warning-dim-filter)}
+}
+@keyframes warningVeil{
+  from{opacity:0}
+  to{opacity:1}
+}
+
 /* ---- the doorway ---------------------------------------------------------
    Anchored to the actual door in the office panorama rather than the screen
    edges, so figures appear where a body could physically be. Set by
@@ -172,6 +202,32 @@ body.dark .doorway.present .lurker{opacity:.95}
   0%  {transform:translateX(0) scaleX(-1);     opacity:.95}
   65% {opacity:.95}
   100%{transform:translateX(-190%) scaleX(-1); opacity:0}
+}
+/* Leaving back into the same side of the building used to borrow the
+   cross-door animation. These exits keep moving toward the room they chose. */
+.doorway.walkby.exitLeft .lurker{animation-name:exitLeft}
+.doorway.walkby.exitRight .lurker{animation-name:exitRight}
+.doorway.right.walkby.exitLeft .lurker{animation-name:exitLeftRight}
+.doorway.right.walkby.exitRight .lurker{animation-name:exitRightRight}
+@keyframes exitLeft{
+  0%  {transform:translateX(0);      opacity:.95}
+  65% {opacity:.95}
+  100%{transform:translateX(-190%); opacity:0}
+}
+@keyframes exitRight{
+  0%  {transform:translateX(0);     opacity:.95}
+  65% {opacity:.95}
+  100%{transform:translateX(190%); opacity:0}
+}
+@keyframes exitLeftRight{
+  0%  {transform:translateX(0) scaleX(-1);      opacity:.95}
+  65% {opacity:.95}
+  100%{transform:translateX(-190%) scaleX(-1); opacity:0}
+}
+@keyframes exitRightRight{
+  0%  {transform:translateX(0) scaleX(-1);     opacity:.95}
+  65% {opacity:.95}
+  100%{transform:translateX(190%) scaleX(-1); opacity:0}
 }
 
 /* No glow. A figure in the doorway is the only signal — if you cannot see it,
@@ -654,6 +710,7 @@ body.touch .rebootBtn{padding:16px; font-size:12px}
       <div class="doorway left"  id="doorLeft"><img class="lurker" alt=""></div>
       <div class="doorway right" id="doorRight"><img class="lurker" alt=""></div>
       <div id="darkVeil"></div>
+      <div id="warningVeil"></div>
   <div id="pullTab"><span>▲</span></div>
     </div>
   </div>
@@ -1071,6 +1128,14 @@ function doorShot(u, side){
 /* Which edge of your office panorama each hall square appears at. If your desk
    faces the other way, swap these two values. */
 const DOOR_SIDE = { nDL:"left", nDR:"right" };
+/* The building is not a left-to-right drawing, so doorway departures use the
+   actual wing each room belongs to rather than its map coordinates. */
+const EXIT_SIDE = {
+  n15:"right", n14:"right", n16:"right", n17:"right", n18:"right", n25:"right", n19:"right", gS:"right",
+  n11:"left", n10:"left", n12:"left", n13:"left", n07:"left", n06:"left", n09:"left", n04:"left",
+  n20:"left", n01:"left", n02:"left", n05:"left", n03:"left", n21:"left", n22:"left", n08:"left",
+  gE:"left", gW:"left"
+};
 
 /* ===========================================================================
    2. TUNING
@@ -1129,7 +1194,11 @@ const CONFIG = {
      was free. It now has to be a reflex. */
   cutGraceMs: 1100,
   darkCamMs: 5000,         // how long the feeds last on residual power
-  ventAlarmMs: 3600,       // gap between air warnings, tightening as it thins
+  ventAlarmMs: 2600,       // initial gap between air warnings, tightening as it thins
+  /* OFFICE WARNING LIGHTS. `warningLightCycleMs` is one full bright-to-dim-to-
+     bright fade: lower values fade faster; higher values fade more slowly. */
+  warningLightCycleMs: 850,
+  phantomWarningLightMs: 2600, // short office-light pulse after a Phantom scare
   /* A system that has just come back is left alone for a while. Watching the
      cameras fault again in the second after an eight-second reboot reads as
      the game cheating rather than as bad luck, and there is nothing to be done
@@ -1332,7 +1401,7 @@ const PAIRS = {
 
   // A - one answers to sound, one answers to being watched. Recommended.
   soundAndSight: [
-    { id:"warden",  name:"THE WARDEN",  lureResist:0.05, watchStall:0.00, passByMod:+0.05,
+    { id:"warden",  name:"THE WARDEN",  lureResist:0.05, watchStall:0.20, passByMod:+0.05,
       flickerOnMove:true, chirp:"sensorA", walkBySfx:"walkByA", enterSfx:"enterA" },
     /* ONE ROOM AT A TIME, ALWAYS.
 
@@ -1420,6 +1489,7 @@ const PHANTOM = {
   /* He will not be waiting on the feed you just left, so switching away from
      him is never punished by finding him again immediately. */
   noRepeatFeed: true,
+  blockedFeeds: ["C13"],  // South Hall is too glitchy for a Phantom appearance
   scareMs: 1100,                     // how long the frame holds
   lure:    0.62,                     // the noise he leaves in your office
   lureMs:  7000,
@@ -1918,6 +1988,7 @@ const S = {
   phantomArmed:false,     // he is somewhere: the next feed you open is it
   phantomLeft:null,       // the feed you just walked away from him on
   phantomScare:0,         // ms left of his frame
+  phantomWarningLightMs:0,// ms of office-light pulsing after a Phantom scare
   shownSecs:-1,           // last whole second painted on the shift timer
   doom:null               // {unit, acc} - the kill is coming, you just can't see it
 };
@@ -2051,7 +2122,7 @@ function startNight(n){
   S.ambAcc = CONFIG.ambienceFirstMs; S.darkCamAcc = 0; S.boxPlayed = false;
   S.shownSecs = -1;
   S.transitUntil = 0; S.hallucAcc = hallucinationGap();
-  S.phantom = null; S.phantomScare = 0;
+  S.phantom = null; S.phantomScare = 0; S.phantomWarningLightMs = 0;
   S.phantomArmed = false; S.phantomLeft = null;
   S.phantomAcc = PHANTOM.firstMs[nightIdx()] * (0.8 + Math.random() * 0.4);
   hidePhantom();
@@ -2087,7 +2158,7 @@ function startNight(n){
      fades. */
   ["left","right"].forEach(side => {
     const box = doorEl(side); if (!box) return;
-    box.classList.remove("present","walkby");
+    box.classList.remove("present","walkby","exitLeft","exitRight");
     const img = box.querySelector(".lurker");
     if (!img) return;
     img.style.transition = "none";
@@ -2097,7 +2168,7 @@ function startNight(n){
 
   stopVictory();
   [el.title, el.lose, el.win, el.scare].forEach(s => s.classList.remove("show"));
-  document.body.classList.remove("camsup","dark","ventbad","camdown","paneltab",
+  document.body.classList.remove("camsup","dark","ventbad","warningLights","camdown","paneltab",
                                 "warn-left","warn-right","flicker","out","doom","atdoor");
   el.monitor.classList.remove("up");
 
@@ -2596,6 +2667,8 @@ function sideOf(node){
   return (SIDE_CACHE[node] = best);
 }
 
+const exitSideOf = node => EXIT_SIDE[node] || sideOf(node);
+
 const doorEl = side => side === "left" ? $("doorLeft") : $("doorRight");
 
 /* Are you actually looking at this square right now? The panel counts as not
@@ -2640,6 +2713,7 @@ function clearLurkers(){
    which is the payoff for having cut the power and blinded yourself. */
 function playWalkBy(u, fromNode){
   const side = DOOR_SIDE[fromNode];
+  const destinationSide = exitSideOf(u.node);
   const box = doorEl(side);
   if (!box) return;
   const img = box.querySelector(".lurker");
@@ -2647,6 +2721,9 @@ function playWalkBy(u, fromNode){
   applyDoorShot(img, u, side);
 
   box.classList.remove("present");
+  box.classList.remove("exitLeft","exitRight");
+  if (destinationSide === side)
+    box.classList.add(destinationSide === "left" ? "exitLeft" : "exitRight");
   box.style.setProperty("--walkMs", CONFIG.walkByMs + "ms");
   void box.offsetWidth;                       // restart the animation
   box.classList.add("walkby");
@@ -2659,7 +2736,7 @@ function playWalkBy(u, fromNode){
      monitor part-way through catches the rest of it. */
   S.transitUntil = performance.now() + CONFIG.walkByMs;
 
-  setTimeout(() => box.classList.remove("walkby"), CONFIG.walkByMs + 60);
+  setTimeout(() => box.classList.remove("walkby","exitLeft","exitRight"), CONFIG.walkByMs + 60);
 }
 
 /* SOMETHING HAS ARRIVED BESIDE YOU.
@@ -2723,6 +2800,7 @@ function lureAuditorFromDoor(u, lure){
   u.lureTarget = lure.nodes;
   u.lureMoves = Math.max(0, CONFIG.lureCommitMoves - 1); // this departure is move one
   u.lastLure = performance.now();
+  playWalkBy(u, was);
   footstep(u);
   pingSensor(u, was);
   if (u.moveTell && S.monUp) play(u.moveTell, { vol:0.55 });
@@ -2980,6 +3058,15 @@ function showPhantom(){
 }
 function hidePhantom(){ $("phantomArt").classList.remove("on"); }
 
+/* A feed hidden behind snow is not a fair place to begin or advance a Phantom
+   attack. This covers the Warden's movement stutter, a doorway crossing, and
+   the random dropout on an unstable feed. */
+function feedCoveredByStatic(){
+  const cam = CAMERAS[S.activeCam];
+  return S.flicker > 0 || performance.now() < S.transitUntil ||
+         (!!cam && cam.unstable && S.dropout);
+}
+
 /* You have just opened a feed. If he is armed, he was already standing in it.
    Called from viewCam, which fires both when you change camera and when you
    raise the monitor onto one — opening a feed is opening a feed. */
@@ -2987,6 +3074,7 @@ function phantomOnEntry(){
   if (!S.phantomArmed || S.phantom || S.phantomScare > 0) return;
   if (!S.monUp || S.panelTab || !S.sys.cam.ok || !S.power) return;
   if (S.doom || S.passedOut > 0 || rebootActive()) return;
+  if (feedCoveredByStatic() || PHANTOM.blockedFeeds.includes(S.activeCam)) return;
   /* Not the feed you just fled him on. Going back to it a second later and
      finding him standing there again would read as the game following you
      rather than as him being somewhere. He stays armed, so the next OTHER
@@ -3006,12 +3094,16 @@ function stepPhantom(dt){
     if (S.phantomScare <= 0){
       S.phantomScare = 0;
       el.scare.classList.remove("show");
+      /* Begin only after the scare frame is gone. A ventilation fault takes
+         priority, so there is never a second light pattern on top of it. */
+      S.phantomWarningLightMs = S.sys.vent.ok ? CONFIG.phantomWarningLightMs : 0;
     }
     return;
   }
 
   const canSee = S.monUp && !S.panelTab && S.sys.cam.ok && S.power &&
-                 !S.doom && S.passedOut <= 0 && !rebootActive();
+                 !S.doom && S.passedOut <= 0 && !rebootActive() &&
+                 !feedCoveredByStatic();
 
   if (S.phantom){
     // changed camera, or lost the picture some other way: he is gone
@@ -3023,6 +3115,8 @@ function stepPhantom(dt){
     }
     // dropped the monitor with him still on it: that is the same as staying
     if (!S.monUp) return phantomTakes();
+    // Snow conceals the picture, so it also pauses the time you have to react.
+    if (feedCoveredByStatic()) return;
     S.phantom.acc += dt;
     if (S.phantom.acc >= PHANTOM.showMs[nightIdx()]) return phantomTakes();
     return;
@@ -3139,6 +3233,12 @@ function render(dt){
 
 
   document.body.classList.toggle("ventbad", !S.sys.vent.ok);
+
+  if (S.phantomWarningLightMs > 0)
+    S.phantomWarningLightMs = Math.max(0, S.phantomWarningLightMs - dt);
+  const officeLightWarning = !S.monUp && !S.panelTab && S.power &&
+    (!S.sys.vent.ok || S.phantomWarningLightMs > 0);
+  document.body.classList.toggle("warningLights", officeLightWarning);
 
   /* The ventilation alarm. It repeats, it gets faster as the air thins, and it
      is the only warning you get — there is no gauge to glance at any more. */
@@ -3894,6 +3994,7 @@ if (location.protocol.startsWith("http")){
 
 
 makeNoise();
+document.body.style.setProperty("--warning-light-cycle", CONFIG.warningLightCycleMs + "ms");
 loadProgress();
 buildPickers();
 applyDoorVars();
