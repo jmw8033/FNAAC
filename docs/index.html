@@ -686,7 +686,7 @@ body.touch .rebootBtn{padding:16px; font-size:12px}
     <div id="alerts"></div>
   </div>
 
-  <button class="dock" id="powerBtn">CUT POWER &nbsp;[X]</button>
+  <button class="dock" id="powerBtn">TURN OFF LIGHTS &nbsp;[X]</button>
   <button class="dock" id="monBtn">MONITOR &nbsp;[SPACE]</button>
   <button class="dock" id="panelBtn">PANEL &nbsp;[C]</button>
 
@@ -3134,7 +3134,7 @@ function render(dt){
   if (!S.sys.vent.ok)  msgs.push(["VENTILATION FAULT", ""]);
   if (!S.sys.cam.ok)   msgs.push(["CAMERA FAULT", "warn"]);
   if (!S.sys.audio.ok) msgs.push(["AUDIO FAULT", "warn"]);
-  if (!S.power)        msgs.push(["MAIN POWER CUT", "warn"]);
+  if (!S.power)        msgs.push(["LIGHTS OFF", "warn"]);
   if (BOT.on)          msgs.push(["AUTOPILOT", "ok"]);
   if (S.sensorOn)      msgs.push(["SENSOR: " + CAMERAS[S.sensorOn].name.trim().split(/\s+/)[0], "ok"]);
   el.alerts.innerHTML = msgs.map(m => '<div class="'+m[1]+'">'+m[0]+'</div>').join("");
@@ -3270,8 +3270,8 @@ function syncChrome(){
   const warming = !S.power && performance.now() < S.powerBackAt;
   el.powerBtn.disabled = warming;
   el.powerBtn.textContent = !S.power
-    ? (warming ? "BREAKER WARMING" : "RESTORE POWER  [X]")
-    : "CUT POWER  [X]";
+    ? (warming ? "..." : "TURN ON LIGHTS  [X]")
+    : "TURN OFF LIGHTS  [X]";
 }
 
 /* ===========================================================================
