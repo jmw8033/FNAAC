@@ -1181,7 +1181,6 @@ const CONFIG = {
 
   // audio lure. chance = strength * falloff^(rooms between them and the noise)
   lureCommitMoves: 7,      // a cue that lands carries HER a long way
-  lureCommitEugene: 3,     // he is markedly less biddable
   lureStrength: 0.92,
   lureFalloff:  0.60,      // 1 room .55 · 2 rooms .33 · 3 rooms .20 · 4 rooms .12
   lureHoldMs:   9000,      // how long a cue keeps working
@@ -1192,10 +1191,6 @@ const CONFIG = {
   ventLureStrength: 0.40,  // the fans coming back on, pointed at your office
   sensorMoveCooldownMs: 1200, // debounce, so remounting doesn't spam the chirp
 
-  /* Every time Eugene takes a step the feeds stutter. It tells you
-     something moved without telling you where — and because only he does it,
-     a quiet monitor means Sloppy is the one on the move. */
-  flickerMs: 420,
   entryStaggerMs: 24000,   // gap between the first and second arrival
 
   botDwellMs: 1400,        // how long the bot holds a feed before moving on
@@ -1221,11 +1216,6 @@ const CONFIG = {
   // cutting it is always fatal.
   passByFast: 0.95,        // power already off, or killed the instant they arrived
   passBySlow: 0.30,        // cut at the last possible moment
-  /* Free reaction time after he arrives, before the odds start decaying. At
-     2200 the flicker told you he had moved, and simply dropping the monitor
-     and hitting the breaker landed inside the window every time — the reflex
-     was free. It now has to be a reflex. */
-  cutGraceMs: 1100,
   darkCamMs: 5000,         // how long the feeds last on residual power
   ventAlarmMs: 2600,       // initial gap between air warnings, tightening as it thins
   /* OFFICE WARNING LIGHTS. `warningLightCycleMs` is one full bright-to-dim-to-
@@ -1319,6 +1309,22 @@ const FATIGUE = {
   fullMs:   9000,   // continuous watching before the stall is at its weakest
   floor:    0.28,   // how much of the stall survives at that point
   recover:  1.7     // how much faster it comes back than it wore off
+};
+
+/* ---------------------------------------------------------------------------
+   EUGENE — his sound-led behaviour
+
+   These used to be scattered through CONFIG because they are also the rules
+   used by any alternate-preset character without Sloppy's commitment model.
+   In the normal pair they are Eugene's settings: the way he gives himself
+   away, how strongly audio redirects him, and how much time the player gets
+   to answer him at the doorway.
+--------------------------------------------------------------------------- */
+const EUGENE = {
+  lureCommitMoves: 3,  // successful audio keeps him walking toward its target
+  flickerMs: 420,      // every feed stutters for this long when he moves
+  entryJitterMs: 6000, // random extra delay before he enters from outside
+  cutGraceMs: 1100     // free doorway reaction time before dark-pass odds decay
 };
 
 const SLOPPY = {
@@ -2162,7 +2168,8 @@ function buildPanel(){
 function entryDelay(u, i){
   if (u.commitModel)
     return SLOPPY.enterMs[nightIdx()] + Math.random() * 4000;
-  return night().enterMs + i * CONFIG.entryStaggerMs + Math.random() * 6000;
+  const jitter = u.id === "eugene" ? EUGENE.entryJitterMs : 6000;
+  return night().enterMs + i * CONFIG.entryStaggerMs + Math.random() * jitter;
 }
 
 function startNight(n){
@@ -2308,7 +2315,7 @@ function togglePower(){
          he arrives is free — reacting at all is the skill, not reacting inside
          200ms. Only after the grace does hesitation start costing you odds. */
       if (u.breaching && !u.commitModel && u.cutFrac === null){
-        const win = tuned().breachMs, grace = CONFIG.cutGraceMs;
+        const win = tuned().breachMs, grace = EUGENE.cutGraceMs;
         u.cutFrac = Math.max(0, Math.min(1,
           (u.breachAcc - grace) / Math.max(1, win - grace)));
       }
@@ -2868,7 +2875,7 @@ function offerLure(){
     if (u.lureMoves > 0) return;                    // already on his way
     if (Math.random() < lureOdds(u, lure)){
       u.lureTarget = lure.nodes;
-      u.lureMoves  = u.commitModel ? CONFIG.lureCommitMoves : CONFIG.lureCommitEugene;
+      u.lureMoves  = u.commitModel ? CONFIG.lureCommitMoves : EUGENE.lureCommitMoves;
       u.lastLure   = performance.now();
     }
   });
@@ -2973,7 +2980,7 @@ function stepUnits(dt){
         // Each of them leaks one bit of information per step, but only while
         // you are actually on the monitor. Eugene stutters the picture;
         // Sloppy is heard and not seen. Look away and you get neither.
-        if (u.flickerOnMove) S.flicker = CONFIG.flickerMs;
+        if (u.flickerOnMove) S.flicker = EUGENE.flickerMs;
         if (u.moveTell && S.monUp) play(u.moveTell, { vol:0.55 });
       }
     }

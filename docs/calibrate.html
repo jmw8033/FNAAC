@@ -2092,6 +2092,10 @@ const TUNE_BLOCKS = [
     note:"One row per night. moveMs is the base move interval, breachMs your "
        + "reaction window once something is at a door, enterMs how long they "
        + "loiter outside, failEveryMs how often a fault is rolled for." },
+  { name:"EUGENE", header:"const EUGENE = {", open:"{", close:"}",
+    note:"His sound-led rules. These control how long a lure redirects him, "
+       + "how long his movement flicker lasts, his extra entry delay, and the "
+       + "free reaction window at a doorway before dark-pass odds decay." },
   { name:"SLOPPY", header:"const SLOPPY = {", open:"{", close:"}",
     note:"Hers alone. Arrays are per night; moveMult multiplies the night's "
        + "move interval and is the single number that decides whether she is a "
@@ -2158,7 +2162,7 @@ const TUNE_HELP = {
   "camPan.period":"Time for one full automatic camera sweep, in milliseconds.",
   "camPan.reach":"Fraction of the available camera-pan travel used by the sweep.",
   lureCommitMoves:"How many future moves Sloppy remains committed to a successful audio cue.",
-  lureCommitEugene:"How many future moves Eugene remains committed to a successful audio cue.",
+  "EUGENE.lureCommitMoves":"How many future moves a successful audio cue keeps Eugene headed toward its target.",
   lureStrength:"Base chance that an audio cue attracts an animatronic before distance falloff.",
   lureFalloff:"How quickly audio-cue strength drops for each room between the cue and its target.",
   lureHoldMs:"How long a fired audio cue continues to influence movement.",
@@ -2166,6 +2170,7 @@ const TUNE_HELP = {
   ventLureStrength:"Strength of the office-facing ventilation cue after the fans return.",
   sensorMoveCooldownMs:"Minimum gap between sensor movement chirps; prevents repeated signals during a remount.",
   flickerMs:"How long Eugene's monitor flicker lasts after he moves.",
+  entryJitterMs:"Maximum random extra delay before Eugene enters from outside.",
   entryStaggerMs:"Delay before the second animatronic can begin arriving.",
   botDwellMs:"How long the autopilot holds one camera before considering another.",
   botHuntMs:"How long the autopilot keeps searching after it sees Eugene's flicker.",
