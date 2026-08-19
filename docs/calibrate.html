@@ -45,6 +45,7 @@ h2{font-size:9px;letter-spacing:.28em;color:var(--dim);font-weight:400;margin:16
 body.doormode #guides{display:none}
 #frame img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 #sprite{position:absolute;object-fit:contain;object-position:bottom center;
+  transform-origin:bottom center;
   filter:grayscale(.6) contrast(1.1) brightness(.65);pointer-events:none}
 #frame{cursor:grab;touch-action:none}
 #frame.drag{cursor:grabbing}
@@ -77,7 +78,13 @@ body.tunemode #hint{display:none}
   line-height:1.9;margin-bottom:10px;max-width:88ch}
 #tuneEdit .grid{display:flex;flex-wrap:wrap;gap:6px 18px;margin-bottom:6px}
 #tuneEdit label{font-size:10px;letter-spacing:.08em;color:#8fe0b4;
-  display:flex;align-items:center;gap:6px}
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+#tuneEdit .desc{flex-basis:100%;max-width:48ch;color:var(--dim);font-size:9px;
+  letter-spacing:.04em;line-height:1.5}
+#tuneEdit .tableDesc{max-width:100ch;color:var(--dim);font-size:9px;
+  letter-spacing:.04em;line-height:1.7;margin:-2px 0 12px}
+#tuneEdit .optionDesc{flex-basis:100%;max-width:52ch;color:var(--amber);font-size:9px;
+  letter-spacing:.04em;line-height:1.5}
 #tuneEdit input[type=number]{width:82px;font:inherit;font-size:11px;
   background:#0c110e;color:var(--phos);border:1px solid var(--hair);padding:3px 5px}
 #tuneEdit input.changed{border-color:var(--amber);color:var(--amber)}
@@ -90,6 +97,12 @@ body.tunemode #hint{display:none}
 #tuneEdit td.rowhead{font-size:10px;letter-spacing:.14em;color:#8fe0b4;padding-right:10px}
 #tuneEdit .arr{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
 #tuneEdit .arr input{width:64px}
+#tuneEdit .fbar{display:flex;align-items:center;gap:10px;margin:2px 0 14px}
+#tuneEdit .fbar input{flex:0 0 340px;font:inherit;font-size:11px;letter-spacing:.1em;
+  background:#0c110e;color:var(--phos);border:1px solid #1e3a29;padding:5px 8px}
+#tuneEdit .fbar input:focus{outline:none;border-color:var(--phos)}
+#tuneEdit .fbar .shown{font-size:9px;letter-spacing:.16em;color:var(--amber)}
+#tuneEdit .sect{margin-bottom:2px}
 #tuneEdit .empty{font-size:11px;letter-spacing:.1em;color:var(--amber);line-height:2}
 #mapBoard{position:relative; aspect-ratio:662/776; height:96%;
   border:1px solid var(--hair); background:#080b09}
@@ -153,13 +166,14 @@ button.act:hover{color:var(--phos);border-color:var(--dim)}
     <div id="tuneEdit"></div>
     <div id="hint">
     <b>drag anywhere</b> move &nbsp; <b>wheel</b> size &nbsp; <b>shift+wheel</b> fine<br>
-    <b>F</b> flip &nbsp; <b>[ ]</b> dim &nbsp; <b>arrows</b> nudge &nbsp; <b>shift+arrows</b> far<br>
+    <b>F</b> flip &nbsp; <b>Q / E</b> rotate &nbsp; <b>[ ]</b> dim &nbsp; <b>arrows</b> nudge &nbsp; <b>shift+arrows</b> far<br>
     <b>W A S D</b> crop edges in &nbsp; <b>shift</b> + them to give back<br>
+    <b>hold V</b> + drag, wheel, arrows, W/A/S/D, or Q/E = very fine &nbsp; <b>V+shift+wheel</b> fine door height<br>
     <b>MAP tab</b> drag camera buttons; click a room name to retype it<br>
-    <b>MOVE DOOR BOX</b> on a DOOR node: drag the opening, wheel to size it<br>
+    <b>MOVE DOOR BOX</b> on a DOOR node: drag the opening, wheel to size it, arrows to nudge it<br>
     <b>G</b> guides &nbsp; <b>Tab</b> other sprite &nbsp; <b>U</b> split/fold<br>
     <b>0</b> recentre &nbsp; <b>H</b> hide this box<br>
-    <b>TUNING tab</b> every number in CONFIG, NIGHTS, AUDITOR, PHANTOM and the
+    <b>TUNING tab</b> every number in CONFIG, NIGHTS, SLOPPY, JEFFREY and the
     pair themselves — LOAD first, then WRITE writes back only what you changed<br>
       <span style="color:var(--dim)">push it below the frame for a face at the lens</span>
     </div>
@@ -581,7 +595,7 @@ const DATA = {
   }
  },
  "unit": {
-  "warden": {
+  "eugene": {
    "nDR": {
     "left": 39.5,
     "bottom": 15.6,
@@ -746,7 +760,7 @@ const DATA = {
     "flip": false
    }
   },
-  "auditor": {
+  "sloppy": {
    "nDR": {
     "left": 38.8,
     "bottom": 15.3,
@@ -935,12 +949,12 @@ const DATA = {
  },
  "roster": [
   {
-   "id": "warden",
-   "art": "images/ani_warden.png"
+   "id": "eugene",
+   "art": "images/ani_eugene.png"
   },
   {
-   "id": "auditor",
-   "art": "images/ani_auditor.png"
+   "id": "sloppy",
+   "art": "images/ani_sloppy.png"
   }
  ],
  "grade": "brightness(.50) contrast(1.22) saturate(.40) hue-rotate(-10deg)",
@@ -1113,8 +1127,8 @@ const DATA = {
   }
  },
  "doorUnit": {
-  "warden": {},
-  "auditor": {}
+  "eugene": {},
+  "sloppy": {}
  }
 };
 const {cams, shots, unit, dist, roster, grade, reach,
@@ -1279,7 +1293,18 @@ function select(n){
 }
 
 const uid = () => roster[S.sprite].id;
-const base = () => (shots[S.node] ||= {left:42, bottom:12, width:16, dim:1, flip:false});
+const base = () => (shots[S.node] ||= {left:42, bottom:12, width:16, dim:1, flip:false, rotate:0});
+/* V is held as a precision clutch. Unlike Ctrl it is safe to combine with
+   W/A/S/D in a browser, so cropping never risks a browser shortcut. */
+let fineHeld = false;
+const isFine = () => fineHeld;
+const shotTransform = s => {
+  const parts = [];
+  if (s.rotate) parts.push("rotate(" + s.rotate + "deg)");
+  if (s.flip) parts.push("scaleX(-1)");
+  return parts.join(" ") || "none";
+};
+const wrapAngle = a => ((a + 180) % 360 + 360) % 360 - 180;
 const hasOverride = () => isDoor(S.node)
   ? !!(doorUnit[uid()] && doorUnit[uid()][DOORNODES[S.node]])
   : !!(unit[uid()] && unit[uid()][S.node]);
@@ -1321,7 +1346,10 @@ function layout(){
   screen.classList.remove("door");
   document.body.classList.remove("doormode");
   frame.style.top = "0"; frame.style.left = "0"; frame.style.height = "100%";
-  const cam = cams[nodeCam[S.node]];
+  // A split entry such as "n18@C07" is already tied to a specific feed.
+  // Resolve that feed before sizing the pan wrapper; indexing nodeCam with the
+  // full entry key misses and incorrectly falls back to the whole-photo view.
+  const cam = cams[entryCam(S.node)];
   const wrap = document.getElementById("wrap");
   const availW = wrap.clientWidth * 0.985, availH = wrap.clientHeight * 0.985;
   const photoAR = img && img.naturalWidth ? img.naturalWidth / img.naturalHeight : 16/9;
@@ -1393,7 +1421,7 @@ function render(){
   sprite.style.bottom = s.bottom + "%";
   sprite.style.width = s.width + "%";
   sprite.style.height = "auto";
-  sprite.style.transform = s.flip ? "scaleX(-1)" : "none";
+  sprite.style.transform = shotTransform(s);
   sprite.style.filter = "grayscale(.6) contrast(1.1) brightness(" + (0.65*(s.dim??1)) + ")";
   const cT=s.clipT||0, cR=s.clipR||0, cB=s.clipB||0, cL=s.clipL||0;
   sprite.style.clipPath = (cT||cR||cB||cL)
@@ -1437,6 +1465,7 @@ function render(){
   read.textContent =
     S.node + "  left " + s.left.toFixed(1) + "%  bottom " + s.bottom.toFixed(1) +
     "%  width " + s.width.toFixed(1) + "%" + (s.flip ? "  flipped" : "") +
+    (s.rotate ? "  rotate " + s.rotate.toFixed(1) + "°" : "") +
     ((s.dim??1) !== 1 ? "  dim " + s.dim : "") +
     (s.bottom < 0 ? "   ↓ " + Math.abs(s.bottom).toFixed(0) + "% below frame" : "") +
     (S.per ? "   [" + uid() + " only]" : "   [shared by both]") +
@@ -1471,8 +1500,9 @@ frame.addEventListener("pointerdown", startDrag);
 let boxDrag = null;
 addEventListener("pointermove", e => {
   if (boxDrag){
-    officeDoor.x   = Math.max(0, Math.min(99, boxDrag.X + (e.clientX - boxDrag.x)/boxDrag.w*100));
-    officeDoor.top = Math.max(0, Math.min(99, boxDrag.Y + (e.clientY - boxDrag.y)/boxDrag.h*100));
+    const rate = isFine() ? 0.15 : 1;
+    officeDoor.x   = Math.max(0, Math.min(99, boxDrag.X + rate * (e.clientX - boxDrag.x)/boxDrag.w*100));
+    officeDoor.top = Math.max(0, Math.min(99, boxDrag.Y + rate * (e.clientY - boxDrag.y)/boxDrag.h*100));
     layout(); render();
     return;
   }
@@ -1487,8 +1517,9 @@ addEventListener("pointermove", e => {
   const wide = isDoor(S.node);
   const loL = wide ? -1200 : -300, hiL = wide ? 1200 : 400;
   const loB = wide ? -2000 : -800, hiB = wide ? 1200 : 400;
-  s.left   = Math.max(loL, Math.min(hiL, drag.l + (e.clientX - drag.x) / drag.w * 100));
-  s.bottom = Math.max(loB, Math.min(hiB, drag.b - (e.clientY - drag.y) / drag.h * 100));
+  const rate = isFine() ? 0.15 : 1;
+  s.left   = Math.max(loL, Math.min(hiL, drag.l + rate * (e.clientX - drag.x) / drag.w * 100));
+  s.bottom = Math.max(loB, Math.min(hiB, drag.b - rate * (e.clientY - drag.y) / drag.h * 100));
   render();
 });
 addEventListener("pointerup", () => { drag = null; boxDrag = null;
@@ -1499,22 +1530,32 @@ frame.addEventListener("wheel", e => {
   e.preventDefault();
   if (S.boxMode && isDoor(S.node)){
     // wheel widens the opening, shift+wheel makes it taller
-    const step = e.deltaY > 0 ? -0.4 : 0.4;
+    const step = (e.deltaY > 0 ? -1 : 1) * (isFine() ? 0.08 : 0.4);
     if (e.shiftKey) officeDoor.h = Math.max(1, Math.min(90, officeDoor.h + step));
     else            officeDoor.w = Math.max(1, Math.min(90, officeDoor.w + step));
     layout(); render();
     return;
   }
   const s = shot();
-  const rate = e.shiftKey ? 1.012 : 1.064;          // shift for fine control
+  const rate = isFine() ? 1.003 : (e.shiftKey ? 1.012 : 1.064);
   s.width = Math.max(1, Math.min(900, s.width * (e.deltaY > 0 ? 1/rate : rate)));
   render();
 }, {passive:false});
 
 addEventListener("keydown", e => {
+  if (e.code === "KeyV"){ fineHeld = true; return; }
   if (!S.node) return;
-  const s = shot(), step = e.shiftKey ? 8 : 0.6;   // shift for big moves
+  const s = shot(), fine = isFine(), step = fine ? 0.1 : (e.shiftKey ? 8 : 0.6);
+  if (S.boxMode && isDoor(S.node) && /^Arrow/.test(e.key)){
+    if (e.key === "ArrowLeft")  officeDoor.x   = Math.max(0, officeDoor.x - step);
+    if (e.key === "ArrowRight") officeDoor.x   = Math.min(99, officeDoor.x + step);
+    if (e.key === "ArrowUp")    officeDoor.top = Math.max(0, officeDoor.top - step);
+    if (e.key === "ArrowDown")  officeDoor.top = Math.min(99, officeDoor.top + step);
+    e.preventDefault(); layout(); render(); return;
+  }
   if (e.key === "f" || e.key === "F") s.flip = !s.flip;
+  else if (e.key === "q" || e.key === "Q") s.rotate = wrapAngle((s.rotate || 0) - (fine ? 0.25 : 3));
+  else if (e.key === "e" || e.key === "E") s.rotate = wrapAngle((s.rotate || 0) + (fine ? 0.25 : 3));
   else if (e.key === "[") s.dim = Math.max(0.2, (s.dim??1) - 0.05);
   else if (e.key === "]") s.dim = Math.min(1, (s.dim??1) + 0.05);
   else if (e.key === "g" || e.key === "G") showGuides = !showGuides;
@@ -1531,20 +1572,23 @@ addEventListener("keydown", e => {
      shift to give it back. This is how a figure ends up behind a desk or
      leaning out from behind a door frame rather than floating in front of it. */
   else if ("wasdWASD".includes(e.key)){
-    const amt = 2, k = e.key.toLowerCase(), give = e.key !== k;
+    const amt = fine ? 0.2 : 2, k = e.key.toLowerCase(), give = e.key !== k;
     const fld = {w:"clipT", s:"clipB", a:"clipL", d:"clipR"}[k];
     s[fld] = Math.max(0, Math.min(95, (s[fld]||0) + (give ? -amt : amt)));
   }
-  else if (e.key === "0"){ s.left = 42; s.bottom = 12; s.width = 16; }   // lost it? come back
+  else if (e.key === "0"){ s.left = 42; s.bottom = 12; s.width = 16; s.rotate = 0; }   // lost it? come back
   else return;
   e.preventDefault(); render();
 });
+addEventListener("keyup", e => { if (e.code === "KeyV") fineHeld = false; });
+addEventListener("blur", () => { fineHeld = false; });
 
 // ---- output --------------------------------------------------------------
 function line(n, override){
   const s = override || shots[n];
   const parts = ["left:" + round(s.left), "bottom:" + round(s.bottom), "width:" + round(s.width)];
   if (s.flip) parts.push("flip:true");
+  if (s.rotate) parts.push("rotate:" + round(s.rotate));
   if ((s.dim ?? 1) !== 1) parts.push("dim:" + (Math.round(s.dim*100)/100));
   ["clipT","clipR","clipB","clipL"].forEach(k => {
     if (s[k]) parts.push(k + ":" + round(s[k]));
@@ -1569,8 +1613,10 @@ function blockShots(){
   return "const SHOTS = {\n" + Object.keys(shots).map(n => line(n)).join("\n").replace(/,$/, "") + "\n};";
 }
 function doorLine(side, o){
-  return "  " + side.padEnd(5) + ":{ left:" + round(o.left) +
-         ", bottom:" + round(o.bottom) + ", width:" + round(o.width) + " },";
+  const parts = ["left:" + round(o.left), "bottom:" + round(o.bottom), "width:" + round(o.width)];
+  if (o.flip) parts.push("flip:true");
+  if (o.rotate) parts.push("rotate:" + round(o.rotate));
+  return "  " + side.padEnd(5) + ":{ " + parts.join(", ") + " },";
 }
 /* The opening itself, so the box can be dragged onto the real door rather than
    measured off a screenshot by hand. */
@@ -1741,7 +1787,7 @@ document.getElementById("download").onclick = downloadPatched;
 function parseDoorBlocks(text){
   const one = b => {
     const o = {};
-    b.replace(/(left|bottom|width|dim|clipT|clipR|clipB|clipL)\s*:\s*(-?[\d.]+)/g,
+    b.replace(/(left|bottom|width|rotate|dim|clipT|clipR|clipB|clipL)\s*:\s*(-?[\d.]+)/g,
               (_, k, v) => { o[k] = parseFloat(v); return ""; });
     o.flip = /flip:true/.test(b);
     return o;
@@ -1824,7 +1870,7 @@ function parseBlock(body){
   // pattern silently stops matching anything.
   body.replace(/"?([\w@$]+)"?\s*:\{([^}]*)\}/g, (_, name, b) => {
     const o = {};
-    b.replace(/(left|bottom|width|dim|clipT|clipR|clipB|clipL)\s*:\s*(-?[\d.]+)/g,
+    b.replace(/(left|bottom|width|rotate|dim|clipT|clipR|clipB|clipL)\s*:\s*(-?[\d.]+)/g,
               (__, k, v) => { o[k] = parseFloat(v); return ""; });
     o.flip = /flip:true/.test(b);
     out[name] = o;
@@ -1833,7 +1879,7 @@ function parseBlock(body){
   return out;
 }
 
-/* Split "warden: { ... }, auditor: { ... }" into named chunks by counting
+/* Split "eugene: { ... }, sloppy: { ... }" into named chunks by counting
    braces. A regex would need a newline escape to find the closing brace, and
    escapes inside generated code are exactly what broke this the first time. */
 function splitUnits(body){
@@ -1855,7 +1901,7 @@ function splitUnits(body){
 
 /* Anything the file did not specify falls back to a sane value, so one odd
    entry can never leave a node half-defined and freeze the renderer. */
-const SHOT_DEFAULT = {left:42, bottom:12, width:16, dim:1, flip:false,
+const SHOT_DEFAULT = {left:42, bottom:12, width:16, dim:1, flip:false, rotate:0,
                       clipT:0, clipR:0, clipB:0, clipL:0};
 const normalise = o => Object.assign({}, SHOT_DEFAULT, o);
 
@@ -1937,7 +1983,7 @@ document.getElementById("who").onclick = () => {
 document.getElementById("reset").onclick = () => {
   if (!S.node) return;
   if (hasOverride()) delete unit[uid()][S.node];   // drop back to the shared one
-  else shots[S.node] = {left:42, bottom:12, width:16, dim:1, flip:false};
+  else shots[S.node] = {left:42, bottom:12, width:16, dim:1, flip:false, rotate:0};
   render();
 };
 
@@ -2023,7 +2069,7 @@ document.getElementById("tab-tuning").onclick  = () => setMode("tuning");
 
    The placement editors above own their data: the tool holds SHOTS in memory
    and regenerates the whole block on write. That cannot work for the tuning
-   constants. CONFIG, NIGHTS, AUDITOR and PHANTOM are more comment than code —
+   constants. CONFIG, NIGHTS, SLOPPY and JEFFREY are more comment than code —
    the reasoning for each number lives beside it, and regenerating those blocks
    would throw all of it away the first time somebody nudged a value.
 
@@ -2046,11 +2092,11 @@ const TUNE_BLOCKS = [
     note:"One row per night. moveMs is the base move interval, breachMs your "
        + "reaction window once something is at a door, enterMs how long they "
        + "loiter outside, failEveryMs how often a fault is rolled for." },
-  { name:"AUDITOR", header:"const AUDITOR = {", open:"{", close:"}",
+  { name:"SLOPPY", header:"const SLOPPY = {", open:"{", close:"}",
     note:"Hers alone. Arrays are per night; moveMult multiplies the night's "
        + "move interval and is the single number that decides whether she is a "
        + "threat at all." },
-  { name:"PHANTOM", header:"const PHANTOM = {", open:"{", close:"}",
+  { name:"JEFFREY", header:"const JEFFREY = {", open:"{", close:"}",
     note:"The one on the feeds. showMs is how long you have to change camera "
        + "once you have opened one he is waiting in." },
   { name:"FATIGUE", header:"const FATIGUE = {", open:"{", close:"}",
@@ -2059,11 +2105,176 @@ const TUNE_BLOCKS = [
     note:"Figures that are not there. A gap of 0 means never." },
   { name:"RAMP", header:"const RAMP = {", open:"{", close:"}",
     note:"Applied per in-game hour, so 5 AM is harder than 12 AM on every night." },
-  { name:"ANIMATRONICS", header:"soundAndSight: [", open:"[", close:"]", rows:true,
+
+  /* Top-level `const NAME = value;` declarations. They sit outside every
+     object in the file, so the block scanner above could never see them —
+     including ACTIVE_PAIR, which decides which of the four behaviour sets
+     below the game actually runs. */
+  { name:"GLOBALS", label:"GLOBALS", scalars:true,
+    note:"Loose constants. ACTIVE_PAIR chooses which pair table the game "
+       + "loads, so changing it swaps the whole character of the night — the "
+       + "three tables under it are the presets it picks from. ROSTER_RHYTHM "
+       + "is the pair's step cadence, deliberately not a round ratio so the "
+       + "two never re-sync.",
+    items:[
+      { path:"ACTIVE_PAIR", kind:"enum",
+        options:["soundAndSight", "lureAndDark", "loudAndQuiet", "identical"] },
+      { path:"ROSTER_RHYTHM",               kind:"arr"  },
+      { path:"BOT_CHEATS",                  kind:"bool" },
+      { path:"VICTORY_DURATION_MS",         kind:"num"  },
+      { path:"VICTORY_REDUCED_DURATION_MS", kind:"num"  }
+    ] },
+
+  { name:"ANIMATRONICS", label:"PAIR A — soundAndSight", header:"soundAndSight: [",
+    open:"[", close:"]", rows:true, rowLabels:["EUGENE", "SLOPPY"],
     note:"The pair themselves. lureResist is how much of a cue they ignore, "
        + "watchStall how much being watched slows them, passByMod their odds "
-       + "in a dark doorway, speedMod a multiplier on their move interval." }
-];
+       + "in a dark doorway, speedMod a multiplier on their move interval. "
+       + "Live only while ACTIVE_PAIR is soundAndSight." },
+  { name:"PAIR_LUREANDDARK", label:"PAIR B — lureAndDark", header:"lureAndDark: [",
+    open:"[", close:"]", rows:true, rowLabels:["EUGENE", "SLOPPY"],
+    note:"The alternate split: audio against the power cut rather than audio "
+       + "against attention. Edited here, live only while ACTIVE_PAIR names it." },
+  { name:"PAIR_LOUDANDQUIET", label:"PAIR C — loudAndQuiet", header:"loudAndQuiet: [",
+    open:"[", close:"]", rows:true, rowLabels:["EUGENE", "SLOPPY"],
+    note:"One fast and legible, one slow and never on a feed. Live only while "
+       + "ACTIVE_PAIR names it. (The fourth preset, identical, carries no "
+       + "numbers at all and so has nothing to show here.)" },
+
+  { name:"SFX", label:"SFX — MIX", header:"const SFX = {", open:"{", close:"}",
+    note:"Playback volume for every sound, 0 to 1. Only the vol of each entry "
+       + "is touched — the file names and the synthesised fallbacks beside "
+       + "them are left alone. Room tone is the amb* group." }
+]
+
+/* The scanner deliberately finds every live number without needing a second
+   hand-maintained list. This companion keeps that flexibility while giving
+   every field a useful explanation; unfamiliar future fields still receive a
+   clear fallback rather than appearing unexplained. */
+const TUNE_HELP = {
+  hourMs:"Real time for one in-game hour. Lower values make the entire night pass faster.",
+  officePan:"How far the office panorama can shift when looking around.",
+  "camPan.width":"Width of a camera panorama relative to the visible monitor; higher means more picture exists off-screen.",
+  "camPan.period":"Time for one full automatic camera sweep, in milliseconds.",
+  "camPan.reach":"Fraction of the available camera-pan travel used by the sweep.",
+  lureCommitMoves:"How many future moves Sloppy remains committed to a successful audio cue.",
+  lureCommitEugene:"How many future moves Eugene remains committed to a successful audio cue.",
+  lureStrength:"Base chance that an audio cue attracts an animatronic before distance falloff.",
+  lureFalloff:"How quickly audio-cue strength drops for each room between the cue and its target.",
+  lureHoldMs:"How long a fired audio cue continues to influence movement.",
+  lureCooldownMs:"Minimum delay before the audio lure can be used again.",
+  ventLureStrength:"Strength of the office-facing ventilation cue after the fans return.",
+  sensorMoveCooldownMs:"Minimum gap between sensor movement chirps; prevents repeated signals during a remount.",
+  flickerMs:"How long Eugene's monitor flicker lasts after he moves.",
+  entryStaggerMs:"Delay before the second animatronic can begin arriving.",
+  botDwellMs:"How long the autopilot holds one camera before considering another.",
+  botHuntMs:"How long the autopilot keeps searching after it sees Eugene's flicker.",
+  botHuntCooldownMs:"Quiet period after an autopilot hunt, preventing chained hunt loops.",
+  botHallCheckMs:"How often the autopilot checks the office hall.",
+  botDoorCheckMs:"How long the autopilot watches the doorways with the monitor down after a flicker.",
+  botWatchMaxMs:"Longest continuous camera hold the autopilot allows while watching Sloppy.",
+  botWatchRestMs:"How long the autopilot looks away so Sloppy's watch-stall can recover.",
+  ambienceMinMs:"Shortest possible gap between ambient room-tone sounds.",
+  ambienceMaxMs:"Longest possible gap between ambient room-tone sounds.",
+  ambienceScale:"Per-night multiplier for ambient-sound gaps; each box is night 1 through 7.",
+  ambienceFirstMs:"Earliest time after the shift begins that room tone can play.",
+  passByFast:"Chance of surviving a doorway encounter when power is already off or cut immediately.",
+  passBySlow:"Chance of surviving a doorway encounter after waiting until the last moment to cut power.",
+  cutGraceMs:"Free reaction window after an arrival before pass-by odds begin to decay.",
+  darkCamMs:"How long camera feeds remain powered by residual power after the mains are cut.",
+  ventAlarmMs:"Initial interval between ventilation warnings; warnings tighten as air runs out.",
+  warningLightCycleMs:"Length of one office-warning-light fade cycle; lower is a faster pulse.",
+  jeffreyWarningLightMs:"Length of the office-light pulse following a Jeffrey scare.",
+  faultGraceMs:"Protected time after a system restores during which a new fault cannot immediately hit it.",
+  passBySteps:"How many rooms an animatronic continues past the office after a successful pass-by.",
+  walkByMs:"How long the visible doorway crossing animation lasts.",
+  powerRestoreMs:"Breaker warm-up time before power returns.",
+  passOutMs:"How long the player remains unconscious after oxygen runs out.",
+  passOutO2:"Oxygen percentage restored when the player wakes after passing out.",
+  doomMs:"Dread delay before the loss cut when hiding in the monitor.",
+  o2Drain:"Oxygen percentage lost per second while ventilation is off.",
+  o2Regen:"Oxygen percentage regained per second while ventilation is on.",
+  rebootOneMs:"Time to reboot one failed system.",
+  rebootAllMs:"Time to reboot every failed system together.",
+  moveMs:"Base delay between movement cycles before character modifiers, rhythm, and the hourly ramp.",
+  approach:"Chance that a movement cycle chooses a step toward the office.",
+  doubleStep:"Chance that a movement cycle covers two rooms instead of one.",
+  idleChance:"Chance that a movement cycle does nothing.",
+  breachMs:"Reaction window after an animatronic reaches a doorway.",
+  respiteMs:"Safety time after a resolved doorway encounter before the next threat can press in.",
+  enterMs:"How long an animatronic waits outside before entering the building.",
+  failEveryMs:"Interval between system-fault rolls.",
+  failChance:"Chance that each scheduled system-fault roll succeeds.",
+  fullMs:"Continuous watch time before the watch-stall effect reaches its weakest level.",
+  floor:"Minimum fraction of the watch-stall effect that remains at full fatigue.",
+  recover:"How quickly watch fatigue recovers while an animatronic is not watched.",
+  doorMs:"How long Sloppy waits at a doorway before resolving her attack; each box is night 1 through 7.",
+  moveMult:"Multiplier on Sloppy's move interval; lower values make her move more often. Each box is night 1 through 7.",
+  idleMult:"Multiplier on Sloppy's normal idle chance.",
+  darkEscape:"Sloppy's chance to leave a doorway when the mains are cut.",
+  "RAMP.approach":"Amount added to approach chance for each in-game hour elapsed.",
+  "RAMP.idle":"Amount removed from idle chance for each in-game hour elapsed.",
+  "RAMP.moveMs":"Fraction by which the movement interval shrinks for each in-game hour elapsed.",
+  idle:"Amount the hourly ramp reduces idle chance each in-game hour.",
+  speedMod:"Multiplier on this animatronic's move interval; lower values make it move more often.",
+  approachMod:"Amount added to this animatronic's chance to move toward the office.",
+  doubleStepMod:"Amount added to this animatronic's chance to take a two-room step.",
+  lureResist:"Fraction of an audio lure's pull this animatronic ignores.",
+  watchStall:"How much watching this animatronic slows its movement timer.",
+  passByMod:"Amount added to this animatronic's chance to be walked past safely in the dark.",
+  flickerOnMove:"Whether this animatronic makes every feed flicker when it moves.",
+  ghost:"Whether this animatronic is invisible on camera feeds.",
+  commitModel:"Whether this animatronic uses the special commitment movement model.",
+  firstMs:"Earliest time Jeffrey can begin appearing; each box is night 1 through 7.",
+  "JEFFREY.gapMs":"Base quiet time between Jeffrey appearances; each box is night 1 through 7.",
+  jitter:"Random variation applied above and below the base interval.",
+  showMs:"How long the player has to change camera after opening a feed containing Jeffrey.",
+  noRepeatFeed:"Whether Jeffrey is forbidden from appearing on the camera just left.",
+  scareMs:"How long Jeffrey's scare frame remains visible.",
+  lure:"Strength of the office noise Jeffrey leaves behind as an audio lure.",
+  lureMs:"How long Jeffrey's office noise remains an active lure.",
+  extraFaultFrom:"Night number at which Jeffrey begins faulting an additional system.",
+  "HALLUCINATION.gapMs":"Base delay between hallucinations; each box is night 1 through 7. A value of 0 disables them.",
+  holdMs:"How long one hallucination remains visible before fading away.",
+  ROSTER_RHYTHM:"Relative movement cadence for the two active animatronics.",
+  BOT_CHEATS:"Whether the autopilot can use information that a human player cannot see.",
+  VICTORY_DURATION_MS:"Length of the normal victory sequence.",
+  VICTORY_REDUCED_DURATION_MS:"Length of the reduced-motion victory sequence.",
+  vol:"Playback volume for this sound, from 0 (silent) to 1 (full level)."
+};
+
+const ACTIVE_PAIR_HELP = {
+  soundAndSight:"Recommended: Eugene is drawn by audio while Sloppy is delayed by watching her on a camera.",
+  lureAndDark:"Audio controls Eugene; cutting the power is the primary answer to Sloppy.",
+  loudAndQuiet:"Eugene moves fast but announces himself; Sloppy moves slowly and never appears on a feed.",
+  identical:"Both animatronics use the same basic behaviour, with no separate pair modifiers."
+};
+
+const humanTuneName = key => key.replace(/([A-Z])/g, " $1").replace(/^./, c => c.toUpperCase());
+const tuneKey = path => path.replace(/^\[\d+\]\./, "");
+function tuneHelp(spec, path){
+  const key = tuneKey(path);
+  if (TUNE_HELP[spec.name + "." + key]) return TUNE_HELP[spec.name + "." + key];
+  if (TUNE_HELP[key]) return TUNE_HELP[key];
+  if (/Ms$/.test(key)) return humanTuneName(key) + " in milliseconds; lower values make this happen sooner or more often.";
+  if (/Chance$/.test(key)) return "Probability for " + humanTuneName(key) + ", from 0 (never) to 1 (always).";
+  return "Sets " + humanTuneName(key) + " for " + (spec.label || spec.name) + ".";
+}
+function tuneOptionHelp(f){
+  if (f.kind === "enum" && f.path === "ACTIVE_PAIR")
+    return ACTIVE_PAIR_HELP[f.value] || "Selects the active animatronic behaviour preset.";
+  if (f.kind === "bool") return "true = enabled; false = disabled.";
+  return "";
+}
+function appendTuneHelp(label, spec, f, optionOnly=false){
+  const text = optionOnly ? tuneOptionHelp(f) : tuneHelp(spec, f.path);
+  if (!text) return null;
+  const d = document.createElement("span");
+  d.className = optionOnly ? "optionDesc" : "desc";
+  d.textContent = text;
+  label.appendChild(d);
+  return d;
+}
 
 /* Comments and strings blanked, offsets preserved. */
 function maskCode(s){
@@ -2159,8 +2370,72 @@ function scanFields(mask, from, to, prefix, out){
   }
 }
 
+/* Masking a nine-megabyte game file costs about a second, and scanBlock used
+   to pay it once per block — fine at four blocks, most of a minute at twelve.
+   Every read and every write masks one string that does not change underneath
+   it, so the result is cached against that string's identity. */
+let maskSrc = null, maskOut = null;
+function maskedCode(s){
+  if (maskSrc === s) return maskOut;
+  maskSrc = s; maskOut = maskCode(s);
+  return maskOut;
+}
+
+/* Top-level `const NAME = <literal>;`. scanFields only ever sees `key: value`
+   pairs inside a bracketed block, so these were invisible to it.
+
+   The one trap: a string literal is blanked to spaces in the mask while the
+   text still holds its quotes. Skipping whitespace by the mask alone walks
+   straight over `"soundAndSight"` and reads the value as empty, so a position
+   only counts as whitespace where the mask AND the text agree. */
+function scanScalars(mask, text, spec){
+  const fields = [];
+  const ws = i => /\s/.test(mask[i]) && /\s/.test(text[i]);
+
+  spec.items.forEach(it => {
+    const m = new RegExp("\\b(?:const|let|var)\\s+" + it.path + "\\s*=").exec(mask);
+    if (!m) return;
+    let vs = m.index + m[0].length;
+    const semi = mask.indexOf(";", vs);        // the real one: strings are blanked
+    if (semi === -1) return;
+    while (vs < semi && ws(vs)) vs++;
+    let ve = semi;
+    while (ve > vs && ws(ve - 1)) ve--;
+    const raw = text.slice(vs, ve).trim();
+
+    if (it.kind === "arr"){
+      if (mask[vs] !== "[") return;
+      const close = matchBracket(mask, vs, "[", "]");
+      if (close === -1 || close > semi) return;
+      const body = text.slice(vs + 1, close);
+      if (!/^[\s\d.,+-]*$/.test(body) || !/\d/.test(body)) return;
+      fields.push({ path:it.path, kind:"arr", start:vs + 1, end:close,
+                    value: body.split(",").map(s => s.trim()).filter(s => s !== "") });
+      return;
+    }
+    if (it.kind === "enum"){
+      if (!/^(["']).*\1$/.test(raw)) return;
+      fields.push({ path:it.path, kind:"enum", start:vs, end:ve,
+                    value: raw.slice(1, -1), options: it.options });
+      return;
+    }
+    if (it.kind === "bool"){
+      if (!/^(true|false)$/.test(raw)) return;
+      fields.push({ path:it.path, kind:"bool", start:vs, end:ve, value:raw });
+      return;
+    }
+    if (/^[-+]?\d*\.?\d+$/.test(raw))
+      fields.push({ path:it.path, kind:"num", start:vs, end:ve, value:raw });
+  });
+  return fields;
+}
+
 function scanBlock(text, spec){
-  const mask = maskCode(text);
+  const mask = maskedCode(text);
+  if (spec.scalars){
+    const fields = scanScalars(mask, text, spec);
+    return fields.length ? { start:0, end:0, fields } : null;
+  }
   const at = mask.indexOf(spec.header);
   if (at === -1) return null;
   const open = mask.indexOf(spec.open, at + spec.header.length - 1);
@@ -2193,7 +2468,8 @@ function readTuning(text){
   TUNE_BLOCKS.forEach(spec => {
     const b = scanBlock(text, spec);
     if (!b || !b.fields.length) return;
-    tuneRead[spec.name] = b.fields.map(f => ({ path:f.path, kind:f.kind, value:f.value }));
+    tuneRead[spec.name] = b.fields.map(f => ({ path:f.path, kind:f.kind,
+                                               value:f.value, options:f.options }));
     found++;
   });
   if (S.mode2 === "tuning") buildTuneEditor();
@@ -2222,6 +2498,48 @@ function numInput(block, f, value, cb){
   return i;
 }
 
+/* Booleans appear in the per-night and per-animatronic tables as well as in
+   the plain grids, so the control is built once here rather than inline. */
+function boolInput(block, f){
+  const sel = document.createElement("select");
+  ["true", "false"].forEach(v => {
+    const o = document.createElement("option");
+    o.value = o.textContent = v;
+    if (v === f.value) o.selected = true;
+    sel.appendChild(o);
+  });
+  sel.onchange = () => setTune(block, f.path, sel.value, sel);
+  return sel;
+}
+
+/* Narrow the tuning tab down to the handful of values you came for. Matches on
+   the setting's own path and on the block name, so "jeffrey" brings up the
+   block and "Ms" brings up every timing in the game. */
+function applyTuneFilter(){
+  const box = document.getElementById("tuneFilter");
+  const q = (box ? box.value : "").trim().toLowerCase();
+  let shown = 0;
+  document.querySelectorAll("#tuneEdit .sect").forEach(sect => {
+    const blockHit = !q || sect.dataset.name.toLowerCase().includes(q);
+    let any = false;
+    sect.querySelectorAll("label[data-path]").forEach(l => {
+      const hit = blockHit || l.dataset.path.toLowerCase().includes(q);
+      l.style.display = hit ? "" : "none";
+      if (hit){ any = true; shown++; }
+    });
+    const tbl = sect.querySelector("table");
+    if (tbl){
+      const hit = blockHit || [...tbl.querySelectorAll("th")]
+        .some(th => th.textContent.toLowerCase().includes(q));
+      tbl.style.display = hit ? "" : "none";
+      if (hit){ any = true; shown += tbl.querySelectorAll("input").length; }
+    }
+    sect.style.display = any ? "" : "none";
+  });
+  const tag = document.getElementById("tuneShown");
+  if (tag) tag.textContent = q ? shown + " SHOWN" : "";
+}
+
 function buildTuneEditor(){
   const host = document.getElementById("tuneEdit");
   host.innerHTML = "";
@@ -2241,17 +2559,33 @@ function buildTuneEditor(){
     'left exactly as it is. <span id="tuneCount" style="color:var(--amber)"></span>';
   host.appendChild(head);
 
+  const fbar = document.createElement("div");
+  fbar.className = "fbar";
+  const filt = document.createElement("input");
+  filt.type = "search"; filt.id = "tuneFilter";
+  filt.placeholder = "filter — try  Ms   ·   lure   ·   jeffrey   ·   vol";
+  filt.oninput = applyTuneFilter;
+  fbar.appendChild(filt);
+  const shown = document.createElement("span");
+  shown.id = "tuneShown"; shown.className = "shown";
+  fbar.appendChild(shown);
+  host.appendChild(fbar);
+
   TUNE_BLOCKS.forEach(spec => {
     const fields = tuneRead[spec.name];
     if (!fields || !fields.length) return;
 
+    const sect = document.createElement("div");
+    sect.className = "sect";
+    sect.dataset.name = (spec.label || spec.name) + " " + spec.name;
+
     const h = document.createElement("h3");
-    h.textContent = spec.name;
-    host.appendChild(h);
+    h.textContent = spec.label || spec.name;
+    sect.appendChild(h);
     if (spec.note){
       const nt = document.createElement("div");
       nt.className = "note"; nt.textContent = spec.note;
-      host.appendChild(nt);
+      sect.appendChild(nt);
     }
 
     if (spec.rows){
@@ -2270,26 +2604,41 @@ function buildTuneEditor(){
       const tbl = document.createElement("table");
       const hr = document.createElement("tr");
       hr.appendChild(document.createElement("th"));
+      const columnHelp = c => {
+        const f = fields.find(x => tuneKey(x.path) === c);
+        return tuneHelp(spec, c) + (f && f.kind === "bool" ? " true = enabled; false = disabled." : "");
+      };
       cols.forEach(c => { const th = document.createElement("th");
-                          th.textContent = c; hr.appendChild(th); });
+                          th.textContent = c; th.title = columnHelp(c);
+                          hr.appendChild(th); });
       tbl.appendChild(hr);
 
-      Object.keys(rows).sort((a,b)=>a-b).forEach(idx => {
+      Object.keys(rows).sort((a, b) => a - b).forEach(idx => {
         const tr = document.createElement("tr");
         const td0 = document.createElement("td");
         td0.className = "rowhead";
-        td0.textContent = spec.name === "NIGHTS" ? "NIGHT " + (+idx + 1) : "#" + (+idx + 1);
+        td0.textContent = spec.rowLabels && spec.rowLabels[idx] ? spec.rowLabels[idx]
+                        : spec.name === "NIGHTS" ? "NIGHT " + (+idx + 1)
+                        : "#" + (+idx + 1);
         tr.appendChild(td0);
         cols.forEach(c => {
           const td = document.createElement("td");
           const f = rows[idx][c];
-          if (f) td.appendChild(numInput(spec.name, f, f.value,
+          if (f){
+            if (f.kind === "bool") td.appendChild(boolInput(spec.name, f));
+            else td.appendChild(numInput(spec.name, f, f.value,
                     (v, i) => setTune(spec.name, f.path, v, i)));
+          }
           tr.appendChild(td);
         });
         tbl.appendChild(tr);
       });
-      host.appendChild(tbl);
+      sect.appendChild(tbl);
+      const legend = document.createElement("div");
+      legend.className = "tableDesc";
+      legend.textContent = cols.map(c => c + " — " + columnHelp(c)).join("  ·  ");
+      sect.appendChild(legend);
+      host.appendChild(sect);
       return;
     }
 
@@ -2297,6 +2646,7 @@ function buildTuneEditor(){
     grid.className = "grid";
     fields.forEach(f => {
       const lab = document.createElement("label");
+      lab.dataset.path = f.path;
       lab.appendChild(document.createTextNode(f.path));
 
       if (f.kind === "arr"){
@@ -2315,57 +2665,110 @@ function buildTuneEditor(){
           box.appendChild(inp);
         });
         lab.appendChild(box);
+        appendTuneHelp(lab, spec, f);
         grid.appendChild(lab);
         return;
       }
 
       if (f.kind === "bool"){
+        lab.appendChild(boolInput(spec.name, f));
+        appendTuneHelp(lab, spec, f);
+        appendTuneHelp(lab, spec, f, true);
+        grid.appendChild(lab);
+        return;
+      }
+
+      /* A named choice rather than a number — ACTIVE_PAIR is the only one so
+         far, and typing its value by hand is how you end up with a game that
+         loads no roster at all. */
+      if (f.kind === "enum"){
         const sel = document.createElement("select");
-        ["true","false"].forEach(v => {
+        const opts = f.options && f.options.length ? f.options.slice() : [f.value];
+        if (!opts.includes(f.value)) opts.unshift(f.value);
+        opts.forEach(v => {
           const o = document.createElement("option");
           o.value = o.textContent = v;
           if (v === f.value) o.selected = true;
           sel.appendChild(o);
         });
-        sel.onchange = () => setTune(spec.name, f.path, sel.value, sel);
+        const optionHelp = document.createElement("span");
+        optionHelp.className = "optionDesc";
+        const updateOptionHelp = () => {
+          optionHelp.textContent = ACTIVE_PAIR_HELP[sel.value] || "Selects the active animatronic behaviour preset.";
+        };
+        sel.onchange = () => { setTune(spec.name, f.path, sel.value, sel); updateOptionHelp(); };
         lab.appendChild(sel);
+        appendTuneHelp(lab, spec, f);
+        updateOptionHelp(); lab.appendChild(optionHelp);
         grid.appendChild(lab);
         return;
       }
 
       lab.appendChild(numInput(spec.name, f, f.value,
                      (v, i) => setTune(spec.name, f.path, v, i)));
+      appendTuneHelp(lab, spec, f);
       grid.appendChild(lab);
     });
-    host.appendChild(grid);
+    sect.appendChild(grid);
+    host.appendChild(sect);
   });
 
   const tag = document.getElementById("tuneCount");
   if (tag) tag.textContent = tuneCount() ? tuneCount() + " CHANGED" : "";
+  applyTuneFilter();
 }
 
 /* Splice the changed numbers into the file. Located fresh in the text being
    written rather than trusting offsets from the read, and applied back to
    front so each splice cannot move the next one. */
+/* How a changed number becomes text again. Arrays are re-joined so spacing
+   stays even, and a string constant keeps its quotes. */
+function renderTuneValue(kind, v){
+  if (kind === "arr")  return String(v).split(",").map(s => s.trim()).join(", ");
+  if (kind === "enum") return '"' + String(v).replace(/"/g, '\\"') + '"';
+  return String(v);
+}
+
+/* Splice the changed values into the file.
+
+   Every block is located against the SAME unmodified text and the edits are
+   collected first, so the mask is built once for the whole write rather than
+   once per block. The splices are then applied in one forward pass: rebuilding
+   by slicing the whole file per edit was fine for four values and took three
+   seconds for a hundred and ninety.
+
+   Overlapping spans would corrupt the file rather than merely misplace a
+   number, so they are checked for and the write abandoned instead. */
 function applyTuning(text){
   if (!tuneRead || !tuneCount()) return text;
+
+  const jobs = [];
   TUNE_BLOCKS.forEach(spec => {
     const edits = tuneEdits[spec.name];
     if (!edits || !Object.keys(edits).length) return;
     const b = scanBlock(text, spec);
     if (!b) return;
-    const jobs = [];
     b.fields.forEach(f => {
       if (!(f.path in edits)) return;
-      const v = edits[f.path];
       jobs.push({ start:f.start, end:f.end,
-                  text: f.kind === "arr" ? String(v).split(",").map(s => s.trim()).join(", ")
-                                         : String(v) });
+                  text: renderTuneValue(f.kind, edits[f.path]) });
     });
-    jobs.sort((a, b2) => b2.start - a.start)
-        .forEach(j => { text = text.slice(0, j.start) + j.text + text.slice(j.end); });
   });
-  return text;
+  if (!jobs.length) return text;
+
+  jobs.sort((a, b) => a.start - b.start);
+  for (let i = 1; i < jobs.length; i++){
+    if (jobs[i].start < jobs[i - 1].end){
+      console.error("tuning: overlapping spans, write abandoned", jobs[i - 1], jobs[i]);
+      return text;
+    }
+  }
+
+  const out = [];
+  let last = 0;
+  jobs.forEach(j => { out.push(text.slice(last, j.start), j.text); last = j.end; });
+  out.push(text.slice(last));
+  return out.join("");
 }
 
 function blockRooms(){
