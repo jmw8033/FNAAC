@@ -157,6 +157,40 @@ body.tunemode #hint{display:none}
 .mPin.drag{cursor:grabbing}
 
 
+/* ---- CAMERA ART -------------------------------------------------------- */
+#artPane{position:absolute; inset:0; display:none; flex-direction:column;
+  background:var(--shell); overflow:hidden}
+body.artmode #artPane{display:flex}
+body.artmode #wrap, body.artmode #out{display:none}
+#artHead{display:flex; align-items:center; gap:18px; padding:14px 18px;
+  border-bottom:1px solid var(--hair); font-size:12px; letter-spacing:.22em;
+  color:var(--phos); flex:none}
+#artNote{margin:0; padding:10px 18px; font-size:11px; line-height:1.7;
+  color:var(--dim); border-bottom:1px solid var(--hair); flex:none}
+#artNote b{color:var(--phos-dim); font-weight:400}
+#artGrid{flex:1; overflow:auto; padding:16px 18px; display:grid; gap:14px;
+  grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); align-content:start}
+.artCard{border:1px solid var(--hair); background:rgba(8,14,10,.5);
+  display:flex; flex-direction:column}
+.artCard.missing{border-color:#5a3a36}
+.artCard.changed{border-color:var(--amber); box-shadow:0 0 0 1px rgba(255,199,102,.25)}
+.artThumb{aspect-ratio:16/10; background:#050806; display:flex;
+  align-items:center; justify-content:center; overflow:hidden; text-align:center;
+  color:#6a4a46; line-height:1.6; word-break:break-all; padding:6px}
+.artThumb img{width:100%; height:100%; object-fit:cover; display:block}
+.artMeta{padding:9px 11px; font-size:12px; color:var(--phos); line-height:1.5}
+.artMeta b{color:var(--phos); margin-right:5px}
+.artMeta .tiny{display:block; color:var(--dim); margin-top:3px}
+.artMeta em{color:var(--amber); font-style:normal}
+.artDark{display:flex; align-items:center; gap:9px; padding:0 11px 9px}
+.artDark label{font-size:10px; letter-spacing:.16em; color:var(--dim)}
+.artDark select{flex:1; font:inherit; font-size:11px; color:var(--amber);
+  background:rgba(8,14,10,.8); border:1px solid rgba(255,199,102,.30);
+  padding:4px 6px}
+.artBtns{display:flex; gap:8px; padding:0 11px 11px}
+.artBtns .act{flex:1; text-align:center; cursor:pointer}
+#artGrid .artUndo{flex:0 0 auto}
+
 #out{height:210px;overflow:auto;resize:vertical;
   background:#050806;border-top:1px solid var(--hair);padding:12px 16px;
   font-size:11px;line-height:1.7;white-space:pre;color:var(--dim)}
@@ -216,6 +250,7 @@ button.act:hover{color:var(--phos);border-color:var(--dim)}
     <button class="act" id="tab-sprites">SPRITES</button>
     <button class="act" id="tab-map">MAP</button>
     <button class="act" id="tab-tuning">TUNING</button>
+    <button class="act" id="tab-art">CAMERA ART</button>
     <span id="read"></span>
     <label class="tiny">VIEW
       <select id="mode">
@@ -245,6 +280,42 @@ button.act:hover{color:var(--phos);border-color:var(--dim)}
     <span id="count"></span>
   </div>
   <div id="out"></div>
+</div>
+
+<!-- ==========================================================================
+     CAMERA ART
+
+     Every camera in the game already carries its photograph as a base64 data
+     URI inside index.html, which is why the file is nine megabytes. Adding a
+     new one by hand means encoding it and pasting a megabyte-long string into
+     the right object — possible, miserable, and easy to get wrong in a way
+     that breaks the whole file.
+
+     This does it for you. Pick a camera, choose a JPEG, and DOWNLOAD PATCHED
+     writes it into the file the same way the existing thirteen are written.
+     Nothing is uploaded anywhere: FileReader runs in your browser and the
+     result goes straight into the text you download.
+     ====================================================================== -->
+<div id="artPane">
+  <div id="artHead">
+    <span>CAMERA ART</span>
+    <span class="tiny" id="artCount"></span>
+    <label class="tiny">SHOW
+      <select id="artFilter">
+        <option value="all">every camera</option>
+        <option value="missing">only the ones still missing art</option>
+        <option value="new">only the ones I have changed</option>
+      </select>
+    </label>
+    <button class="act" id="artClear">FORGET MY CHANGES</button>
+  </div>
+  <p class="tiny" id="artNote">
+    Shoot them at the aspect the feed uses and they will letterbox themselves.
+    A camera with a wide <b>pan</b> value is swept horizontally by the game, so
+    give those a wider photograph than the frame. Changes live here until you
+    press DOWNLOAD PATCHED.
+  </p>
+  <div id="artGrid"></div>
 </div>
 
 <script>
@@ -475,43 +546,10 @@ const DATA = {
    }
   },
   "C14": {
-   "name": "7A  LOWER NORTH TUNNEL",
-   "art": "images/cam_b01.jpg",
+   "name": "7A  ENGINEERING",
+   "art": "images/cam_13.jpg",
    "sees": [
-    "b04",
-    "b05",
-    "b06",
-    "b07",
-    "b08"
-   ],
-   "peek": [],
-   "pan": 126.0,
-   "unstable": false,
-   "floor": 2,
-   "pin": {
-    "x": 50.0,
-    "y": 20.5
-   }
-  },
-  "C15": {
-   "name": "7B  NORTH-WEST STORE",
-   "art": "images/cam_b02.jpg",
-   "sees": [
-    "b01"
-   ],
-   "peek": [],
-   "pan": 102.0,
-   "unstable": false,
-   "floor": 2,
-   "pin": {
-    "x": 11.0,
-    "y": 7.0
-   }
-  },
-  "C16": {
-   "name": "7C  PLANT ROOM",
-   "art": "images/cam_b03.jpg",
-   "sees": [
+    "b01",
     "b02"
    ],
    "peek": [],
@@ -519,95 +557,116 @@ const DATA = {
    "unstable": false,
    "floor": 2,
    "pin": {
-    "x": 50.0,
-    "y": 3.0
+    "x": 83.3,
+    "y": 95.0
    }
   },
-  "C17": {
-   "name": "7D  NORTH-EAST STORE",
-   "art": "images/cam_b04.jpg",
+  "C15": {
+   "name": "7B  NORTH HALL",
+   "art": "images/atrium_north.jpg",
    "sees": [
-    "b03"
+    "b02",
+    "b03",
+    "b04"
    ],
-   "peek": [],
+   "peek": [
+    "b05"
+   ],
    "pan": 102.0,
-   "unstable": false,
-   "floor": 2,
-   "pin": {
-    "x": 89.0,
-    "y": 7.0
-   }
-  },
-  "C18": {
-   "name": "8A  LOWER SPINE",
-   "art": "images/cam_b05.jpg",
-   "sees": [
-    "b09",
-    "b10",
-    "b11"
-   ],
-   "peek": [],
-   "pan": 118.0,
    "unstable": true,
    "floor": 2,
    "pin": {
-    "x": 56.0,
-    "y": 47.0
+    "x": 25.2,
+    "y": 68.9
    }
   },
-  "C19": {
-   "name": "8B  WEST BAYS",
-   "art": "images/cam_b06.jpg",
+  "C16": {
+   "name": "7C  ENG OFFICE EAST",
+   "art": "images/eng_office_east.jpg",
    "sees": [
-    "b14"
+    "b06",
+    "b07"
+   ],
+   "peek": [],
+   "pan": 102.0,
+   "unstable": false,
+   "floor": 2,
+   "pin": {
+    "x": 60.0,
+    "y": 75.0
+   }
+  },
+  "C25": {
+   "name": "7E  ENG OFFICE WEST",
+   "art": "images/eng_office_west.jpg",
+   "sees": [
+    "b08"
    ],
    "peek": [
-    "b12"
+    "b07"
    ],
    "pan": 102.0,
    "unstable": false,
    "floor": 2,
    "pin": {
-    "x": 29.0,
-    "y": 41.0
+    "x": 76.7,
+    "y": 55.0
    }
   },
-  "C20": {
-   "name": "8C  EAST BAYS",
-   "art": "images/cam_b07.jpg",
+  "C17": {
+   "name": "7D  OFFICE A",
+   "art": "images/office_A.jpg",
    "sees": [
-    "b13",
-    "b15"
+    "b09"
    ],
    "peek": [],
-   "pan": 112.0,
+   "pan": 102.0,
    "unstable": false,
    "floor": 2,
    "pin": {
-    "x": 74.0,
-    "y": 37.0
+    "x": 48.3,
+    "y": 53.9
    }
   },
-  "C21": {
-   "name": "9A  LOWER SOUTH TUNNEL",
-   "art": "images/cam_b08.jpg",
+  "C18": {
+   "name": "8A  VAULT",
+   "art": "images/vault_south.jpg",
+   "sees": [
+    "b12",
+    "b13"
+   ],
+   "peek": [],
+   "pan": 102.0,
+   "unstable": false,
+   "floor": 2,
+   "pin": {
+    "x": 96.0,
+    "y": 41.1
+   }
+  },
+  "C19": {
+   "name": "8B  PAYROLL",
+   "art": "images/payroll.jpg",
    "sees": [
     "b16",
     "b17",
     "b18"
    ],
-   "peek": [],
-   "pan": 124.0,
+   "peek": [
+    "b10",
+    "b11"
+   ],
+   "pan": 102.0,
    "unstable": false,
    "floor": 2,
    "pin": {
-    "x": 50.0,
-    "y": 74.0
+    "x": 65.0,
+    "y": 27.8
    }
   },
-  "C22": {
-   "name": "9B  SUMP",
-   "art": "images/cam_b09.jpg",
+  "C20": {
+   "name": "8C  NORTH OFFICE",
+   "art": "images/north_office.jpg",
    "sees": [
     "b19"
    ],
@@ -616,23 +675,77 @@ const DATA = {
    "unstable": false,
    "floor": 2,
    "pin": {
-    "x": 16.0,
-    "y": 95.0
+    "x": 13.3,
+    "y": 38.0
    }
   },
-  "C23": {
-   "name": "9C  SOUTH-EAST DUCT",
-   "art": "images/cam_b10.jpg",
+  "C21": {
+   "name": "9A  WASHROOM ROW",
+   "art": "images/mens.jpg",
    "sees": [
-    "b20"
+    "b20",
+    "b21",
+    "b22"
    ],
    "peek": [],
    "pan": 102.0,
    "unstable": false,
    "floor": 2,
    "pin": {
-    "x": 84.0,
-    "y": 95.0
+    "x": 57.7,
+    "y": 18.7
+   }
+  },
+  "C22": {
+   "name": "9B  CENTRE CORRIDOR",
+   "art": "images/centre_corridor.jpg",
+   "sees": [
+    "b23",
+    "b24",
+    "b15"
+   ],
+   "peek": [],
+   "pan": 102.0,
+   "unstable": true,
+   "floor": 2,
+   "pin": {
+    "x": 48.3,
+    "y": 15.2
+   }
+  },
+  "C23": {
+   "name": "9C  SALES FLOOR",
+   "art": "images/sales_office3.jpg",
+   "sees": [
+    "b25",
+    "b26",
+    "b27",
+    "b23"
+   ],
+   "peek": [],
+   "pan": 102.0,
+   "unstable": false,
+   "floor": 2,
+   "pin": {
+    "x": 83.3,
+    "y": 10.6
+   }
+  },
+  "C24": {
+   "name": "9D  ATRIUM",
+   "art": "images/lobby.jpg",
+   "sees": [
+    "b28",
+    "b29",
+    "b30"
+   ],
+   "peek": [],
+   "pan": 102.0,
+   "unstable": false,
+   "floor": 2,
+   "pin": {
+    "x": 8.3,
+    "y": 21.7
    }
   }
  },
@@ -1134,53 +1247,63 @@ const DATA = {
   "OFFICE": 0,
   "nDR": 1,
   "nDL": 1,
-  "n15": 2,
   "n14": 2,
+  "n15": 2,
   "n11": 2,
   "n18": 3,
   "n16": 3,
   "n17": 3,
-  "n07": 3,
   "n12": 3,
+  "n07": 3,
   "n10": 3,
   "n25": 4,
-  "n26": 4,
   "n19": 4,
-  "n05": 4,
-  "n06": 4,
-  "n09": 4,
+  "n26": 4,
   "n13": 4,
+  "n09": 4,
+  "n06": 4,
+  "n05": 4,
   "gS": 5,
-  "n21": 5,
   "n20": 5,
+  "n21": 5,
   "n02": 5,
-  "n03": 6,
-  "n22": 6,
   "n04": 6,
   "n01": 6,
-  "n08": 7,
-  "gE": 7,
+  "n03": 6,
+  "n22": 6,
   "gW": 7,
-  "b01": 4,
-  "b02": 8,
-  "b03": 10,
-  "b04": 5,
-  "b05": 6,
-  "b06": 7,
-  "b07": 8,
-  "b08": 9,
-  "b09": 8,
-  "b10": 7,
-  "b11": 6,
-  "b12": 9,
-  "b13": 9,
-  "b14": 8,
+  "gE": 7,
+  "n08": 7,
+  "b01": 3,
+  "b02": 4,
+  "b03": 5,
+  "b04": 6,
+  "b05": 7,
+  "b06": 4,
+  "b07": 3,
+  "b08": 2,
+  "b09": 5,
+  "b10": 11,
+  "b11": 10,
+  "b12": 12,
+  "b13": 11,
+  "b14": 11,
   "b15": 7,
-  "b16": 6,
-  "b17": 5,
-  "b18": 4,
-  "b19": 7,
-  "b20": 3
+  "b16": 10,
+  "b17": 9,
+  "b18": 8,
+  "b19": 9,
+  "b20": 9,
+  "b21": 10,
+  "b22": 10,
+  "b23": 8,
+  "b24": 9,
+  "b25": 9,
+  "b26": 9,
+  "b27": 10,
+  "b28": 9,
+  "b29": 8,
+  "b30": 7
  },
  "roster": [
   {
@@ -1353,110 +1476,200 @@ const DATA = {
  ],
  "roomsB": [
   {
-   "x1": 8,
-   "y1": 2,
-   "x2": 24,
-   "y2": 11.5,
-   "name": "NW STORE",
-   "hall": false,
-   "you": false
-  },
-  {
-   "x1": 41,
-   "y1": 2,
-   "x2": 59,
-   "y2": 11.5,
-   "name": "PLANT",
-   "hall": false,
-   "you": false
-  },
-  {
-   "x1": 77,
-   "y1": 2,
-   "x2": 93,
-   "y2": 11.5,
-   "name": "NE STORE",
-   "hall": false,
-   "you": false
-  },
-  {
-   "x1": 14,
-   "y1": 12,
-   "x2": 88,
-   "y2": 20.5,
-   "name": "NORTH TUNNEL",
+   "x1": 27.2,
+   "y1": 80.6,
+   "x2": 100,
+   "y2": 100,
+   "name": "ENGINEERING",
    "hall": true,
    "you": false
   },
   {
-   "x1": 25,
-   "y1": 25,
-   "x2": 41,
-   "y2": 36.5,
-   "name": "WEST BAY 1",
-   "hall": false,
+   "x1": 27.2,
+   "y1": 40.1,
+   "x2": 35.7,
+   "y2": 80.6,
+   "name": "NORTH HALL",
+   "hall": true,
    "you": false
   },
   {
-   "x1": 60,
-   "y1": 25,
-   "x2": 76,
-   "y2": 36.5,
-   "name": "EAST BAY 1",
-   "hall": false,
-   "you": false
-  },
-  {
-   "x1": 25,
-   "y1": 41,
-   "x2": 41,
-   "y2": 52.5,
-   "name": "WEST BAY 2",
+   "x1": 35.7,
+   "y1": 61.1,
+   "x2": 100,
+   "y2": 80.6,
+   "name": "ENGINEERING OFFICE",
    "hall": false,
    "you": false
   },
   {
    "x1": 61,
-   "y1": 41,
-   "x2": 79,
-   "y2": 52.5,
-   "name": "EAST BAY 2",
+   "y1": 51.2,
+   "x2": 100,
+   "y2": 61.1,
+   "name": "ENG OFFICE WEST",
    "hall": false,
    "you": false
   },
   {
-   "x1": 44,
-   "y1": 21,
-   "x2": 56,
-   "y2": 70,
-   "name": "SPINE",
-   "hall": true,
-   "you": false
-  },
-  {
-   "x1": 12,
-   "y1": 73.5,
-   "x2": 86,
-   "y2": 84,
-   "name": "SOUTH TUNNEL",
-   "hall": true,
-   "you": false
-  },
-  {
-   "x1": 10,
-   "y1": 85,
-   "x2": 30,
-   "y2": 97,
-   "name": "SUMP",
+   "x1": 35.7,
+   "y1": 51.2,
+   "x2": 61,
+   "y2": 61.1,
+   "name": "OFFICE A",
    "hall": false,
    "you": false
   },
   {
-   "x1": 70,
-   "y1": 85,
-   "x2": 90,
-   "y2": 97,
-   "name": "SE DUCT ROOM",
+   "x1": 56.3,
+   "y1": 40.1,
+   "x2": 82.7,
+   "y2": 51.2,
+   "name": "OFFICE B",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 35.7,
+   "y1": 40.1,
+   "x2": 56.3,
+   "y2": 51.2,
+   "name": "OFFICE C",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 82.7,
+   "y1": 28.7,
+   "x2": 100,
+   "y2": 51.2,
+   "name": "VAULT",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 82.7,
+   "y1": 25.6,
+   "x2": 100,
+   "y2": 28.7,
+   "name": "CLOSET",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 82.7,
+   "y1": 17.3,
+   "x2": 100,
+   "y2": 25.6,
+   "name": "UTILITY CLOSET",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 26,
+   "y1": 24.8,
+   "x2": 82.7,
+   "y2": 40.1,
+   "name": "PAYROLL & BILLING",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 0.7,
+   "y1": 24.8,
+   "x2": 26,
+   "y2": 40.1,
+   "name": "NORTH OFFICE",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 64.8,
+   "y1": 17.3,
+   "x2": 82.7,
+   "y2": 24.8,
+   "name": "LADIES",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 50.3,
+   "y1": 17.3,
+   "x2": 64.8,
+   "y2": 24.8,
+   "name": "MENS",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 38.3,
+   "y1": 17.3,
+   "x2": 50.3,
+   "y2": 24.8,
+   "name": "EAST CLOSET",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 38.3,
+   "y1": 13.1,
+   "x2": 100,
+   "y2": 17.3,
+   "name": "CENTRE CORRIDOR",
+   "hall": true,
+   "you": false
+  },
+  {
+   "x1": 80,
+   "y1": 0.2,
+   "x2": 100,
+   "y2": 13.1,
+   "name": "SALES OFFICE",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 59.8,
+   "y1": 0.2,
+   "x2": 80,
+   "y2": 13.1,
+   "name": "SALES OFFICE 2",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 37.5,
+   "y1": 0.2,
+   "x2": 59.8,
+   "y2": 13.1,
+   "name": "SALES OFFICE 3",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 0.7,
+   "y1": 10.1,
+   "x2": 38.3,
+   "y2": 24.8,
+   "name": "ATRIUM",
+   "hall": true,
+   "you": false
+  },
+  {
+   "x1": 25.3,
+   "y1": 0.2,
+   "x2": 37.5,
+   "y2": 10.1,
+   "name": "ATRIUM SOUTH",
+   "hall": true,
+   "you": false
+  },
+  {
+   "x1": 0.7,
+   "y1": 0.2,
+   "x2": 25.3,
+   "y2": 10.1,
+   "name": "ENTRY",
    "hall": false,
    "you": false
   }
@@ -1464,53 +1677,72 @@ const DATA = {
  "ducts": [
   {
    "id": "V1",
-   "name": "WEST DUCT",
-   "down": "b01",
-   "up": "n06"
-  },
-  {
-   "id": "V2",
-   "name": "EAST DUCT",
+   "name": "UTILITY CLOSET",
    "down": "b15",
    "up": "n08"
   },
   {
+   "id": "V2",
+   "name": "ENG OFFICE WEST",
+   "down": "b08",
+   "up": "n11"
+  },
+  {
    "id": "V3",
-   "name": "SOUTH DUCT",
-   "down": "b20",
-   "up": "n17"
+   "name": "ENGINEERING",
+   "down": "b01",
+   "up": "n18"
+  },
+  {
+   "id": "V4",
+   "name": "ENTRY",
+   "down": "b30",
+   "up": "gE"
   }
  ],
  "doorLinks": [
   {
    "id": "D1",
-   "name": "WEST STORE DOOR",
-   "a": "b04",
-   "b": "b01"
-  },
-  {
-   "id": "D2",
-   "name": "SPINE DOOR",
-   "a": "b06",
-   "b": "b09"
-  },
-  {
-   "id": "D3",
-   "name": "EAST BAY DOOR",
-   "a": "b10",
+   "name": "UTILITY CLOSET DOOR",
+   "a": "b23",
    "b": "b15"
   },
   {
+   "id": "D2",
+   "name": "OFFICE A DOOR",
+   "a": "b09",
+   "b": "b06"
+  },
+  {
+   "id": "D3",
+   "name": "ENGINEERING DOOR",
+   "a": "b02",
+   "b": "b01"
+  },
+  {
    "id": "D4",
-   "name": "SOUTH STAIR DOOR",
-   "a": "b11",
-   "b": "b17"
+   "name": "ENG OFFICE DOOR",
+   "a": "b03",
+   "b": "b06"
   },
   {
    "id": "D5",
-   "name": "SUMP DOOR",
-   "a": "b18",
-   "b": "b20"
+   "name": "PAYROLL DOOR",
+   "a": "b17",
+   "b": "b18",
+   "oneShot": true
+  },
+  {
+   "id": "D6",
+   "name": "ATRIUM DOOR",
+   "a": "b24",
+   "b": "b28"
+  },
+  {
+   "id": "D7",
+   "name": "ENTRY DOOR",
+   "a": "b29",
+   "b": "b30"
   }
  ],
  "nodes": {
@@ -1660,103 +1892,153 @@ const DATA = {
    "floor": 1
   },
   "b01": {
-   "x": 15,
-   "y": 7,
+   "x": 53.3,
+   "y": 91.1,
    "floor": 2
   },
   "b02": {
-   "x": 50,
-   "y": 7,
+   "x": 31.5,
+   "y": 79.4,
    "floor": 2
   },
   "b03": {
-   "x": 85,
-   "y": 7,
+   "x": 31.5,
+   "y": 68.9,
    "floor": 2
   },
   "b04": {
-   "x": 20,
-   "y": 16,
+   "x": 31.5,
+   "y": 57.2,
    "floor": 2
   },
   "b05": {
-   "x": 35,
-   "y": 16,
+   "x": 31.5,
+   "y": 45.6,
    "floor": 2
   },
   "b06": {
-   "x": 50,
-   "y": 16,
+   "x": 48.3,
+   "y": 70,
    "floor": 2
   },
   "b07": {
-   "x": 66,
-   "y": 16,
+   "x": 70,
+   "y": 70,
    "floor": 2
   },
   "b08": {
-   "x": 81,
-   "y": 16,
+   "x": 91.7,
+   "y": 57.2,
    "floor": 2
   },
   "b09": {
-   "x": 50,
-   "y": 31,
+   "x": 48.3,
+   "y": 56.2,
    "floor": 2
   },
   "b10": {
-   "x": 50,
-   "y": 47,
+   "x": 70,
+   "y": 46,
    "floor": 2
   },
   "b11": {
-   "x": 50,
-   "y": 63,
+   "x": 46,
+   "y": 46,
    "floor": 2
   },
   "b12": {
-   "x": 33,
-   "y": 31,
+   "x": 91.3,
+   "y": 47.2,
    "floor": 2
   },
   "b13": {
-   "x": 68,
-   "y": 31,
+   "x": 91.3,
+   "y": 33.9,
    "floor": 2
   },
   "b14": {
-   "x": 33,
-   "y": 47,
+   "x": 91.3,
+   "y": 27.1,
    "floor": 2
   },
   "b15": {
-   "x": 70,
-   "y": 47,
+   "x": 91.3,
+   "y": 21.4,
    "floor": 2
   },
   "b16": {
-   "x": 26,
-   "y": 79,
+   "x": 73.3,
+   "y": 32.8,
    "floor": 2
   },
   "b17": {
-   "x": 50,
-   "y": 79,
+   "x": 55,
+   "y": 32.8,
    "floor": 2
   },
   "b18": {
-   "x": 74,
-   "y": 79,
+   "x": 34.2,
+   "y": 32.8,
    "floor": 2
   },
   "b19": {
-   "x": 20,
-   "y": 91,
+   "x": 13.3,
+   "y": 32.8,
    "floor": 2
   },
   "b20": {
-   "x": 80,
-   "y": 91,
+   "x": 73.8,
+   "y": 21.1,
+   "floor": 2
+  },
+  "b21": {
+   "x": 57.7,
+   "y": 21.1,
+   "floor": 2
+  },
+  "b22": {
+   "x": 44.3,
+   "y": 21.1,
+   "floor": 2
+  },
+  "b23": {
+   "x": 86.7,
+   "y": 15.2,
+   "floor": 2
+  },
+  "b24": {
+   "x": 53.3,
+   "y": 15.2,
+   "floor": 2
+  },
+  "b25": {
+   "x": 90,
+   "y": 6.7,
+   "floor": 2
+  },
+  "b26": {
+   "x": 70,
+   "y": 6.7,
+   "floor": 2
+  },
+  "b27": {
+   "x": 48.7,
+   "y": 6.7,
+   "floor": 2
+  },
+  "b28": {
+   "x": 20,
+   "y": 18.9,
+   "floor": 2
+  },
+  "b29": {
+   "x": 31.7,
+   "y": 5.6,
+   "floor": 2
+  },
+  "b30": {
+   "x": 13.3,
+   "y": 5.6,
    "floor": 2
   }
  },
@@ -2312,6 +2594,18 @@ const round = v => Math.round(v * 10) / 10;
 const cxOff = s => (s.left + s.width/2) < 0 || (s.left + s.width/2) > 100;
 
 function dump(){
+  if (S.mode2 === "art"){
+    const n = Object.keys(newArt).length;
+    const curve = darkCurve()
+      .map(c => "night " + c.n + ": " + c.lit + " lit / " + c.dark + " dark")
+      .join("\n  ");
+    document.getElementById("out").textContent =
+      (n ? n + " picture" + (n === 1 ? "" : "s") + " staged.\n\n"
+         : "") +
+      "HOW MUCH OF THE BUILDING YOU CAN STILL SEE\n  " + curve +
+      "\n\n" + blockDark();
+    return;
+  }
   document.getElementById("out").textContent = (S.mode2 === "map")
     ? (mapFloor === 2
         ? blockRoomsB() + "\n\n" + blockDoorLinks() +
@@ -2393,13 +2687,33 @@ function patchText(text){
   const sb = blockShots(), ub = blockUnit(), db = blockDoor();
   if (!sane(sb, "SHOTS") || !sane(ub, "SHOTS_UNIT") ||
       !sane(blockRooms(), "ROOMS") || !sane(blockDoorBox(), "OFFICE_DOOR") ||
-      !sane(blockRoomsB(), "ROOMS_B") || !sane(blockDoorLinks(), "DOOR_LINKS")) return null;
+      !sane(blockRoomsB(), "ROOMS_B") || !sane(blockDoorLinks(), "DOOR_LINKS") ||
+      !sane(blockDark(), "DARK_FROM")) return null;
 
   text = applyTuning(text);
   text = text.replace(/const SHOTS = \{[\s\S]*?\s\};/, () => sb);
   text = /const SHOTS_UNIT = \{/.test(text)
     ? text.replace(/const SHOTS_UNIT = \{[\s\S]*?\s\};/, () => ub)
     : text.replace(sb, () => sb + "\n\n" + ub);
+
+  /* ---- CAMERA ART -------------------------------------------------------
+     Each staged picture replaces that camera's `art:` value in place. The
+     entries are found by walking from the camera's id to its own `art:` key
+     rather than by one big regex, because several of these values are already
+     a megabyte of base64 and a greedy match across them would swallow half the
+     file. Bounded, per camera, and it leaves everything else byte-identical. */
+  Object.entries(newArt).forEach(([id, uri]) => {
+    const at = text.search(new RegExp("(^|[{,\\s])" + id + "\\s*:\\s*\\{"));
+    if (at < 0) return;
+    const key = text.indexOf("art:", at);
+    if (key < 0) return;
+    const q = text.indexOf('"', key);
+    if (q < 0) return;
+    // walk to the closing quote; base64 has no escapes so this is safe
+    const end = text.indexOf('"', q + 1);
+    if (end < 0) return;
+    text = text.slice(0, q + 1) + uri + text.slice(end);
+  });
 
   // rooms, replaced wholesale
   text = text.replace(/const ROOMS = \[[\s\S]*?\s\];/, () => blockRooms());
@@ -2414,6 +2728,10 @@ function patchText(text){
     text = text.replace(/const ROOMS_B = \[[\s\S]*?\s\];/, () => blockRoomsB());
   if (/const DOOR_LINKS = \[/.test(text))
     text = text.replace(/const DOOR_LINKS = \[[\s\S]*?\s\];/, () => blockDoorLinks());
+  /* The darkness schedule. Written only if the target file has one, so this
+     tool stays usable against a build from before the lights started going. */
+  if (/const DARK_FROM = \{/.test(text))
+    text = text.replace(/const DARK_FROM = \{[\s\S]*?\n\};/, () => blockDark());
 
   // the doorway opening itself
   text = text.replace(/const OFFICE_DOOR = \{[^}]*\};/, () => blockDoorBox());
@@ -2537,6 +2855,11 @@ function parseDoorBlocks(text){
 }
 
 function parseWorld(text){
+  /* Note which cameras already carry a photograph, so the CAMERA ART pane can
+     tell you what is actually left to shoot rather than guessing from the
+     tool's own summary of the building. */
+  try { scanArt(text); }  catch (e) { /* older file, no cameras to scan */ }
+  try { scanDark(text); } catch (e) { /* older file, no darkness schedule */ }
   parseDoorBlocks(text);
   const od = text.match(/const OFFICE_DOOR = \{\s*x:(-?[\d.]+),\s*w:(-?[\d.]+),\s*top:(-?[\d.]+),\s*h:(-?[\d.]+)\s*\}/);
   if (od){
@@ -2886,17 +3209,204 @@ function setMode(m){
   S.mode2 = m;
   document.body.classList.toggle("mapmode",  m === "map");
   document.body.classList.toggle("tunemode", m === "tuning");
-  [["tab-map","map"],["tab-sprites","sprites"],["tab-tuning","tuning"]].forEach(([id,k]) =>
-    document.getElementById(id).style.color = m === k ? "var(--phos)" : "var(--dim)");
+  document.body.classList.toggle("artmode",  m === "art");
+  [["tab-map","map"],["tab-sprites","sprites"],["tab-tuning","tuning"],["tab-art","art"]]
+    .forEach(([id,k]) => document.getElementById(id).style.color =
+      m === k ? "var(--phos)" : "var(--dim)");
   if (m === "map" && !mapBuilt) buildMapEditor();
   else if (m === "map") syncPinScale();
   else if (m === "tuning") buildTuneEditor();
+  else if (m === "art") buildArtEditor();
   dump();
 }
 addEventListener("resize", () => { if (S.mode2 === "map") syncPinScale(); });
 document.getElementById("tab-map").onclick     = () => setMode("map");
 document.getElementById("tab-sprites").onclick = () => setMode("sprites");
 document.getElementById("tab-tuning").onclick  = () => setMode("tuning");
+document.getElementById("tab-art").onclick     = () => setMode("art");
+
+/* ===========================================================================
+   CAMERA ART
+
+   newArt holds the pictures you have chosen this session, keyed by camera id,
+   each one already a data URI. Nothing touches the file until you download.
+   =========================================================================== */
+const newArt = {};
+
+/* ---------------------------------------------------------------------------
+   WHEN EACH ROOM LOSES ITS LIGHTS
+
+   One night per camera, 1 to 7. From that night the feed shows a room with no
+   lighting at all and the torch is the only way to see into it.
+
+   Read out of the loaded index.html so what you are editing is what the game
+   is running, and written back on save. Anything the file does not name goes
+   dark on the last night.
+--------------------------------------------------------------------------- */
+const DARK = {};
+const darkFrom = id => DARK[id] || 7;
+
+function scanDark(text){
+  Object.keys(DARK).forEach(k => delete DARK[k]);
+  const m = text.match(/const DARK_FROM = \{([\s\S]*?)\};/);
+  if (!m) return;
+  m[1].replace(/(C\d\d)\s*:\s*(\d)/g, (_, id, n) => { DARK[id] = +n; return ""; });
+}
+
+function blockDark(){
+  const rows = Object.keys(cams).sort().map(id =>
+    "  " + id + ":" + darkFrom(id));
+  // eight to a line, so the block stays readable rather than becoming a wall
+  const lines = [];
+  for (let i = 0; i < rows.length; i += 6)
+    lines.push(rows.slice(i, i + 6).map(r => r.trim()).join(", "));
+  return "const DARK_FROM = {\n  " + lines.join(",\n  ") + "\n};";
+}
+
+/* How many rooms are still lit on each night — the shape you are actually
+   editing, and the thing a per-camera dropdown hides from you. */
+function darkCurve(){
+  const total = Object.keys(cams).length;
+  return [1,2,3,4,5,6,7].map(n => {
+    const dark = Object.keys(cams).filter(id => darkFrom(id) <= n).length;
+    return { n, dark, lit: total - dark };
+  });
+}
+
+/* WHICH CAMERAS ALREADY HAVE A PHOTOGRAPH, read from the file you loaded.
+
+   Not from `cams[].art`. The DATA block in this tool carries the on-disk path
+   for every camera — that is what makes the preview pane able to name them —
+   so asking it would report all twenty-five as missing, including the thirteen
+   that have had art since the first build. The authoritative answer is in
+   index.html, where a camera with a picture carries a data URI inline.
+
+   Empty until a file is loaded, and the pane says so rather than lying. */
+const artInFile = {};
+let artScanned = false;
+
+function scanArt(text){
+  Object.keys(artInFile).forEach(k => delete artInFile[k]);
+  Object.keys(cams).forEach(id => {
+    const at = text.search(new RegExp("(^|[{,\\s])" + id + "\\s*:\\s*\\{"));
+    if (at < 0) return;
+    const key = text.indexOf("art:", at);
+    if (key < 0) return;
+    artInFile[id] = /^\s*"data:/.test(text.slice(key + 4, key + 20));
+  });
+  artScanned = true;
+}
+
+const hasArt = id => !!artInFile[id];
+
+function readAsDataURL(file){
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload  = () => res(r.result);
+    r.onerror = () => rej(new Error("could not read " + file.name));
+    r.readAsDataURL(file);
+  });
+}
+
+/* Photographs come off a camera at three or four thousand pixels wide and the
+   feed is under a thousand. Shipping the original would put twenty megabytes
+   in the file for detail no one can see, so each one is drawn through a canvas
+   at a sane width and re-encoded as JPEG on the way in. */
+async function shrink(dataURL, maxW, quality){
+  const img = await new Promise((res, rej) => {
+    const i = new Image();
+    i.onload = () => res(i); i.onerror = () => rej(new Error("not an image"));
+    i.src = dataURL;
+  });
+  if (img.width <= maxW) return dataURL;
+  const c = document.createElement("canvas");
+  c.width = maxW;
+  c.height = Math.round(img.height * maxW / img.width);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", quality);
+}
+
+const kb = s => (s.length * 0.75 / 1024).toFixed(0) + " KB";
+
+function buildArtEditor(){
+  const grid = document.getElementById("artGrid");
+  const filter = document.getElementById("artFilter").value;
+  grid.innerHTML = "";
+
+  const ids = Object.keys(cams).filter(id => {
+    if (filter === "missing") return !hasArt(id) && !newArt[id];
+    if (filter === "new")     return !!newArt[id];
+    return true;
+  });
+
+  ids.forEach(id => {
+    const c = cams[id];
+    const card = document.createElement("div");
+    card.className = "artCard" + (newArt[id] ? " changed" : hasArt(id) ? "" : " missing");
+
+    const shot = newArt[id] || (hasArt(id) ? c.art : null);
+    card.innerHTML =
+      '<div class="artThumb">' +
+        (shot ? '<img src="' + shot + '">'
+              : '<span class="tiny">NO SIGNAL<br>' + c.art + '</span>') +
+      '</div>' +
+      '<div class="artMeta"><b>' + id + '</b> ' + c.name +
+        '<span class="tiny">floor ' + (c.floor || 1) +
+        ' \u00b7 pan ' + c.pan +
+        (newArt[id] ? ' \u00b7 <em>' + kb(newArt[id]) + ' staged</em>' : '') +
+      '</span></div>' +
+      '<div class="artDark"><label>GOES DARK</label>' +
+        '<select data-dark="' + id + '">' +
+          [1,2,3,4,5,6,7].map(nn => '<option value="' + nn + '"' +
+            (darkFrom(id) === nn ? " selected" : "") + '>night ' + nn +
+            (nn === 7 ? " (last)" : "") + '</option>').join("") +
+        '</select></div>' +
+      '<div class="artBtns">' +
+        '<label class="act">CHOOSE\u2026<input type="file" accept="image/*" hidden></label>' +
+        (newArt[id] ? '<button class="act artUndo">UNDO</button>' : '') +
+      '</div>';
+
+    const input = card.querySelector('input[type=file]');
+    input.addEventListener("change", async e => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      try {
+        const raw = await readAsDataURL(f);
+        newArt[id] = await shrink(raw, ART_MAX_W, ART_QUALITY);
+        buildArtEditor(); dump();
+      } catch (err){ alert(err.message); }
+    });
+    const dsel = card.querySelector("select[data-dark]");
+    if (dsel) dsel.addEventListener("change", () => {
+      DARK[id] = parseInt(dsel.value, 10);
+      buildArtEditor(); dump();
+    });
+    const undo = card.querySelector(".artUndo");
+    if (undo) undo.addEventListener("click", () => { delete newArt[id]; buildArtEditor(); dump(); });
+
+    grid.appendChild(card);
+  });
+
+  const staged = Object.keys(newArt).length;
+  const missing = Object.keys(cams).filter(i => !hasArt(i) && !newArt[i]).length;
+  document.getElementById("artCount").textContent = artScanned
+    ? staged + " staged \u00b7 " + missing + " still missing \u00b7 " +
+      (staged ? kb(Object.values(newArt).join("")) + " to add" : "nothing to add")
+    : "load index.html to see which cameras already have art";
+}
+
+/* 1280 wide at quality 0.82 is roughly 150-250 KB a frame, which is the same
+   order as the thirteen already in the file. Raise these if the feeds look
+   soft; the only cost is the size of index.html. */
+const ART_MAX_W = 1280, ART_QUALITY = 0.82;
+
+document.getElementById("artFilter").onchange = buildArtEditor;
+document.getElementById("artClear").onclick = () => {
+  if (!Object.keys(newArt).length) return;
+  if (!confirm("Discard every picture you have chosen this session?")) return;
+  Object.keys(newArt).forEach(k => delete newArt[k]);
+  buildArtEditor(); dump();
+};
 
 /* ===========================================================================
    TUNING — every number the game runs, edited here and written back
