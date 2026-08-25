@@ -459,13 +459,36 @@ body.camsup #monUI > *{pointer-events:auto}
 .doorPin.jammed{border-color:var(--alarm); background:rgba(28,8,8,.86); cursor:not-allowed}
 .doorPin.jammed i{border-color:var(--alarm); background:transparent;
   transform:rotate(24deg)}
+/* Spent. Struck through, greyed, and never coming back tonight. */
+.doorPin.broken{border-color:#5a4a46; background:rgba(18,12,11,.9); cursor:not-allowed}
+.doorPin.broken i{border-color:#6a5450; background:transparent; height:2px;
+  transform:rotate(-32deg)}
 .doorPin:disabled{cursor:not-allowed}
 .doorPin:disabled:not(.jammed):not(.shut){opacity:.5}
+
+/* ---- THE USAGE METER --------------------------------------------------- */
+/* Top-left, always on, and deliberately not a number. Sits above everything so
+   it survives the monitor, the panel and the dark. */
+#usage{position:fixed; left:16px; top:14px; z-index:60; display:flex;
+  align-items:center; gap:5px; pointer-events:none;
+  font-size:15px; letter-spacing:.12em; color:#e8f4ec;
+  text-shadow:0 2px 3px #000, 0 0 10px rgba(0,0,0,.9)}
+#usage.hidden{display:none}
+#usage .uLbl{margin-right:4px}
+#usage i{display:block; width:13px; height:19px; background:rgba(0,0,0,.55);
+  border:1px solid rgba(230,240,235,.30)}
+#usage i.on{border-color:rgba(0,0,0,.65)}
+#usage i.on.lo  {background:#57e06a}
+#usage i.on.mid {background:#9ae04a}
+#usage i.on.hi  {background:#e0c240}
+#usage i.on.max {background:#e06a3a}
+body.touch #usage{left:12px; top:10px; font-size:13px}
+body.touch #usage i{width:11px; height:16px}
 
 /* ---- the bar, in the panel ---------------------------------------------- */
 #pwPanel{border:1px solid #46614f; padding:13px 14px 11px; margin-bottom:14px;
   background:rgba(8,14,10,.5)}
-.pwHead,.pwFoot{display:flex; justify-content:space-between; align-items:baseline}
+.pwHead{display:flex; justify-content:space-between; align-items:baseline}
 .pwHead{font-size:10px; letter-spacing:.22em; color:var(--phos-dim); margin-bottom:8px}
 #pwPct{font-size:19px; letter-spacing:.04em; color:var(--phos)}
 #pwPct.low{color:var(--amber)} #pwPct.crit{color:var(--alarm)}
@@ -477,16 +500,6 @@ body.camsup #monUI > *{pointer-events:auto}
    panel, so it cannot be mistaken for anything else on it. */
 .pwBar i.crit{background:var(--alarm); animation:pwCrit .85s ease-in-out infinite alternate}
 @keyframes pwCrit{from{opacity:.55} to{opacity:1}}
-.pwFoot{font-size:10px; letter-spacing:.12em; color:var(--phos-dim); margin-top:7px}
-#pwLeft{color:#8fe0b4}
-/* What is actually drawing it, named. A player bleeding power should be able
-   to see WHICH habit is doing it rather than only that it is happening. */
-#pwLoad{display:flex; flex-wrap:wrap; gap:5px 8px; margin-top:9px;
-  font-size:9px; letter-spacing:.1em}
-#pwLoad span{color:var(--amber); border:1px solid rgba(255,199,102,.34);
-  padding:2px 5px}
-#pwLoad span b{font-weight:400; color:var(--phos-dim); margin-right:5px}
-#pwLoad span.idle{color:var(--phos-dim); border-color:#34493c}
 
 /* ---- a feed coming apart because he is in it ---------------------------- */
 body.camburn #camFeed{animation:camTear .19s steps(2) infinite}
@@ -652,6 +665,96 @@ body.camsup #powerBtn{opacity:0; pointer-events:none}
 .dock{transition:opacity .14s, color .1s, padding .12s}
 
 /* ---- screens ----------------------------------------------------------- */
+/* ==========================================================================
+   THE TITLE SCREEN
+
+   Everything here is a layer over a black box. The rules are: nothing moves
+   quickly, nothing loops on a period you can count, and the only saturated
+   colour on screen is the one word you are meant to press.
+   ========================================================================== */
+#titleScreen{background:#040605; overflow:hidden}
+#titleContent{position:relative; z-index:4; display:flex; flex-direction:column;
+  align-items:center; gap:clamp(8px,2.2vh,22px); width:100%}
+
+/* --- the face ------------------------------------------------------------
+   A blurred sprite behind everything, at 4% opacity, drifting on a 47-second
+   cycle. It should never be the thing you notice; it should be the reason the
+   screen feels wrong before you can say why. Pushed to 22% for a few frames
+   by the glitch scheduler and then dropped again. */
+#titleFace{position:absolute; inset:0; z-index:1; opacity:.04;
+  background:var(--titleFace, none) center 42% / auto 78% no-repeat;
+  filter:blur(2px) brightness(.5) contrast(1.4);
+  transition:opacity .18s steps(2), filter .18s steps(2);
+  animation:faceDrift 47s ease-in-out infinite}
+#titleFace.peek{opacity:.22; filter:blur(0.6px) brightness(1.5) contrast(1.9)}
+@keyframes faceDrift{
+  0%   {transform:translate(0,0)      scale(1.00)}
+  33%  {transform:translate(-1.2%,.6%) scale(1.03)}
+  66%  {transform:translate(1.0%,-.4%) scale(1.01)}
+  100% {transform:translate(0,0)      scale(1.00)}
+}
+
+/* --- dead-channel snow --------------------------------------------------- */
+#titleSnow{position:absolute; inset:-20%; z-index:2; opacity:.055;
+  pointer-events:none; mix-blend-mode:screen;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.9) 0 1px, transparent 1px 2px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.5) 0 1px, transparent 1px 3px);
+  animation:snowShift .09s steps(3) infinite}
+@keyframes snowShift{
+  0%{transform:translate(0,0)} 33%{transform:translate(-2%,1.5%)}
+  66%{transform:translate(1.5%,-2%)} 100%{transform:translate(-1%,-1%)}
+}
+
+/* --- the vertical roll ---------------------------------------------------
+   A single bright band crawling down the screen every eleven seconds. This is
+   the one that makes it read as a CRT rather than as a web page. */
+#titleRoll{position:absolute; left:0; right:0; height:22%; z-index:3;
+  pointer-events:none; opacity:.4; mix-blend-mode:screen;
+  background:linear-gradient(180deg, transparent,
+    rgba(150,255,190,.05) 35%, rgba(190,255,215,.10) 50%,
+    rgba(150,255,190,.05) 65%, transparent);
+  animation:rollDown 11s linear infinite}
+@keyframes rollDown{ from{top:-25%} to{top:105%} }
+
+/* --- vignette, heavy ----------------------------------------------------- */
+#titleVig{position:absolute; inset:0; z-index:3; pointer-events:none;
+  background:radial-gradient(ellipse at 50% 45%,
+    transparent 24%, rgba(0,0,0,.55) 62%, rgba(0,0,0,.94) 100%)}
+
+/* --- the tear ------------------------------------------------------------
+   Fires on a schedule, not per frame. Off-screen and invisible almost always. */
+#titleTear{position:absolute; left:0; right:0; z-index:6; height:0;
+  pointer-events:none; opacity:0; mix-blend-mode:difference;
+  background:rgba(190,255,215,.55)}
+#titleTear.on{opacity:1}
+
+/* --- the title itself ----------------------------------------------------
+   Three copies of the same words: the green one you read, and a red and a cyan
+   ghost offset a pixel or two. That is what chromatic aberration on a failing
+   monitor actually looks like, and it costs one element and two shadows. */
+#titleScreen h1{position:relative; color:#cdf7de; letter-spacing:.16em;
+  text-shadow:
+    2px 0 0 rgba(255,60,60,.55),
+   -2px 0 0 rgba(60,220,255,.45),
+    0 0 26px rgba(120,255,180,.28);
+  animation:titleBreathe 6.5s ease-in-out infinite}
+@keyframes titleBreathe{
+  0%,100%{opacity:.92; text-shadow:2px 0 0 rgba(255,60,60,.55),-2px 0 0 rgba(60,220,255,.45),0 0 26px rgba(120,255,180,.28)}
+  50%    {opacity:1;   text-shadow:3px 0 0 rgba(255,60,60,.42),-3px 0 0 rgba(60,220,255,.34),0 0 40px rgba(120,255,180,.40)}
+}
+#titleScreen h1.jolt{animation:none; transform:translateX(var(--jx,0));
+  text-shadow:calc(var(--jx,0px) * -2) 0 0 rgba(255,60,60,.85),
+              calc(var(--jx,0px) *  2) 0 0 rgba(60,220,255,.75)}
+#titleFoot{margin:0; font-size:clamp(8px,1.4vh,11px); letter-spacing:.30em;
+  color:rgba(140,190,165,.34)}
+#titleScreen #btnStart{position:relative}
+#titleScreen #btnStart::after{content:""; position:absolute; inset:-6px;
+  border:1px solid rgba(120,255,180,.16); pointer-events:none;
+  animation:startPulse 3.1s ease-in-out infinite}
+@keyframes startPulse{0%,100%{opacity:.25; transform:scale(1)}
+  50%{opacity:.7; transform:scale(1.02)}}
+
 .screen{position:absolute; inset:0; z-index:70; display:none; flex-direction:column;
   align-items:center; justify-content:center; background:var(--shell);
   text-align:center; overflow-y:auto; -webkit-overflow-scrolling:touch;
@@ -870,16 +973,22 @@ body.touch #floorBtn{padding:13px 8px; font-size:12px}
     <!-- The bar lives at the top of the panel, above the systems, because it
          is the one number that governs all of them: at zero every row below
          becomes moot. -->
+    <!-- The exact figure lives here and only here. Rate, time remaining and
+         the per-consumer breakdown are gone: they turned a horror interface
+         into a spreadsheet, and the thing you actually need moment to moment
+         is the coarse usage read-out on the office wall, not arithmetic. -->
     <div id="pwPanel">
-      <div class="pwHead"><span>MAIN BUS</span><span id="pwPct">100%</span></div>
+      <div class="pwHead"><span>POWER</span><span id="pwPct">100%</span></div>
       <div class="pwBar"><i id="pwFill"></i></div>
-      <div class="pwFoot"><span id="pwDraw">DRAW 0.00 %/s</span>
-                          <span id="pwLeft">—</span></div>
-      <div id="pwLoad"></div>
     </div>
     <div id="sysList"></div>
     <button class="rebootBtn" id="rebootAll">REBOOT ALL SYSTEMS</button>
   </div>
+
+  <!-- USAGE. Always on screen, never a number. It answers "how fast is this
+       going" at a glance and refuses to answer anything more precise, which is
+       the whole point: you should feel the cost, not compute it. -->
+  <div id="usage"><span class="uLbl">Usage:</span><i></i><i></i><i></i><i></i><i></i></div>
 
   <div id="hud">
     <div id="clock"><span id="clockHour">12 AM</span>
@@ -892,11 +1001,32 @@ body.touch #floorBtn{padding:13px 8px; font-size:12px}
   <button class="dock" id="monBtn">MONITOR &nbsp;[SPACE]</button>
   <button class="dock" id="panelBtn">PANEL &nbsp;[C]</button>
 
+  <!-- ======================================================================
+       THE TITLE SCREEN
+
+       Layered rather than styled. Each element does one thing badly on its own
+       and the stack does the work: a face that is almost never there, a slow
+       vertical roll, a dead-channel snow, an occasional whole-screen tear, and
+       a title that will not hold still. None of it is random per frame — the
+       glitches are scheduled, because a screen that flickers constantly reads
+       as broken and a screen that is calm for eleven seconds and then tears
+       reads as watched.
+       =================================================================== -->
   <div class="screen show" id="titleScreen">
-    <h1>FIVE NIGHTS AT<br>ATLANTIC CONCRETE</h1>
-    <div class="nights" id="pickTitle"></div>
-    <button id="btnStart">CLOCK IN</button>
-    <div class="stars" id="starsTitle"></div>
+    <div id="titleFace"></div>
+    <div id="titleSnow"></div>
+    <div id="titleRoll"></div>
+    <div id="titleVig"></div>
+    <div id="titleContent">
+      <h1 data-txt="FIVE NIGHTS AT ATLANTIC CONCRETE">
+        <span>FIVE NIGHTS AT</span><br><span>ATLANTIC CONCRETE</span>
+      </h1>
+      <div class="nights" id="pickTitle"></div>
+      <button id="btnStart">CLOCK IN</button>
+      <div class="stars" id="starsTitle"></div>
+      <p id="titleFoot">6.15.88 &nbsp;·&nbsp; PROPERTY OF ATLANTIC CONCRETE &nbsp;·&nbsp; NIGHT WATCH</p>
+    </div>
+    <div id="titleTear"></div>
   </div>
 
   <div class="screen" id="loseScreen">
@@ -1041,37 +1171,36 @@ const GRAPH = {
    walk to, so which one he picks is a real difference and not a coin flip.
 --------------------------------------------------------------------------- */
 const GRAPH_B = {
-  // --- rooms hanging off the north tunnel ---
-  b01:{ x:15.0, y:7.0,  edges:["b04"] },     // NW STORE   — duct V1
-  b02:{ x:50.0, y:7.0,  edges:["b06"] },     // PLANT ROOM
-  b03:{ x:85.0, y:7.0,  edges:["b08"] },     // NE STORE
-
-  // --- the north tunnel ---
-  b04:{ x:20.0, y:16.0, edges:["b05"] },     // west end
-  b05:{ x:35.0, y:16.0, edges:["b06"] },
-  b06:{ x:50.0, y:16.0, edges:["b07","b09"] },   // the junction
-  b07:{ x:66.0, y:16.0, edges:["b08"] },
-  b08:{ x:81.0, y:16.0, edges:[] },          // east end
-
-  // --- the spine, running south from the north tunnel ---
-  b09:{ x:50.0, y:31.0, edges:["b10","b12","b13"] },
-  b10:{ x:50.0, y:47.0, edges:["b11","b14","b15"] },
-  b11:{ x:50.0, y:63.0, edges:["b17"] },
-
-  // --- bays either side of the spine ---
-  b12:{ x:33.0, y:31.0, edges:[] },          // west bay    (NO CAMERA)
-  b13:{ x:68.0, y:31.0, edges:[] },          // east bay
-  b14:{ x:33.0, y:47.0, edges:[] },          // west bay
-  b15:{ x:70.0, y:47.0, edges:[] },          // east bay   — duct V2
-
-  // --- the south tunnel ---
-  b16:{ x:26.0, y:79.0, edges:["b17"] },
-  b17:{ x:50.0, y:79.0, edges:["b18"] },
-  b18:{ x:74.0, y:79.0, edges:[] },
-
-  // --- and its two ends ---
-  b19:{ x:20.0, y:91.0, edges:["b16"] },     // SUMP
-  b20:{ x:80.0, y:91.0, edges:["b18"] }      // SE DUCT ROOM — duct V3
+  b01:{ x: 53.3, y: 91.1, edges:["b02"] },                     // ENGINEERING
+  b02:{ x: 31.5, y: 79.4, edges:["b03"] },                     // HALL N
+  b03:{ x: 31.5, y: 68.9, edges:["b04","b06"] },               // HALL C
+  b04:{ x: 31.5, y: 57.2, edges:["b05","b09"] },               // HALL S
+  b05:{ x: 31.5, y: 45.6, edges:["b18"] },                     // HALL FOOT
+  b06:{ x: 48.3, y: 70.0, edges:["b07","b09"] },               // ENG OFFICE E
+  b07:{ x: 70.0, y: 70.0, edges:["b08"] },                     // ENG OFFICE C
+  b08:{ x: 91.7, y: 57.2, edges:[] },                          // ENG OFFICE W
+  b09:{ x: 48.3, y: 56.2, edges:[] },                          // OFFICE A
+  b10:{ x: 70.0, y: 46.0, edges:["b16"] },                     // OFFICE B
+  b11:{ x: 46.0, y: 46.0, edges:["b17"] },                     // OFFICE C
+  b12:{ x: 91.3, y: 47.2, edges:["b13"] },                     // VAULT N
+  b13:{ x: 91.3, y: 33.9, edges:["b16"] },                     // VAULT S
+  b14:{ x: 91.3, y: 27.1, edges:["b16"] },                     // CLOSET
+  b15:{ x: 91.3, y: 21.4, edges:["b23"] },                     // UTILITY CLOSET
+  b16:{ x: 73.3, y: 32.8, edges:["b17"] },                     // PAYROLL W
+  b17:{ x: 55.0, y: 32.8, edges:["b18"] },                     // PAYROLL C
+  b18:{ x: 34.2, y: 32.8, edges:["b19","b28"] },               // PAYROLL E
+  b19:{ x: 13.3, y: 32.8, edges:[] },                          // NORTH OFFICE
+  b20:{ x: 73.8, y: 21.1, edges:["b23"] },                     // LADIES
+  b21:{ x: 57.7, y: 21.1, edges:["b24"] },                     // MENS
+  b22:{ x: 44.3, y: 21.1, edges:["b24"] },                     // EAST CLOSET
+  b23:{ x: 86.7, y: 15.2, edges:["b24","b25","b26"] },         // CORRIDOR W
+  b24:{ x: 53.3, y: 15.2, edges:["b27","b28"] },               // CORRIDOR E
+  b25:{ x: 90.0, y:  6.7, edges:[] },                          // SALES 1
+  b26:{ x: 70.0, y:  6.7, edges:[] },                          // SALES 2
+  b27:{ x: 48.7, y:  6.7, edges:[] },                          // SALES 3
+  b28:{ x: 20.0, y: 18.9, edges:["b29"] },                     // ATRIUM N
+  b29:{ x: 31.7, y:  5.6, edges:["b30"] },                     // ATRIUM S
+  b30:{ x: 13.3, y:  5.6, edges:[] },                          // ENTRY
 };
 
 /* Every downstairs square folded into the one graph the rest of the file
@@ -1097,9 +1226,10 @@ const floorOf = n => (n && n.charAt(0) === "b") ? 2 : 1;
      V3 → n17   three rooms out, on camera, and far too close
 --------------------------------------------------------------------------- */
 const DUCTS = [
-  { id:"V1", name:"WEST DUCT",  down:"b01", up:"n06" },
-  { id:"V2", name:"EAST DUCT",  down:"b15", up:"n08" },
-  { id:"V3", name:"SOUTH DUCT", down:"b20", up:"n17" }
+  { id:"V1", name:"UTILITY CLOSET", down:"b15", up:"n08" },
+  { id:"V2", name:"ENG OFFICE WEST", down:"b08", up:"n11" },
+  { id:"V3", name:"ENGINEERING", down:"b01", up:"n18" },
+  { id:"V4", name:"ENTRY", down:"b30", up:"gE" }
 ];
 
 /* ---------------------------------------------------------------------------
@@ -1119,11 +1249,13 @@ const DUCTS = [
    layout below is checked for that at boot — see auditBuilding().
 --------------------------------------------------------------------------- */
 const DOOR_LINKS = [
-  { id:"D1", name:"WEST STORE DOOR",  a:"b04", b:"b01" },
-  { id:"D2", name:"SPINE DOOR",       a:"b06", b:"b09" },
-  { id:"D3", name:"EAST BAY DOOR",    a:"b10", b:"b15" },
-  { id:"D4", name:"SOUTH STAIR DOOR", a:"b11", b:"b17" },
-  { id:"D5", name:"SUMP DOOR",        a:"b18", b:"b20" }
+  { id:"D1", name:"UTILITY CLOSET DOOR", a:"b23", b:"b15" },
+  { id:"D2", name:"OFFICE A DOOR", a:"b09", b:"b06" },
+  { id:"D3", name:"ENGINEERING DOOR", a:"b02", b:"b01" },
+  { id:"D4", name:"ENG OFFICE DOOR", a:"b03", b:"b06" },
+  { id:"D5", name:"PAYROLL DOOR", a:"b17", b:"b18", oneShot:true },
+  { id:"D6", name:"ATRIUM DOOR", a:"b24", b:"b28" },
+  { id:"D7", name:"ENTRY DOOR", a:"b29", b:"b30" }
 ];
 
 /* Cameras.
@@ -1189,33 +1321,18 @@ const CAMERAS = {
      One square he can cross unobserved is worth more than total coverage.
 --------------------------------------------------------------------------- */
 const CAMERAS_B = {
-  C14:{ name:"7A  LOWER NORTH TUNNEL", floor:2, pin:{x:50,y:20.5},
-        sees:["b04","b05","b06","b07","b08"], art:"images/cam_b01.jpg",
-        pan:{width:126,period:37000,phase:0.0} },
-  C15:{ name:"7B  NORTH-WEST STORE",   floor:2, pin:{x:11,y:7},
-        sees:["b01"], art:"images/cam_b02.jpg", pan:{width:102} },
-  C16:{ name:"7C  PLANT ROOM",         floor:2, pin:{x:50,y:3},
-        sees:["b02"], art:"images/cam_b03.jpg", pan:{width:102} },
-  C17:{ name:"7D  NORTH-EAST STORE",   floor:2, pin:{x:89,y:7},
-        sees:["b03"], art:"images/cam_b04.jpg", pan:{width:102} },
-  /* The lower spine is the one feed you most want and least can hold, the way
-     3A is upstairs: it is the only camera that shows which way he turned at
-     the junction, and it drops out constantly. */
-  C18:{ name:"8A  LOWER SPINE",        floor:2, pin:{x:56,y:47}, unstable:true,
-        sees:["b09","b10","b11"], art:"images/cam_b05.jpg",
-        pan:{width:118,period:41000,phase:3.1} },
-  C19:{ name:"8B  WEST BAYS",          floor:2, pin:{x:29,y:41},
-        sees:["b14"], peek:["b12"], art:"images/cam_b06.jpg", pan:{width:102} },
-  C20:{ name:"8C  EAST BAYS",          floor:2, pin:{x:74,y:37},
-        sees:["b13","b15"], art:"images/cam_b07.jpg",
-        pan:{width:112,period:35000,phase:1.4} },
-  C21:{ name:"9A  LOWER SOUTH TUNNEL", floor:2, pin:{x:50,y:74},
-        sees:["b16","b17","b18"], art:"images/cam_b08.jpg",
-        pan:{width:124,period:39000,phase:4.7} },
-  C22:{ name:"9B  SUMP",               floor:2, pin:{x:16,y:95},
-        sees:["b19"], art:"images/cam_b09.jpg", pan:{width:102} },
-  C23:{ name:"9C  SOUTH-EAST DUCT",    floor:2, pin:{x:84,y:95},
-        sees:["b20"], art:"images/cam_b10.jpg", pan:{width:102} }
+  C14:{ name:"7A  ENGINEERING", floor:2, pin:{x:83.3,y:95.0}, sees:["b01","b02"], art:"images/cam_b01.jpg" },
+  C15:{ name:"7B  NORTH HALL", floor:2, pin:{x:25.2,y:68.9}, unstable:true, sees:["b02","b03","b04"], peek:["b05"], art:"images/cam_b02.jpg" },
+  C16:{ name:"7C  ENG OFFICE EAST", floor:2, pin:{x:60.0,y:75.0}, sees:["b06","b07"], art:"images/cam_b03.jpg" },
+  C25:{ name:"7E  ENG OFFICE WEST", floor:2, pin:{x:76.7,y:55.0}, sees:["b08"], peek:["b07"], art:"images/cam_b04.jpg" },
+  C17:{ name:"7D  OFFICE A", floor:2, pin:{x:48.3,y:53.9}, sees:["b09"], art:"images/cam_b05.jpg" },
+  C18:{ name:"8A  VAULT", floor:2, pin:{x:96.0,y:41.1}, sees:["b12","b13"], art:"images/cam_b06.jpg" },
+  C19:{ name:"8B  PAYROLL", floor:2, pin:{x:65.0,y:27.8}, sees:["b16","b17","b18"], peek:["b10","b11"], art:"images/cam_b07.jpg" },
+  C20:{ name:"8C  NORTH OFFICE", floor:2, pin:{x:13.3,y:38.0}, sees:["b19"], art:"images/cam_b08.jpg" },
+  C21:{ name:"9A  WASHROOM ROW", floor:2, pin:{x:57.7,y:18.7}, sees:["b20","b21","b22"], art:"images/cam_b09.jpg" },
+  C22:{ name:"9B  CENTRE CORRIDOR", floor:2, pin:{x:48.3,y:15.2}, unstable:true, sees:["b23","b24","b15"], art:"images/cam_b10.jpg" },
+  C23:{ name:"9C  SALES FLOOR", floor:2, pin:{x:83.3,y:10.6}, sees:["b25","b26","b27","b23"], art:"images/cam_b11.jpg" },
+  C24:{ name:"9D  ATRIUM", floor:2, pin:{x:8.3,y:21.7}, sees:["b28","b29","b30"], art:"images/cam_b12.jpg" }
 };
 
 /* Folded into the one table the rest of the file already reads, exactly as
@@ -1441,18 +1558,28 @@ const ROOMS = [
    this one alongside it. `hall` shades a run of tunnel; nothing down here is
    marked `you`, because you are never down here. */
 const ROOMS_B = [
-  { x1:8.0,  y1:2.0,  x2:24.0, y2:11.5, name:"NW STORE" },
-  { x1:41.0, y1:2.0,  x2:59.0, y2:11.5, name:"PLANT" },
-  { x1:77.0, y1:2.0,  x2:93.0, y2:11.5, name:"NE STORE" },
-  { x1:14.0, y1:12.0, x2:88.0, y2:20.5, name:"NORTH TUNNEL", hall:true },
-  { x1:25.0, y1:25.0, x2:41.0, y2:36.5, name:"WEST BAY 1" },
-  { x1:60.0, y1:25.0, x2:76.0, y2:36.5, name:"EAST BAY 1" },
-  { x1:25.0, y1:41.0, x2:41.0, y2:52.5, name:"WEST BAY 2" },
-  { x1:61.0, y1:41.0, x2:79.0, y2:52.5, name:"EAST BAY 2" },
-  { x1:44.0, y1:21.0, x2:56.0, y2:70.0, name:"SPINE", hall:true },
-  { x1:12.0, y1:73.5, x2:86.0, y2:84.0, name:"SOUTH TUNNEL", hall:true },
-  { x1:10.0, y1:85.0, x2:30.0, y2:97.0, name:"SUMP" },
-  { x1:70.0, y1:85.0, x2:90.0, y2:97.0, name:"SE DUCT ROOM" }
+  { x1:27.2, y1:80.6, x2:100.0, y2:100.0, name:"ENGINEERING", hall:true },
+  { x1:27.2, y1:40.1, x2:35.7, y2:80.6, name:"NORTH HALL", hall:true },
+  { x1:35.7, y1:61.1, x2:100.0, y2:80.6, name:"ENGINEERING OFFICE" },
+  { x1:61.0, y1:51.2, x2:100.0, y2:61.1, name:"ENG OFFICE WEST" },
+  { x1:35.7, y1:51.2, x2:61.0, y2:61.1, name:"OFFICE A" },
+  { x1:56.3, y1:40.1, x2:82.7, y2:51.2, name:"OFFICE B" },
+  { x1:35.7, y1:40.1, x2:56.3, y2:51.2, name:"OFFICE C" },
+  { x1:82.7, y1:28.7, x2:100.0, y2:51.2, name:"VAULT" },
+  { x1:82.7, y1:25.6, x2:100.0, y2:28.7, name:"CLOSET" },
+  { x1:82.7, y1:17.3, x2:100.0, y2:25.6, name:"UTILITY CLOSET" },
+  { x1:26.0, y1:24.8, x2:82.7, y2:40.1, name:"PAYROLL & BILLING" },
+  { x1:0.7, y1:24.8, x2:26.0, y2:40.1, name:"NORTH OFFICE" },
+  { x1:64.8, y1:17.3, x2:82.7, y2:24.8, name:"LADIES" },
+  { x1:50.3, y1:17.3, x2:64.8, y2:24.8, name:"MENS" },
+  { x1:38.3, y1:17.3, x2:50.3, y2:24.8, name:"EAST CLOSET" },
+  { x1:38.3, y1:13.1, x2:100.0, y2:17.3, name:"CENTRE CORRIDOR", hall:true },
+  { x1:80.0, y1:0.2, x2:100.0, y2:13.1, name:"SALES OFFICE" },
+  { x1:59.8, y1:0.2, x2:80.0, y2:13.1, name:"SALES OFFICE 2" },
+  { x1:37.5, y1:0.2, x2:59.8, y2:13.1, name:"SALES OFFICE 3" },
+  { x1:0.7, y1:10.1, x2:38.3, y2:24.8, name:"ATRIUM", hall:true },
+  { x1:25.3, y1:0.2, x2:37.5, y2:10.1, name:"ATRIUM SOUTH", hall:true },
+  { x1:0.7, y1:0.2, x2:25.3, y2:10.1, name:"ENTRY" }
 ];
 
 /* ---------------------------------------------------------------------------
@@ -1556,6 +1683,12 @@ const CONFIG = {
      lives. Left out of CONFIG deliberately rather than kept as an alias: two
      names for one grace window is how they end up disagreeing. */
   passBySteps: 4,          // how many rooms it carries on before settling
+  /* How often a pass-by crosses your doorway instead of backing off the way it
+     came. This is the ONLY thing that puts something on the other side of your
+     office without it walking all the way round, so it is also the only reason
+     the door you were watching can become the wrong one. At 0 the crossing
+     animation never plays; at 1 they never simply retreat. */
+  crossDoorChance: 0.38,
   walkByMs: 2600,          // how long they take to cross your doorway
   powerRestoreMs: 2600,    // breaker warm-up, so you can't strobe it
   passOutMs: 6500,         // how long you're face-down when the air runs out
@@ -1939,7 +2072,7 @@ const GORDON = {
      b17 is FIVE steps from your door and b05 and b16 are six, which on night
      six is him arriving before you have finished learning where Sloppy is.
      If you re-cut the basement, re-run the totals before touching this. */
-  startNodes: ["b02", "b07", "b13", "b19"],
+  startNodes: ["b12"],
 
   /* Nights 1-2 are empty for him; the first two figures are the ones he is
      tuned against. From night three the interval tightens hard, because the
@@ -1959,6 +2092,50 @@ const GORDON = {
   climbOutMs: 2600,
 
   doorMs:   [0, 0, 4200, 4000, 3800, 3600, 3000],
+
+  /* HOW OFTEN HE WANDERS.
+     A step that does not take him toward the duct he wants. Without this he
+     traces the same shortest path every night and the rooms off it might as
+     well not exist; with it, the squares between the routes are places he can
+     actually turn up, which is the only thing that makes checking them worth
+     the seconds. Kept low — he is a clock, and a clock that wanders too much
+     stops reading as one. */
+  strayChance: 0.18,
+
+  /* WHICH WAY UP HE COMMITS TO, and why it is not simply the nearest.
+
+     It used to be: after a rebuff, re-pick the closest reachable duct. That is
+     deterministic, and against a layout where two ducts sit near each other it
+     is exploitable — shut the door on one and he turns for the other, shut
+     that and he turns back, and he shuffles between two squares making no
+     progress for as long as you can pay for it. Measured on the engineering
+     end: V3, V2, V3, V2 with no advance.
+
+     He now picks at random, weighted by distance:
+
+         weight = ductBias ^ (rooms further than the nearest)
+
+     At 0.45 the nearest gets about two-thirds of the roll, the next about a
+     third, and anything four rooms further is under 5%. Near enough to be
+     predictable, random enough that you cannot bank on it — so shutting a door
+     is a push in a direction rather than a lever with a known output, and the
+     shuffle has a real chance of ending with him bolting for the far one. */
+  ductBias: 0.45,
+
+  /* THE TELL.
+     He makes a noise this long before each step. It is the only warning in the
+     game that something is ABOUT to happen rather than reporting that it just
+     did, and it exists so that hearing him is worth more than watching him:
+     two seconds is enough to raise the monitor and find him, and not enough to
+     do that and anything else. */
+  tellMs: 2200,
+
+  /* HOW LONG HE SPENDS BREAKING A ONE-SHOT DOOR, per night, in milliseconds.
+
+     Absolute rather than a multiple of his move interval, and deliberately so.
+     A multiplier would shrink exactly when it matters most — night six needs
+     this to be worth as many real seconds as night three, not fewer. */
+  breakMs: [0, 0, 62000, 55000, 48000, 42000, 34000],
 
   camBurnMs: 3200,
   /* He does not idle. A wandering Gordon would be a slower Eugene; a Gordon
@@ -2029,7 +2206,33 @@ const POWER = {
      minute and an average one finishes at 69%. By night six the average player
      no longer makes it and only efficient play does, at 76%. On night seven
      efficient finishes at 92% — one forgotten door from an outage. */
-  nightMult: [0.62, 0.73, 0.76, 0.86, 0.97, 1.09, 1.25],
+  /* RE-SOLVED against the current lower floor, and the method changed as well
+     as the numbers.
+
+     The old fit assumed door time was a HABIT — a flat fraction of the night
+     per skill level. It is not. It is a DEBT: Gordon arrives at a time you can
+     compute, and the doors have to buy exactly the difference between that and
+     6 AM. On nights one to four the payroll door alone covers the whole
+     shortfall, so a competent player holds no door at all and the old model was
+     charging them for a third of the night that never happened.
+
+     Derived from the building instead, the debt is a step: 0s, 0s, 0s, 0s, 5s,
+     43s, 93s. Which means GORDON IS NOW THE DIFFICULTY CURVE, and a steep
+     multiplier on top of him double-counts. Solving for one anyway produces a
+     curve that peaks at night four and then FALLS — the late nights need no
+     help from it.
+
+     So this is set by hand to rise smoothly rather than forced out of a solve
+     that wanted to go down. What it produces, checked rather than assumed:
+
+       nights 1-4  everyone survives, careless scraping night four at 97%
+       night 5     careless fails       average 90%
+       night 6     average fails        efficient 82%
+       night 7     efficient fails      optimal 82%
+
+     One skill tier removed per night from five onward, which is the shape the
+     whole game is built around. */
+  nightMult: [0.60, 0.72, 0.90, 1.05, 1.15, 1.24, 1.30],
 
   /* THE OUTAGE.
      The clock keeps running through all of it, so an outage at 5:40 is
@@ -2039,7 +2242,31 @@ const POWER = {
   jingleMs: 5200,          // how long the box plays before the grace begins
   graceMinMs: 4000,        // shortest wait after the jingle before he moves
   graceMaxMs: 21000,       // longest. Rolled once, per outage.
-  warnAt: 20               // percent at which the readout starts shouting
+  warnAt: 20,
+
+  /* THE USAGE METER.
+
+     Bars, not numbers, and derived from the drains rather than hand-assigned
+     so it cannot drift out of step with what is actually being spent. One
+     "unit" is set a hair above the cost of the lights, which lands the four
+     states you actually occupy on four distinct readings:
+
+       lights only                 1 bar
+       monitor only                2
+       lights + monitor            3
+       monitor + door              4
+       lights + monitor + door     5
+
+     nightMult is divided back out first. The meter reports WHAT YOU HAVE ON,
+     not how expensive tonight is — a night six player holding nothing should
+     see an empty meter, the same as on night one. */
+  barUnit: 0.145,
+  maxBars: 5,
+  /* An audio cue is a lump, not a rate, so it has nothing to show on a meter
+     of rates. It is faked as a spike: the meter jumps for this long and drops
+     back, which is the only honest way to draw an instant. */
+  lureSpikeMs: 700,
+  lureSpikeBars: 2               // percent at which the readout starts shouting
 };
 
 /* ---------------------------------------------------------------------------
@@ -2134,7 +2361,11 @@ const FAULTS = {
   door: {
     base: [0.00, 0.00, 0.10, 0.13, 0.16, 0.20, 0.26],
     step: [0.00, 0.00, 0.04, 0.05, 0.06, 0.075, 0.10],
-    max:  [0.00, 0.00, 0.40, 0.46, 0.52, 0.60,  0.70]
+    max:  [0.00, 0.00, 0.40, 0.46, 0.52, 0.60,  0.70],
+    /* Multiplies the jam chance when the closed door has him sealed away from
+       every duct at once. At 3 he is through in two or three attempts rather
+       than half a dozen, so a total seal buys a minute rather than a night. */
+    sealedMult: 3.0
   },
 
   /* A system that has just come back is left alone for a while. Faults still
@@ -2237,9 +2468,32 @@ function distFromBlocked(start, shutId){
   return d;
 }
 
-/* The nearest duct he can actually still reach, and how far it is. Returns
-   null only if every duct is walled off, which auditBuilding() guarantees
-   cannot happen with a single door closed. */
+/* WHICH DUCT HE COMMITS TO. Weighted by distance rather than simply nearest —
+   see GORDON.ductBias for why. Returns null only when every way up is walled
+   off, which is a supported case rather than an error. */
+function chooseDuct(from, shutId){
+  const d = distFromBlocked(from, shutId);
+  const opts = [];
+  for (const v of DUCTS){
+    const dist = d[v.down];
+    if (dist !== undefined) opts.push({ v, dist });
+  }
+  if (!opts.length) return null;
+
+  const min = Math.min(...opts.map(o => o.dist));
+  let total = 0;
+  for (const o of opts){
+    o.w = Math.pow(GORDON.ductBias, o.dist - min);
+    total += o.w;
+  }
+  let r = Math.random() * total;
+  for (const o of opts){ r -= o.w; if (r <= 0) return o.v; }
+  return opts[0].v;
+}
+
+/* The nearest duct he can actually still reach, and how far it is. Kept for
+   the boot audit and the sealed-in check, which both want "is ANY way up
+   reachable" rather than "which one is he taking". */
 function nearestDuct(from, shutId){
   const d = distFromBlocked(from, shutId);
   let best = null, bestD = Infinity;
@@ -2304,13 +2558,22 @@ function auditBuilding(){
     if (floorOf(d.a) !== 2 || floorOf(d.b) !== 2) say(d.id + " is not entirely downstairs");
   });
 
-  /* The one that matters. For every door, from every downstairs square, can he
-     still reach at least one duct? */
+  /* THE ONE THAT MATTERS — and what it means has changed.
+
+     It used to be a hard error: a door that sealed him away from every duct
+     would leave him standing still and the night would stall. That is now a
+     supported case, handled two ways. A one-shot door lets him break through
+     it; an ordinary one lets him jam the array open. So this is a NOTICE, not
+     a fault — but it is still worth printing, because a door with this
+     property plays completely differently from the others and you want to know
+     you have made one. */
   const lower = Object.keys(GRAPH).filter(n => floorOf(n) === 2);
   DOOR_LINKS.forEach(d => {
     const stranded = lower.filter(n => !nearestDuct(n, d.id));
     if (stranded.length)
-      say(d.id + " strands him with no reachable duct from: " + stranded.join(", "));
+      console.info("BUILDING: " + d.id + (d.oneShot ? " (one-shot)" : "") +
+        " seals him off from every duct when he is at: " + stranded.join(", ") +
+        (d.oneShot ? " — he breaks through it" : " — he jams the array open"));
   });
 
   const uncovered = lower.filter(n =>
@@ -2414,6 +2677,49 @@ const gordonClank = () => {
                         t => (1 - t) ** 2), 40);
 };
 
+/* THREE SURFACES.
+
+   The original gordonClank is the concrete one and stays as it is. The other
+   two are built from the same weight-then-ring recipe with the ring changed,
+   because that is what actually differs when a heavy thing lands on carpet
+   rather than bare slab: the mass is identical, what the room does with it
+   is not.
+
+     concrete  bright inharmonic ring, long tail — the plant and the vault
+     carpet    ring almost entirely gone, just the thud and a dull slap
+     tile      shorter, harder, with a slap that comes back at you
+
+   They have to be told apart in three seconds through a floor, so the
+   difference is deliberately larger than realism would allow. */
+const gordonCarpet = () => {
+  noise(0.07, "lowpass", 900, .14, undefined, t => (1 - t) ** 3);
+  tone(54, .30, "sine", .30, 36);
+  setTimeout(() => noise(0.22, "lowpass", 320, .17, undefined,
+                         t => (1 - t) ** 1.6), 26);
+  setTimeout(() => tone(190, .13, "triangle", .028, 150), 20);
+};
+
+const gordonTile = () => {
+  noise(0.06, "bandpass", 3400, .19, undefined, t => (1 - t) ** 4);
+  tone(62, .26, "sine", .28, 42);
+  setTimeout(() => {
+    tone(2380, .17, "square", .034, 2330);
+    tone(3110, .12, "square", .020, 3060);
+  }, 12);
+  // the slap coming back off a hard floor
+  setTimeout(() => noise(0.15, "highpass", 1500, .10, undefined,
+                         t => (1 - t) ** 2), 95);
+};
+
+/* The shift of weight before he moves. Deliberately NOT a small footstep: it
+   is a low swell with no impact in it, so it can never be mistaken for the
+   step itself and counted twice. */
+const gordonTellFx = () => {
+  tone(41, .62, "sine", .26, 33);
+  noise(0.55, "lowpass", 190, .16, undefined, t => Math.sin(t * Math.PI) ** 1.4);
+  setTimeout(() => tone(96, .28, "triangle", .035, 74), 150);
+};
+
 /* Going INTO a duct, heard from the floor below. The body tone rises, because
    he is going up and the sound should say so without a word of interface. */
 const ductIn = () => {
@@ -2481,6 +2787,25 @@ const doorBlockedFx = () => {
                          t => (1 - t) ** 2), 120);
 };
 
+/* A one-shot door coming apart. Three impacts, each lower than the last, with
+   the frame tearing out between them and a long low collapse at the end. */
+const doorBreakFx = () => {
+  [0, 380, 760].forEach((delay, i) => setTimeout(() => {
+    tone(52 - i * 6, .60, "sine", .42, 30 - i * 4);
+    noise(0.34, "lowpass", 300 - i * 40, .34, undefined, t => (1 - t) ** 1.3);
+    tone(840 - i * 90, .30, "square", .050, 810 - i * 90);
+    tone(1270 - i * 130, .24, "square", .034, 1240 - i * 130);
+  }, delay));
+  // the frame letting go
+  setTimeout(() => {
+    noise(1.10, "bandpass", 1250, .26, undefined,
+          t => Math.sin(t * Math.PI * 5) ** 2 * (1 - t));
+    tone(300, .90, "sawtooth", .09, 62);
+  }, 1080);
+  setTimeout(() => noise(1.60, "lowpass", 160, .24, undefined,
+                         t => (1 - t) ** 0.7), 1500);
+};
+
 /* A feed that has had Gordon in it for too long. It stutters, it whines, and
    then it is simply not there any more. */
 const camBurnFx = () => {
@@ -2503,6 +2828,128 @@ const powerOutFx = () => {
     setTimeout(() => tone(150 - i * 22, .12, "square", .13, 70), d));
   setTimeout(() => noise(1.60, "lowpass", 180, .20, undefined,
                          t => Math.sin(t * Math.PI) ** 0.6), 420);
+};
+
+/* ===========================================================================
+   MENU MUSIC
+
+   Generative rather than a loop, because a loop of any length becomes
+   furniture: you learn where it repeats and it stops working on you. This
+   never repeats. It is built from three parts that run on unrelated periods,
+   so the combination does not come back around inside any session.
+
+     DRONE     two detuned oscillators a fifth apart, plus a third an octave
+               down. The detune is the whole trick — 0.4 Hz apart produces a
+               beat every two and a half seconds that you feel rather than
+               hear, and it is what makes a held note sound like a room instead
+               of a synth.
+
+     BREATH    filtered noise swelling and falling on a 19-second cycle,
+               nothing like the drone's period, so the two drift in and out of
+               phase forever.
+
+     FIGURE    six notes from a minor scale, played at random with long gaps,
+               on a music box that is slightly out of tune with itself. Never
+               resolves and never lands on the root.
+
+   All of it sits under -20 dB. Menu music that announces itself is menu music
+   you turn off.
+   =========================================================================== */
+let menuNodes = null;
+
+function startMenuMusic(){
+  if (!actx || menuNodes) return;
+  const out = actx.createGain();
+  out.gain.setValueAtTime(0.0001, actx.currentTime);
+  out.gain.exponentialRampToValueAtTime(0.10, actx.currentTime + 4.0);  // a slow fade in
+  out.connect(master || actx.destination);
+
+  const nodes = { out, osc:[], timers:[], stopped:false };
+
+  /* --- the drone -------------------------------------------------------- */
+  // D2, A2 and D1: a bare fifth with the octave under it. No third, so it is
+  // neither major nor minor and refuses to tell you how to feel about it.
+  [[73.42, 0.34, "sine"], [73.42 * 1.006, 0.30, "sine"],
+   [110.00, 0.16, "sine"], [110.00 * 0.994, 0.15, "sine"],
+   [36.71, 0.42, "sine"]].forEach(([hz, amp, type]) => {
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.value = hz;
+    g.gain.value = amp;
+    o.connect(g).connect(out);
+    o.start();
+    nodes.osc.push(o);
+  });
+
+  /* --- the breath ------------------------------------------------------- */
+  const nb = actx.createBufferSource();
+  const len = actx.sampleRate * 4;
+  const buf = actx.createBuffer(1, len, actx.sampleRate);
+  const dat = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) dat[i] = (Math.random() * 2 - 1) * 0.5;
+  nb.buffer = buf; nb.loop = true;
+  const nf = actx.createBiquadFilter();
+  nf.type = "bandpass"; nf.frequency.value = 220; nf.Q.value = 0.7;
+  const ng = actx.createGain(); ng.gain.value = 0.0;
+  nb.connect(nf).connect(ng).connect(out);
+  nb.start();
+  nodes.osc.push(nb);
+
+  // a 19-second swell, deliberately coprime with everything else on screen
+  const lfo = actx.createOscillator(), lfoGain = actx.createGain();
+  lfo.frequency.value = 1 / 19; lfo.type = "sine";
+  lfoGain.gain.value = 0.055;
+  lfo.connect(lfoGain).connect(ng.gain);
+  ng.gain.value = 0.06;
+  lfo.start();
+  nodes.osc.push(lfo);
+
+  /* --- the figure ------------------------------------------------------- */
+  // D minor, no root at the top: A, C, D, F, G, Bb — and the box is a hair
+  // flat, which is what makes it sound wound rather than played.
+  const SCALE = [440.00, 523.25, 587.33, 698.46, 783.99, 932.33];
+  function note(){
+    if (nodes.stopped) return;
+    const f = SCALE[Math.floor(Math.random() * SCALE.length)] * 0.994;
+    const t = actx.currentTime;
+    [[1, 0.030, "triangle", 1.7], [2, 0.012, "sine", 0.9]].forEach(([m, a, ty, dur]) => {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = ty; o.frequency.value = f * m;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(a, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g).connect(out);
+      o.start(t); o.stop(t + dur + 0.1);
+    });
+    // 2.5 to 8 seconds of nothing. The gaps are the frightening part.
+    nodes.timers.push(setTimeout(note, 2500 + Math.random() * 5500));
+  }
+  nodes.timers.push(setTimeout(note, 2600));
+
+  menuNodes = nodes;
+}
+
+function stopMenuMusic(){
+  if (!menuNodes || !actx) return;
+  const n = menuNodes;
+  menuNodes = null;
+  n.stopped = true;
+  n.timers.forEach(clearTimeout);
+  // fade rather than cut: a hard stop on a drone is a click
+  try {
+    n.out.gain.cancelScheduledValues(actx.currentTime);
+    n.out.gain.setValueAtTime(n.out.gain.value, actx.currentTime);
+    n.out.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + 0.8);
+  } catch (e) {}
+  setTimeout(() => n.osc.forEach(o => { try { o.stop(); } catch (e) {} }), 900);
+}
+
+/* The stab under the face when it appears. Short, loud, and gone. */
+const titleStabFx = () => {
+  noise(0.16, "highpass", 2600, .34, undefined, t => (1 - t) ** 2.2);
+  tone(1180, .13, "sawtooth", .10, 320);
+  tone(58, .55, "sine", .30, 34);
+  setTimeout(() => noise(0.42, "lowpass", 420, .17, undefined,
+                         t => (1 - t) ** 1.4), 60);
 };
 
 /* THE BOX THAT PLAYS WHEN THE POWER GOES.
@@ -2641,7 +3088,13 @@ const SFX = {
      gordonStep is played at a volume computed from how close he is, so its
      `vol` here is the CEILING rather than the level — see gordonFootstep().
      Everything else is played flat. */
-  gordonStep:{ src:"sounds/gordon_step.wav", vol:0.66, synth:() => gordonClank() },
+  /* One entry per surface. gordonFootstep() builds the name from the square he
+     is standing on, so adding a fourth surface means adding a row here and a
+     line in ZONE, and nothing else. */
+  gordonStepConcrete:{ src:"sounds/gordon_step_concrete.wav", vol:0.66, synth:() => gordonClank() },
+  gordonStepCarpet:  { src:"sounds/gordon_step_carpet.wav",   vol:0.62, synth:() => gordonCarpet() },
+  gordonStepTile:    { src:"sounds/gordon_step_tile.wav",     vol:0.66, synth:() => gordonTile() },
+  gordonTell:        { src:"sounds/gordon_tell.wav",          vol:0.58, synth:() => gordonTellFx() },
   /* His sensor chirp. Eugene is a low falling double and Sloppy a high rising
      triple, so his is a low FALLING triple: unmistakably the heaviest thing in
      the building, and unmistakably not either of them. */
@@ -2658,12 +3111,17 @@ const SFX = {
   doorShut:  { src:"sounds/door_shut.wav",  vol:0.52, synth:() => doorShutFx() },
   doorOpen:  { src:"sounds/door_open.wav",  vol:0.44, synth:() => doorOpenFx() },
   doorBlocked:{src:"sounds/door_blocked.wav",vol:0.70, synth:() => doorBlockedFx() },
+  /* A door being destroyed rather than bounced off. Longer, lower and with the
+     tearing metal underneath it, because it has to be unmistakable: it is the
+     sound of a defence you no longer have. */
+  doorBreak: { src:"sounds/door_break.wav",  vol:0.90, synth:() => doorBreakFx() },
   camBurn:   { src:"sounds/cam_burn.wav",   vol:0.62, synth:() => camBurnFx() },
   powerOut:  { src:"sounds/power_out.wav",  vol:0.78, synth:() => powerOutFx() },
   outageBox: { src:"sounds/outage_box.wav", vol:0.62, synth:() => outageBoxTune() },
   /* The bar getting low. One short, dry tick, played at 25% and again at the
      POWER.warnAt threshold — twice a night at most, so it stays a warning
      rather than becoming part of the room tone. */
+  titleStab: { src:"sounds/title_stab.wav", vol:0.72, synth:() => titleStabFx() },
   powerWarn: { src:"sounds/power_warn.wav", vol:0.50, synth:() => {
                  tone(520,.10,"square",.09);
                  setTimeout(()=>tone(392,.16,"square",.09),130); } }
@@ -2943,6 +3401,35 @@ function scrape(u){
   play("atDoor", { pan: u && sideOf(u.node) === "left" ? -0.6 : 0.6 });
 }
 
+/* WHAT HE IS WALKING ON.
+
+   Three surfaces, and each has its own footfall. This is not decoration: with
+   one step sound the only thing his footsteps tell you is how far away he is,
+   and the room he is in has to be looked up. With three, a listener who has
+   learned them knows he has just come off the concrete and onto carpet — which
+   narrows him to a handful of squares without the monitor ever going up.
+
+   Anything not named here is CARPET, which is most of the office wing. */
+const ZONE = {};
+[["concrete", ["b01","b02","b03","b04","b05","b12","b13"]],
+ ["tile",     ["b15","b20","b21","b22","b23","b24","b28","b29"]]
+].forEach(([z, list]) => list.forEach(n => ZONE[n] = z));
+const zoneOf = n => (floorOf(n) === 2 ? (ZONE[n] || "carpet") : "carpet");
+
+/* The shift of weight before a step. Quiet, low, and deliberately not the same
+   shape as the footfall so the two never get confused. */
+function gordonTell(g){
+  if (!g) return;
+  const far = floorOf(g.node) === 2;
+  const d = far ? undefined : DO[g.node];
+  const near = (d === undefined) ? 0 : Math.max(0, Math.min(1, 1 - (d - 1) / 6));
+  play("gordonTell", {
+    vol:  far ? 0.30 : 0.34 + near * 0.55,
+    pan:  far ? 0 : (sideOf(g.node) === "left" ? -0.45 : 0.45) * (1 - near * 0.5),
+    rate: 0.96 + Math.random() * 0.08
+  });
+}
+
 /* GORDON'S FOOTFALL — the one sound that is a distance readout.
 
    The others go quiet past four rooms because they are texture. His does not:
@@ -2955,12 +3442,17 @@ function scrape(u){
    While he is DOWNSTAIRS it is muffled and centred: the ceiling below you,
    direction unknown. The moment he is upstairs it pans to the wing he is
    walking up, and gets louder every room. */
+const zoneCap = z => z.charAt(0).toUpperCase() + z.slice(1);
+
 function gordonFootstep(g){
   if (!g) return;
 
   if (floorOf(g.node) === 2){
-    // through the floor: quiet, dull, and it could be anywhere
-    play("gordonStep", { vol: 0.24, pan: 0, rate: 0.80 + Math.random() * 0.08 });
+    /* Through the floor: quiet, dull, and it could be anywhere — except that
+       the SURFACE still comes through, which is the one thing about his
+       position you can learn without looking. */
+    play("gordonStep" + zoneCap(zoneOf(g.node)),
+         { vol: 0.26, pan: 0, rate: 0.80 + Math.random() * 0.08 });
     return;
   }
 
@@ -2970,7 +3462,7 @@ function gordonFootstep(g){
      the loudest thing in the game. The curve is deliberately steep at the
      bottom end so the last three steps are unmistakable. */
   const near = Math.max(0, Math.min(1, 1 - (d - 1) / 6));
-  play("gordonStep", {
+  play("gordonStep" + zoneCap(zoneOf(g.node)), {
     vol:  0.20 + near * near * 0.80,
     pan:  (sideOf(g.node) === "left" ? -0.55 : 0.55) * (1 - near * 0.5),
     rate: 0.94 + Math.random() * 0.10
@@ -2994,6 +3486,10 @@ const S = {
             something you have to remember
      outage null, or the scripted ending in progress. See beginOutage(). */
   pw:100, draw:0, pwWarned:0, outage:null,
+  lureSpike:0,            // ms left on the cue's usage-meter blip
+  lastDoor:null,          // what the D key works
+  shownBars:-1,           // last usage reading drawn, to avoid restyling every frame
+  brokeMsg:null,          // a door destroyed, shown briefly and then gone
 
   /* --- THE FLOOR BELOW ---------------------------------------------------
      mapFloor  which storey the map is showing. Purely a view: it does not
@@ -3005,6 +3501,7 @@ const S = {
      deadCams  feeds he has burned out, gone for the rest of the night */
   mapFloor:1,
   doorShut:null, doorReadyAt:0,
+  doorBroken:{},          // one-shot doors he has already taken apart tonight
   gordon:null,
   deadCams:{},
   burnCam:null, burnAcc:0,   // the feed currently being ruined by looking at him
@@ -3031,7 +3528,7 @@ const el = {
   camPan:$("camPan"), camArt:$("camArt"),
   camName:$("camName"), mapPlan:$("mapPlan"),
   audioBtn:$("audioBtn"), sensorBtn:$("sensorBtn"),
-  sysList:$("sysList"), panel:$("panel"),
+  sysList:$("sysList"), panel:$("panel"), usage:$("usage"),
   clockHour:$("clockHour"), nightLabel:$("nightLabel"),
   alerts:$("alerts"),
   title:$("titleScreen"), lose:$("loseScreen"), win:$("winScreen"),
@@ -3232,7 +3729,8 @@ function startNight(n){
   S.pw = POWER.capacity; S.draw = 0; S.pwWarned = 0; S.outage = null;
   S.wear = {}; SYSTEMS.forEach(s => S.wear[s.id] = 0);
   S.darkAcc = 0;
-  S.doorShut = null; S.doorReadyAt = 0;
+  S.doorShut = null; S.doorReadyAt = 0; S.doorBroken = {};
+  S.lastDoor = null; S.lureSpike = 0; S.brokeMsg = null; S.shownBars = -1;
   S.deadCams = {}; S.burnCam = null; S.burnAcc = 0;
   S.mapFloor = 1;
   S.gordon = spawnGordon();
@@ -3448,6 +3946,7 @@ function playCue(){
   S.lureReadyAt = performance.now() + CONFIG.lureCooldownMs;
   lureFx();
   spendPower(lureCost());            // charged per press, not per second
+  S.lureSpike = POWER.lureSpikeMs;   // and the meter jumps for a moment
 
   /* AND THEN THE RELAY ROLLS. Deliberately last: the cue has already been
      placed and already been offered to everything in the building, so a relay
@@ -3480,9 +3979,11 @@ function toggleDoor(id){
   if (!S.sys.door.ok){ buzz(); return; }      // the array is jammed
   if (performance.now() < S.doorReadyAt){ buzz(); return; }
   if (!DOOR_BY_ID[id]) return;
+  if (S.doorBroken[id]){ buzz(); return; }    // he already took this one apart
 
   S.doorReadyAt = performance.now() + CONFIG.doorCooldownMs;
 
+  S.lastDoor = id;                            // the key works this one from now on
   if (S.doorShut === id){                     // this one was shut: open it
     S.doorShut = null;
     play("doorOpen");
@@ -3504,6 +4005,38 @@ function toggleDoor(id){
 /* Every door the player can currently reach. Closed doors are always listed,
    so the one you shut never disappears from the map when the array faults. */
 const doorOpenable = () => S.running && !S.outage && S.power && S.sys.door.ok;
+
+/* THE DOOR KEY.
+
+   Works the LAST door you touched, from anywhere — monitor up, monitor down,
+   in the office, in the dark. Everything else about the array still requires
+   the cameras; this one binding does not.
+
+   The reason is asymmetry. CHOOSING a door needs the map, because you have to
+   know where he is to know which one matters. RELEASING one needs nothing at
+   all — you already decided, he has already gone past, and the only thing
+   standing between you and switching it off was having to raise a monitor that
+   itself costs power to hold. Charging for that was charging you to stop
+   spending.
+
+   It re-closes as well as releases, so a door you are shuffling can be worked
+   without the map once you have picked it. If you have never touched a door
+   tonight there is nothing for the key to work, and it says so. */
+function toggleLastDoor(){
+  if (!S.running || S.outage || S.passedOut > 0 || S.doom) return;
+  const id = S.doorShut || S.lastDoor;
+  if (!id || !DOOR_BY_ID[id]){ buzz(); return; }
+  if (S.doorBroken[id]){ buzz(); return; }
+  if (!S.power){ buzz(); return; }
+  if (performance.now() < S.doorReadyAt){ buzz(); return; }
+
+  // Releasing is always allowed. Closing still needs a working array.
+  if (S.doorShut !== id && !S.sys.door.ok){ buzz(); return; }
+
+  S.doorReadyAt = performance.now() + CONFIG.doorCooldownMs;
+  if (S.doorShut === id){ S.doorShut = null; play("doorOpen"); }
+  else { S.doorShut = id; play("doorShut"); }
+}
 
 /* Which storey the map is drawing. TAB flips it, as does the button above the
    plan. It is a view and nothing else: your feed does not change, so you can
@@ -3636,8 +4169,105 @@ function markPickers(){
   markStars();
 }
 
-const clockIn = () => { initAudio(); startNight(S.night); };
+/* ===========================================================================
+   THE TITLE SCREEN — glitches and music
+
+   Both run only while the title is showing, and both stop dead the moment you
+   clock in. Nothing here survives into a night.
+   =========================================================================== */
+
+/* The face behind everything is Gordon, blurred to almost nothing. He is the
+   one nobody has met yet on their first run, and using a sprite you already
+   have costs nothing and means the thing behind the title is a real thing in
+   the building rather than a texture. */
+if (sprites[GORDON.id])
+  document.documentElement.style.setProperty("--titleFace", "url(" + GORDON.art + ")");
+
+let titleGlitch = null, titleAlive = false;
+
+/* WHY THIS IS SCHEDULED AND NOT RANDOM PER FRAME.
+
+   A screen that glitches constantly reads as broken — the eye normalises it in
+   about two seconds and then it is just texture. A screen that is completely
+   still for eight or ten seconds and THEN tears reads as something noticing
+   you. So each event picks its own next delay, and the gaps are long enough to
+   be uncomfortable. */
+function scheduleGlitch(){
+  if (!titleAlive) return;
+  const wait = 3200 + Math.random() * 9000;
+  titleGlitch = setTimeout(() => {
+    if (!titleAlive) return;
+    const roll = Math.random();
+
+    if (roll < 0.34){
+      // a horizontal tear: a band of inverted screen, two frames long
+      const t = $("titleTear");
+      if (t){
+        t.style.top = (8 + Math.random() * 76) + "%";
+        t.style.height = (2 + Math.random() * 7) + "px";
+        t.classList.add("on");
+        setTimeout(() => t.classList.remove("on"), 40 + Math.random() * 90);
+      }
+      if (Math.random() < 0.5) blip();
+
+    } else if (roll < 0.62){
+      // the title loses its registration for a moment
+      const h = document.querySelector("#titleScreen h1");
+      if (h){
+        h.style.setProperty("--jx", ((Math.random() * 8) - 4).toFixed(1) + "px");
+        h.classList.add("jolt");
+        setTimeout(() => h.classList.remove("jolt"), 90 + Math.random() * 130);
+      }
+
+    } else if (roll < 0.80){
+      // the snow surges, as if the signal dropped
+      const sn = $("titleSnow");
+      if (sn){
+        sn.style.opacity = "0.24";
+        setTimeout(() => sn.style.opacity = "", 70 + Math.random() * 140);
+      }
+
+    } else {
+      /* HE IS THERE, for about a fifth of a second. The rarest event by a
+         distance — roughly once every forty seconds — and the only one with a
+         sound under it. If a player ever screenshots the menu to check whether
+         they imagined it, this is doing its job. */
+      const f = $("titleFace");
+      if (f){
+        f.classList.add("peek");
+        setTimeout(() => f.classList.remove("peek"), 110 + Math.random() * 120);
+      }
+      play("titleStab", { vol: 0.5 + Math.random() * 0.3 });
+    }
+    scheduleGlitch();
+  }, wait);
+}
+
+function titleScreenOn(){
+  if (titleAlive) return;
+  titleAlive = true;
+  scheduleGlitch();
+  startMenuMusic();
+}
+function titleScreenOff(){
+  titleAlive = false;
+  clearTimeout(titleGlitch);
+  stopMenuMusic();
+}
+
+const clockIn = () => { titleScreenOff(); initAudio(); startNight(S.night); };
 $("btnStart").onclick = clockIn;
+
+/* The music cannot start until the browser has been touched, so the title
+   waits for the first interaction rather than trying and failing silently. */
+["pointerdown","keydown"].forEach(ev =>
+  addEventListener(ev, function armTitle(){
+    removeEventListener(ev, armTitle);
+    if ($("titleScreen") && $("titleScreen").classList.contains("show")){
+      initAudio();
+      titleScreenOn();
+    }
+  }, { once:true }));
 $("btnRetry").onclick = clockIn;
 
 addEventListener("keydown", e => {
@@ -3659,6 +4289,7 @@ addEventListener("keydown", e => {
   else if (k === "f") playCue();
   else if (k === "m" && S.monUp) mountSensor(S.activeCam);
   else if (k === "b") toggleBot();
+  else if (k === "d") toggleLastDoor();
   /* 1-5 work the doors from the keyboard, in DOOR_LINKS order, so holding a
      line does not cost you a trip to the map and back with the mouse. They do
      nothing unless the monitor is up, exactly like clicking a pin. */
@@ -3842,8 +4473,38 @@ function stepToward(from, targets){
 }
 
 /* A pass-by isn't a single sidestep — it keeps walking. Two rooms of distance
-   is what makes the powered-down gamble worth the air you lose taking it. */
-function retreatFrom(node, steps){
+   is what makes the powered-down gamble worth the air you lose taking it.
+
+   THE CROSSING, AND WHY IT NEEDED ONE.
+
+   `away` is every neighbour STRICTLY further from your office; `side` is every
+   neighbour at the same distance or further. The loop prefers `away` and only
+   falls back to `side` when `away` is empty.
+
+   At a doorway that preference is fatal to the crossing animation. The other
+   doorway is the only neighbour on the opposite wing, and it sits at exactly
+   the same distance from you — so it lands in `side`, never in `away`. And
+   `away` is never empty at either doorway: nDL always has n11, nDR always has
+   n14 and n15. The result was that something at your left door retreated left
+   one hundred percent of the time, and the cross-the-doorway animation could
+   not physically play. Twenty thousand trials per door, zero crossings.
+
+   So the crossing is now its own roll, taken before the walk rather than
+   emerging from it. It is worth having as a mechanic and not just a picture:
+   whichever door you had been watching is now the wrong one.
+
+   Passing allowCross=false gives the old behaviour, which is what anything
+   that is not a doorway pass-by wants. */
+function retreatFrom(node, steps, allowCross){
+  if (allowCross && DOOR_SIDE[node] && Math.random() < CONFIG.crossDoorChance){
+    const sibling = ADJ[node].find(n => DOOR_SIDE[n] && n !== node);
+    if (sibling){
+      node = sibling;
+      // One step is spent crossing, but never the last one — he has to end up
+      // off the doorway, or he would be standing at your other door for free.
+      steps = Math.max(1, steps - 1);
+    }
+  }
   for (let i = 0; i < steps; i++){
     const away = ADJ[node].filter(n => walkable(n) && DO[n] > DO[node]);
     const side = ADJ[node].filter(n => walkable(n) && DO[n] >= DO[node]);
@@ -3973,7 +4634,7 @@ function darkRoll(u){
   u.darkTried = true;
   if (Math.random() >= SLOPPY.darkEscape) return false;
   const cameFrom = u.node;
-  u.node = retreatFrom(u.node, CONFIG.passBySteps);
+  u.node = retreatFrom(u.node, CONFIG.passBySteps, true);
   u.breaching = false; u.breachAcc = 0; u.acc = 0;
   u.respite = tuned().respiteMs;
   playWalkBy(u, cameFrom);
@@ -4081,7 +4742,7 @@ function stepUnits(dt){
 
         if (Math.random() < odds){
           const cameFrom = u.node;
-          u.node = retreatFrom(u.node, CONFIG.passBySteps);
+          u.node = retreatFrom(u.node, CONFIG.passBySteps, true);
           u.breaching = false; u.breachAcc = 0; u.acc = 0; u.cutFrac = null;
           u.respite = tuned().respiteMs;
           playWalkBy(u, cameFrom);
@@ -4200,9 +4861,73 @@ function spawnGordon(){
    Committing to one and then re-checking it after every rebuff is what makes
    the door a lever instead of a wall: you do not stop him, you point him. */
 function gordonRetarget(g){
-  const found = nearestDuct(g.node, S.doorShut);
-  g.duct = found ? found.duct : null;
+  const found = chooseDuct(g.node, S.doorShut);
+  g.duct = found;
+  /* SEALED IN.
+     Some door layouts have a single closed door that cuts him off from every
+     duct at once — auditBuilding() names them at boot. Rather than forbid such
+     doors, a total seal is treated as a delaying tactic: he walks to the door
+     and throws himself at it until the array gives out. */
+  g.sealed = !found;
   return g.duct;
+}
+
+/* HE HAS WALKED INTO THE CLOSED DOOR.
+
+   Two completely different things can happen, and which one depends on the
+   door rather than on a roll:
+
+   AN ORDINARY DOOR rebuffs him. He loses blockPenalty and turns around, and
+   there is a small chance the array jams doing it. The door survives and can
+   be closed again — its value is that it POINTED him somewhere worse.
+
+   A ONE-SHOT DOOR does not survive. He spends breakMs taking it apart, it is
+   gone for the night, and he carries on exactly where he was going. Its value
+   is not redirection, it is the minute he spent. No roll, no jam, and the rest
+   of the array is untouched: you paid a door, you got a known number of
+   seconds, and that is the whole transaction.
+
+   Returns true if the door broke. */
+function gordonHitsDoor(g, sealed){
+  const id = S.doorShut;
+  const dl = DOOR_BY_ID[id];
+  if (!dl) return false;
+
+  if (dl.oneShot){
+    const ms = GORDON.breakMs[nightIdx()] || 0;
+    S.doorBroken[id] = true;
+    S.doorShut = null;
+    /* Shown for a few seconds and then gone. It used to sit in the alert strip
+       for the rest of the night, which is exactly the wrong trade: the fact is
+       worth a shout at the moment it happens and worth nothing afterwards,
+       because the map already shows the door struck through. */
+    S.brokeMsg = { text:(dl.name || id) + " DESTROYED",
+                   until: performance.now() + 4200 };
+    /* Expressed as a multiple of his move interval because that is the unit
+       the movement loop counts in — the arithmetic here turns an absolute
+       number of milliseconds into the same thing. */
+    g.penalty = ms / Math.max(1, gordonCfg().moveMs);
+    g.acc = 0; g.telled = false;
+    play("doorBreak", { vol: 1.0 });
+    trackGameEvent("door_broken", { night_number:S.night, door:id });
+    return true;
+  }
+
+  play("doorBlocked", { vol: sealed ? 1.0 : 0.9 });
+  g.penalty = GORDON.blockPenalty;
+  rollDoorJam(sealed);
+  return false;
+}
+
+/* Whichever end of the closed door he can still reach, or null if the shut
+   door is nowhere near him. */
+function sealSideNode(from, shutId){
+  const d = DOOR_BY_ID[shutId];
+  if (!d) return null;
+  const reach = distFromBlocked(from, shutId);
+  if (reach[d.a] !== undefined) return d.a;
+  if (reach[d.b] !== undefined) return d.b;
+  return null;
 }
 
 function gordonBeginClimb(g){
@@ -4219,9 +4944,37 @@ function gordonBeginClimb(g){
 /* One downstairs step. Returns nothing; everything is on g. */
 function gordonStepDown(g){
   const target = g.duct || gordonRetarget(g);
-  if (!target) return;                        // audited against, but never crash
+
+  /* WALLED IN COMPLETELY. He goes to the door and works on it. Every attempt
+     rolls the jam at much better odds than an ordinary rebuff, because this is
+     not him blundering into a door on his way past — it is the only thing left
+     for him to do, and he has all night. */
+  if (!target){
+    const at = sealSideNode(g.node, S.doorShut);
+    if (!at) return;                          // nothing reachable to hit
+    if (g.node !== at){
+      const step = stepTowardBlocked(g.node, at, S.doorShut);
+      if (step !== g.node){ g.node = step; gordonFootstep(g); gordonPingSensor(g); }
+      return;
+    }
+    gordonHitsDoor(g, true);
+    return;
+  }
 
   if (g.node === target.down) return gordonBeginClimb(g);
+
+  /* THE STRAY STEP, rolled before the purposeful one so it can override it. */
+  if (Math.random() < GORDON.strayChance){
+    const wander = ADJ[g.node].filter(n =>
+      walkable(n) && !edgeShut(g.node, n, S.doorShut) && floorOf(n) === 2);
+    if (wander.length){
+      g.node = pick(wander);
+      gordonFootstep(g);
+      gordonPingSensor(g);
+      if (g.node === target.down) gordonBeginClimb(g);
+      return;
+    }
+  }
 
   const next = stepTowardBlocked(g.node, target.down, S.doorShut);
 
@@ -4232,11 +4985,12 @@ function gordonStepDown(g){
      stand there: he turns around, eats a penalty, and picks a different duct —
      which is the pendulum the door array is for. */
   if (next === g.node){
-    play("doorBlocked", { vol: 0.9 });
-    g.penalty = GORDON.blockPenalty;
+    /* A one-shot door does not turn him around — he goes through the space it
+       used to occupy, just a long time later. Only an ordinary rebuff costs
+       him ground. */
+    if (gordonHitsDoor(g, false)) return;
     g.node = stepAwayFrom(g.node, target.down, S.doorShut);
     gordonRetarget(g);
-    rollDoorJam();                            // he may have broken it doing that
     gordonFootstep(g);
     return;
   }
@@ -4327,8 +5081,20 @@ function stepGordon(dt){
     case "up": {
       g.acc += dt;
       const mult = (g.phase === "up" ? GORDON.upMult : 1) * (1 + g.penalty);
-      if (g.acc >= cfg.moveMs * mult){
+      const interval = cfg.moveMs * mult;
+
+      /* THE TELL. He shifts his weight before he moves, and you hear it
+         wherever you are. This is the only cue in the game that reports
+         something ABOUT to happen — everything else tells you afterwards — and
+         it is what makes listening for him worth more than watching for him. */
+      if (!g.telled && g.acc >= interval - GORDON.tellMs){
+        g.telled = true;
+        gordonTell(g);
+      }
+
+      if (g.acc >= interval){
         g.acc = 0;
+        g.telled = false;
         g.penalty = 0;                        // a penalty is paid once
         if (g.phase === "down") gordonStepDown(g);
         else gordonStepUp(g);
@@ -4443,6 +5209,13 @@ function faultSystem(id){
   if (!canFault(id)) return false;
   S.sys[id].ok = false;
   S.wear[id] = 0;
+  /* A JAMMED ARRAY CANNOT HOLD WHAT IT WAS HOLDING. The door you had shut
+     springs open with the rest — which is what stops a door that seals him off
+     entirely from being a way to win the night by pressing one button. */
+  if (id === "door" && S.doorShut){
+    S.doorShut = null;
+    play("doorOpen");
+  }
   playSystemFault(id);
   return true;
 }
@@ -4477,7 +5250,9 @@ const rollCamFlicker = src =>
   rollFault("cam", src === "feed" ? FAULTS.camFeed : FAULTS.camEugene);
 
 /* THE DOOR ARRAY. Only ever called when Gordon walks into a closed door. */
-const rollDoorJam = () => rollFault("door", FAULTS.door);
+/* sealed multiplies the odds: he is not passing by, he is working on it. */
+const rollDoorJam = sealed =>
+  rollFault("door", FAULTS.door, sealed ? FAULTS.door.sealedMult : undefined);
 
 /* ---------------------------------------------------------------------------
    THE BAR
@@ -4502,12 +5277,33 @@ function currentDraw(){
 /* What one press of the cue costs. Scaled by the night like everything else. */
 const lureCost = () => POWER.drain.lure * powerMult();
 
+/* HOW MANY BARS ARE LIT.
+
+   Built from the same drain figures the bar itself is spending, with the night
+   multiplier divided back out — see POWER.barUnit. Anything not currently
+   switched on contributes nothing, so sitting in the dark with the monitor down
+   reads as genuinely empty rather than as "low". */
+function usageBars(){
+  if (!S.running || S.outage) return 0;
+  const d = POWER.drain;
+  let raw = 0;
+  if (S.power)    raw += d.lights;
+  if (S.monUp)    raw += d.monitor;
+  if (S.panelTab) raw += d.panel;
+  if (S.doorShut) raw += d.door;
+  let bars = Math.ceil(raw / POWER.barUnit);
+  if (S.lureSpike > 0) bars += POWER.lureSpikeBars;
+  return Math.max(0, Math.min(POWER.maxBars, bars));
+}
+
 function spendPower(amount){
   if (!S.running || S.outage) return;
   S.pw = Math.max(0, S.pw - amount);
 }
 
 function stepPower(dt){
+  if (S.lureSpike > 0) S.lureSpike = Math.max(0, S.lureSpike - dt);
+  if (S.brokeMsg && performance.now() > S.brokeMsg.until) S.brokeMsg = null;
   if (S.outage) return;
   S.draw = currentDraw();
   spendPower(S.draw * (dt / 1000));
@@ -4693,7 +5489,19 @@ function jeffreyOnEntry(){
   if (!S.jeffreyArmed || S.jeffrey || S.jeffreyScare > 0) return;
   if (!S.monUp || S.panelTab || !S.sys.cam.ok || !S.power) return;
   if (S.doom || S.passedOut > 0 || rebootActive()) return;
-  if (feedCoveredByStatic() || JEFFREY.blockedFeeds.includes(S.activeCam)) return;
+  if (JEFFREY.blockedFeeds.includes(S.activeCam)) return;
+
+  /* STATIC NO LONGER KEEPS HIM OUT — it only stops the clock.
+
+     It used to block his arrival outright, which meant opening a feed while it
+     happened to be snowing was a free pass: he did not spawn, and by the time
+     the picture came back the moment had gone. That rewarded the one thing the
+     player has no control over.
+
+     He can now be standing there behind the snow. What static still does is
+     pause his timer — see stepJeffrey — so the seconds you cannot see him are
+     seconds he does not gain. You get the whole window, starting from the
+     moment the picture actually resolves. */
   /* Not the feed you just fled him on. Going back to it a second later and
      finding him standing there again would read as the game following you
      rather than as him being somewhere. He stays armed, so the next OTHER
@@ -4736,7 +5544,9 @@ function stepJeffrey(dt){
     }
     // dropped the monitor with him still on it: that is the same as staying
     if (!S.monUp) return jeffreyTakes();
-    // Snow conceals the picture, so it also pauses the time you have to react.
+    /* Snow conceals the picture, so it also pauses the time you have to react.
+       This is the other half of letting him arrive behind static: he can be
+       there before you can see him, and none of that counts against you. */
     if (feedCoveredByStatic()) return;
     S.jeffrey.acc += dt;
     if (S.jeffrey.acc >= JEFFREY.showMs[nightIdx()]) return jeffreyTakes();
@@ -4967,8 +5777,22 @@ function render(dt){
      shift timer, so the only arithmetic the player ever has to do is compare
      two clocks: how long the power lasts against how long the night has left.
      That comparison IS the resource game. */
+  /* The office meter, redrawn only when the reading actually changes so a
+     five-bar hold is not restyling ten elements sixty times a second. */
+  const bars = usageBars();
+  if (bars !== S.shownBars){
+    S.shownBars = bars;
+    const cells = el.usage ? el.usage.querySelectorAll("i") : [];
+    cells.forEach((c, i) => {
+      c.className = i < bars
+        ? (i < 2 ? "on lo" : i < 3 ? "on mid" : i < 4 ? "on hi" : "on max")
+        : "";
+    });
+  }
+  if (el.usage) el.usage.classList.toggle("hidden", !S.running || !!S.outage);
+
   const pct = Math.max(0, S.pw);
-  const pf = $("pwFill"), pp = $("pwPct"), pd = $("pwDraw"), pl = $("pwLeft");
+  const pf = $("pwFill"), pp = $("pwPct");
   if (pf){
     pf.style.width = pct + "%";
     pf.className = pct <= POWER.warnAt ? "crit" : (pct <= 45 ? "low" : "");
@@ -4977,32 +5801,6 @@ function render(dt){
     pp.textContent = pct.toFixed(0) + "%";
     pp.className = pct <= POWER.warnAt ? "crit" : (pct <= 45 ? "low" : "");
   }
-  if (pd) pd.textContent = "DRAW " + S.draw.toFixed(2) + " %/s";
-  if (pl){
-    if (S.draw <= 0.0001) pl.textContent = "HOLDS";
-    else {
-      const secs = Math.floor(pct / S.draw);
-      pl.textContent = String(Math.floor(secs / 60)).padStart(2,"0") + ":" +
-                       String(secs % 60).padStart(2,"0") + " AT THIS DRAW";
-    }
-  }
-
-  /* And what is actually drawing it. Naming the consumers means a player who
-     is bleeding power can see WHICH habit is doing it, rather than being told
-     only that it is happening. */
-  const load = $("pwLoad");
-  if (load){
-    const m = powerMult(), d = POWER.drain, on = [];
-    if (S.power)    on.push(["LIGHTS",  d.lights  * m]);
-    if (S.monUp)    on.push(["MONITOR", d.monitor * m]);
-    if (S.panelTab && d.panel > 0) on.push(["PANEL", d.panel * m]);
-    if (S.doorShut) on.push([DOOR_BY_ID[S.doorShut] ? DOOR_BY_ID[S.doorShut].name : "DOOR",
-                             d.door * m]);
-    load.innerHTML = on.length
-      ? on.map(r => '<span><b>' + r[0] + '</b>' + r[1].toFixed(2) + '</span>').join("")
-      : '<span class="idle">NO LOAD</span>';
-  }
-
   // alerts
   const msgs = [];
   if (!S.sys.vent.ok)  msgs.push(["VENTILATION FAULT", ""]);
@@ -5015,6 +5813,7 @@ function render(dt){
     const dl = DOOR_BY_ID[S.doorShut];
     msgs.push([(dl ? dl.name : "DOOR") + " SHUT", "ok"]);
   }
+  if (S.brokeMsg) msgs.push([S.brokeMsg.text, "warn"]);
   if (BOT.on)          msgs.push(["AUTOPILOT", "ok"]);
   if (S.sensorOn)      msgs.push(["SENSOR: " + CAMERAS[S.sensorOn].name.trim().split(/\s+/)[0], "ok"]);
   el.alerts.innerHTML = msgs.map(m => '<div class="'+m[1]+'">'+m[0]+'</div>').join("");
@@ -5069,10 +5868,15 @@ function render(dt){
     const cooling = performance.now() < S.doorReadyAt;
     el.mapPlan.querySelectorAll(".doorPin").forEach(b => {
       const id = b.dataset.door;
+      const broken = !!S.doorBroken[id];
       b.classList.toggle("shut",   S.doorShut === id);
-      b.classList.toggle("jammed", !S.sys.door.ok);
-      b.classList.toggle("busy",   cooling && S.doorShut !== id);
-      b.disabled = !canWork || cooling;
+      b.classList.toggle("jammed", !S.sys.door.ok && !broken);
+      b.classList.toggle("busy",   cooling && S.doorShut !== id && !broken);
+      /* Broken is permanent and looks it. A one-shot door you have already
+         spent stays on the map rather than disappearing, because knowing which
+         of your defences is gone is information you want at a glance. */
+      b.classList.toggle("broken", broken);
+      b.disabled = broken || !canWork || cooling;
     });
 
     drawSubjects();
@@ -5910,6 +6714,20 @@ applyDoorVars();
   const boot = mountArt(el.officeArt, OFFICE_ART, "(wide panorama from your desk)");
   if (boot){ boot.addEventListener("load", () => fitOfficeScene(boot)); }
 }
+/* THE BOOT AUDIT.
+
+   This was written and then never called, which meant every guarantee its
+   comments make about the building was unchecked for the whole of its
+   existence. It runs now, at boot, and prints to the console.
+
+   It is expected to complain about the payroll door on the current lower
+   floor: that single door genuinely does seal Gordon away from all three ways
+   up. That is not an oversight — it is a door the layout wants — and the
+   sealed-in behaviour in gordonStepDown() is what makes it survivable rather
+   than a way to stop the night. The warning is left switched on so that any
+   FUTURE door with the same property announces itself instead of being
+   discovered as a Gordon who mysteriously stopped walking. */
+auditBuilding();
 buildMap();
 buildPanel();
 mountArt(el.officeArt, OFFICE_ART, "(wide panorama from your desk)");
