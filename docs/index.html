@@ -505,6 +505,16 @@ body.camsup #monUI > *{pointer-events:auto}
 #map .doorPin i{width:17px}
 #map .ductPin{font-size:14px}
 #mapPlan .room i{font-size:10px}
+/* Door-array failure is a whole-system condition: every lower-floor door control turns red together. */
+#mapPlan.lower .doorPin.arraydown{
+  border-color:var(--alarm); background:rgba(70,10,8,.92);
+  box-shadow:0 0 10px rgba(255,95,82,.34), inset 0 0 0 1px rgba(255,140,130,.12);
+  cursor:not-allowed;
+}
+#mapPlan.lower .doorPin.arraydown i{
+  border-color:var(--alarm); background:var(--alarm); height:8px;
+}
+
 #mapPlan::after{content:""; position:absolute; inset:0; pointer-events:none;
   background:linear-gradient(148deg, rgba(255,255,255,.05) 0%,
     transparent 34%, transparent 66%, rgba(255,255,255,.025) 100%)}
@@ -859,9 +869,46 @@ body.nearRight #panel::before{opacity:1}
   font-variant-numeric:tabular-nums}
 /* The air has no gauge. You are told it is failing by a sound, and you either
    recognise it or you do not. */
-#alerts{position:absolute; top:78px; left:26px; font-size:10px; letter-spacing:.14em; line-height:2.2}
-#alerts div{color:var(--alarm)}
-#alerts div.warn{color:var(--amber)}
+/* Alerts remain in the DOM as an internal state bus, but are never shown to the player. */
+#alerts{display:none !important}
+#audioBtn.firing{color:var(--shell); background:var(--amber); border-color:var(--amber)}
+/* Both monitor utility controls keep the same footprint even when their labels change. */
+#audioBtn, #sensorBtn{
+  width:230px; min-width:230px; white-space:nowrap;
+}
+/* Audio failure is communicated by the control itself, not a text alert. */
+#audioBtn.audio-error{
+  color:#ffd7d2; border-color:var(--alarm);
+  background:linear-gradient(180deg,rgba(150,24,18,.88),rgba(72,12,10,.94));
+  box-shadow:inset 0 1px 0 rgba(255,180,170,.12),0 0 0 1px rgba(255,95,82,.12);
+}
+#audioBtn.audio-error:hover:not(:disabled){
+  color:#fff3f1; border-color:#ff8b80;
+  background:linear-gradient(180deg,rgba(180,31,23,.94),rgba(88,13,10,.96));
+}
+
+/* A motion hit briefly makes the matching camera pin flicker. */
+@keyframes sensorRoomFlicker{
+  0%,100%{opacity:1; filter:none}
+  10%{opacity:.18; filter:brightness(.55)}
+  22%{opacity:1; filter:brightness(1.5)}
+  36%{opacity:.25; filter:brightness(.65)}
+  52%{opacity:1; filter:brightness(1.8)}
+  68%{opacity:.35; filter:brightness(.7)}
+  84%{opacity:1; filter:brightness(1.35)}
+}
+.camPin.motion-hit{animation:sensorRoomFlicker 1s steps(2,end) both; z-index:8}
+
+/* ---- the monitor's own controls ------------------------------------------
+   These sit OUTSIDE #monitor, in their own layer above the CRT, because the
+   vignette is a grade for the footage and not for the interface. The monitor
+   is a stacking context of its own, so nothing inside it can ever rise above
+   the CRT — the controls have to live out here to be lit evenly.
+
+   Geometry is unchanged: #monUI covers the same rectangle #monitor does, so
+   every left/right/bottom offset means what it always meant. It carries the
+   monitor's slide so they still arrive together, and nothing in it is
+   clickable unless the monitor is actually up. */
 
 /* ---- controls ---------------------------------------------------------- */
 .dock{position:absolute; bottom:0; z-index:45; pointer-events:auto;
@@ -1213,7 +1260,7 @@ body.touch #panel{width:min(340px,76vw); padding:20px 16px}
 body.touch #pullTab{opacity:.5}
 body.touch.camsup #pullTab{opacity:0}
 body.touch .dock{width:132px; font-size:11px; padding:16px 0 22px}
-body.touch #audioBtn, body.touch #sensorBtn{padding:15px 20px; font-size:12px}
+body.touch #audioBtn, body.touch #sensorBtn{padding:15px 20px; font-size:12px; width:230px; min-width:230px}
 body.touch .camPin{min-width:52px; padding:10px 8px; font-size:12px}
 body.touch .rebootBtn{padding:16px; font-size:12px}
 /* A door pin is the only control in the game you may have to hit while
@@ -1340,7 +1387,7 @@ input, textarea, [contenteditable]{ -webkit-user-select:text; user-select:text; 
       <button id="btnStart">CLOCK IN</button>
       <div class="stars" id="starsTitle"></div>
     </div>
-    <div id="titleVersion" aria-label="Game version">V 2.0.10</div>
+    <div id="titleVersion" aria-label="Game version">V 2.0.11</div>
     <div id="preNightContent" aria-live="polite" aria-atomic="true">
       <div id="preNightLabel"></div>
       <div id="preNightNight">NIGHT 1</div>
@@ -1492,6 +1539,147 @@ input, textarea, [contenteditable]{ -webkit-user-select:text; user-select:text; 
   };
 
   requestAnimationFrame(() => requestAnimationFrame(loadGame));
+})();
+</script>
+
+<script>
+/* ============================================================================
+   PRESENTATION-ONLY FAULT FEEDBACK
+
+   The gameplay script already publishes fault/motion information through the
+   existing alert DOM. Keep that mechanism as an internal state bus, but translate
+   it into visual feedback instead of showing the alert text to the player.
+   ============================================================================ */
+(() => {
+  const alerts = document.getElementById("alerts");
+  const audioBtn = document.getElementById("audioBtn");
+  const mapPlan = document.getElementById("mapPlan");
+  if (!alerts || !audioBtn || !mapPlan) return;
+
+  const normalize = value => String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+  const faultActive = (text, kind) => {
+    const t = normalize(text);
+    if (kind === "audio") {
+      return /audio (?:error|fault|failure|failed|offline|down|unavailable)|(?:error|fault|failure|failed|offline|down).{0,18}audio/.test(t)
+        && !/(audio).{0,18}(?:fixed|restored|online|okay|ok|clear|cleared)/.test(t);
+    }
+    if (kind === "doorArray") {
+      return /door\s*array(?:\s+(?:error|fault|failure|failed|offline|down|jammed|unavailable))?/.test(t)
+        && !/(door\s*array).{0,22}(?:fixed|restored|online|okay|ok|clear|cleared)/.test(t);
+    }
+    return false;
+  };
+
+  function setAudioError(isBad) {
+    audioBtn.classList.toggle("audio-error", !!isBad);
+    audioBtn.setAttribute("data-fault", isBad ? "audio" : "");
+  }
+
+  function setDoorArrayDown(isDown) {
+    mapPlan.querySelectorAll(".doorPin").forEach(pin => {
+      pin.classList.toggle("arraydown", !!isDown);
+    });
+  }
+
+  // Recover whenever the map is rebuilt by game.js.
+  function refreshDoorVisual() {
+    setDoorArrayDown(faultActive(alerts.textContent, "doorArray"));
+  }
+
+  function pinAliases(pin) {
+    const values = [
+      pin.textContent,
+      pin.getAttribute("aria-label"),
+      pin.getAttribute("title"),
+      pin.dataset.room,
+      pin.dataset.name,
+      pin.dataset.location,
+      pin.dataset.label
+    ];
+    return values.map(normalize).filter(v => v.length >= 2);
+  }
+
+  function pinIsOnCurrentFloor(pin) {
+    if (!mapPlan.contains(pin) || pin.hidden) return false;
+    const style = getComputedStyle(pin);
+    if (style.display === "none" || style.visibility === "hidden") return false;
+
+    const declaredFloor = normalize(
+      pin.dataset.floor || pin.dataset.level || pin.dataset.story || pin.getAttribute("data-floor")
+    );
+    if (!declaredFloor) return true; // Pins are generated inside the currently displayed map.
+
+    const lower = mapPlan.classList.contains("lower");
+    const isLower = /2|lower|bottom|down/.test(declaredFloor);
+    return lower === isLower;
+  }
+
+  function triggerPin(pin) {
+    if (!pin || !pinIsOnCurrentFloor(pin)) return;
+    pin.classList.remove("motion-hit");
+    // Force a reflow so the 1-second flicker can fire again for back-to-back events.
+    void pin.offsetWidth;
+    pin.classList.add("motion-hit");
+    window.setTimeout(() => pin.classList.remove("motion-hit"), 1100);
+  }
+
+  function triggerMotionFlicker(detailText) {
+    if (!document.body.classList.contains("camsup")) return;
+
+    const text = normalize(detailText);
+    if (!text || !/(motion|sensor|detected|entered|arrived)/.test(text)) return;
+
+    const sensorPins = [...mapPlan.querySelectorAll(".camPin.sensor")]
+      .filter(pinIsOnCurrentFloor)
+      .filter(pin => !pin.classList.contains("dead"));
+    if (!sensorPins.length) return;
+
+    // Prefer the sensor room/camera explicitly named by the event.
+    let match = null;
+    let matchLength = 0;
+    for (const pin of sensorPins) {
+      for (const alias of pinAliases(pin)) {
+        if (alias.length > matchLength && text.includes(alias)) {
+          match = pin;
+          matchLength = alias.length;
+        }
+      }
+    }
+
+    // When the game's motion message only says that the mounted sensor fired,
+    // the mounted pin itself is the best available room target.
+    if (match) {
+      triggerPin(match);
+    } else if (sensorPins.length === 1) {
+      triggerPin(sensorPins[0]);
+    } else {
+      sensorPins.forEach(triggerPin);
+    }
+  }
+
+  function refreshFromAlerts() {
+    const text = alerts.textContent || "";
+    setAudioError(faultActive(text, "audio"));
+    setDoorArrayDown(faultActive(text, "doorArray"));
+    triggerMotionFlicker(text);
+  }
+
+  const observer = new MutationObserver(() => refreshFromAlerts());
+  observer.observe(alerts, {subtree:true, childList:true, characterData:true, attributes:true});
+
+  const bodyObserver = new MutationObserver(() => refreshDoorVisual());
+  bodyObserver.observe(document.body, {childList:true, subtree:true});
+
+  // Expose one small bridge for game.js/other scripts to use for an exact motion event.
+  // Passing the room name or camera name is enough; the correct-floor/camera checks remain here.
+  window.fnaacMotionAlert = detail => triggerMotionFlicker(detail);
+
+  refreshFromAlerts();
+  refreshDoorVisual();
 })();
 </script>
 
