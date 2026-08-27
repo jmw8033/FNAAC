@@ -2037,15 +2037,19 @@ const titleStabFx = () => {
                          t => (1 - t) ** 1.4), 60);
 };
 
-/* The sound immediately before a shift begins. It is deliberately short and
-   unlike the menu music: two relay-like clicks, a descending confirmation tone,
-   and a low thump. The fallback means the transition still has a sound even if
-   the optional WAV is unavailable. */
+/* The sound immediately before a shift begins. It used to be a clean relay
+   confirmation, but the handoff deserves something that feels less like a
+   machine welcoming you and more like the building noticing you. This is an
+   original synthesized sting: a low sub-bass pull, a pair of detuned tones
+   slipping downward, a short burst of filtered air, and a final hollow hit. */
 const nightStartFx = () => {
-  tone(620, .075, "square", .11, 430);
-  setTimeout(() => tone(430, .11, "square", .10, 300), 85);
-  setTimeout(() => tone(220, .20, "sawtooth", .12, 92), 180);
-  setTimeout(() => noise(0.16, "lowpass", 260, .17, undefined, t => (1 - t) ** 2), 205);
+  tone(78, .72, "sine", .18, 41);
+  tone(155, .46, "triangle", .07, 83);
+  setTimeout(() => tone(612, .19, "sawtooth", .065, 188), 90);
+  setTimeout(() => tone(617, .22, "square", .028, 191), 94);
+  setTimeout(() => noise(0.34, "bandpass", 1450, .12, undefined, t => (1 - t) ** 1.7), 180);
+  setTimeout(() => tone(96, .48, "sine", .14, 49), 270);
+  setTimeout(() => noise(0.22, "lowpass", 520, .13, undefined, t => (1 - t) ** 2), 300);
 };
 
 /* ===========================================================================
@@ -3785,17 +3789,22 @@ function showPreNight(){
   titleScreenOn();
 
   clearTimeout(preNightTimer);
+  /* Three seconds total: the eerie cue begins 260 ms before the night starts,
+     with Gordon's eyes flashing just before the sting. */
   preNightTimer = setTimeout(() => {
+    title.classList.add("eyesFlash");
     play("nightStart");
+    setTimeout(() => title.classList.remove("eyesFlash"), 240);
     preNightTimer = setTimeout(() => {
       titleScreenOff();
       initAudio();
       startNight(S.night);
       title.classList.remove("preNight");
+      title.classList.remove("eyesFlash");
       if (start) start.disabled = false;
       preNightActive = false;
     }, 260);
-  }, 1840);
+  }, 2740);
 }
 
 const clockIn = () => {

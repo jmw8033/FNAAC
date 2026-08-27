@@ -998,6 +998,22 @@ body.camsup #powerBtn{opacity:0; pointer-events:none}
 @keyframes preNightIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @keyframes preNightPulse{0%,100%{opacity:.84}50%{opacity:1}}
 #titleScreen.preNight #titleVersion{opacity:.7}
+#gordonEyeFlash{position:absolute; inset:0; z-index:5; pointer-events:none; opacity:0}
+#gordonEyeFlash::before,#gordonEyeFlash::after{content:""; position:absolute; top:10.8%;
+  width:clamp(10px,1.9vw,20px); height:clamp(7px,1.35vw,14px); border-radius:50%;
+  background:radial-gradient(circle, #fff8cf 0 18%, #ffc65e 36%, #ff5f52 68%, rgba(255,65,45,0) 100%);
+  box-shadow:0 0 8px rgba(255,95,82,.72), 0 0 22px rgba(255,70,48,.42);
+}
+#gordonEyeFlash::before{left:48.2%}
+#gordonEyeFlash::after{left:51.8%}
+#titleScreen.eyesFlash #gordonEyeFlash{animation:gordonEyesFlash .24s steps(2) both}
+@keyframes gordonEyesFlash{
+  0%{opacity:0; transform:scale(.72)}
+  24%{opacity:1; transform:scale(1.18)}
+  42%{opacity:.8; transform:scale(1)}
+  60%{opacity:1; transform:scale(1.08)}
+  100%{opacity:0; transform:scale(.95)}
+}
 #titleScreen #btnStart{position:relative}
 #titleScreen #btnStart::after{content:""; position:absolute; inset:-6px;
   border:1px solid rgba(120,255,180,.16); pointer-events:none;
@@ -1286,7 +1302,8 @@ input, textarea, [contenteditable]{ -webkit-user-select:text; user-select:text; 
       <button id="btnStart">CLOCK IN</button>
       <div class="stars" id="starsTitle"></div>
     </div>
-    <div id="titleVersion" aria-label="Game version">V 2.0.1</div>
+    <div id="titleVersion" aria-label="Game version">V 2.0.2</div>
+    <div id="gordonEyeFlash" aria-hidden="true"></div>
     <div id="preNightContent" aria-live="polite" aria-atomic="true">
       <div id="preNightLabel">SHIFT COMMENCING</div>
       <div id="preNightNight">NIGHT 1</div>
