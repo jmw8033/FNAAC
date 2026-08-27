@@ -386,7 +386,9 @@ body.camdown #jeffreyArt, body.transit #jeffreyArt{opacity:0}
 
 /* camera system down: nothing but snow */
 #camDead{position:absolute; inset:0; display:none; align-items:center; justify-content:center;
-  background:#050705; z-index:2; font-size:12px; letter-spacing:.22em; color:var(--alarm)}
+  background:#050705; z-index:2; font-size:12px; letter-spacing:.22em; color:var(--alarm);
+  text-shadow:0 0 12px rgba(255,95,82,.35)}
+#camDead::before{content:"CAMERA SYSTEM OFFLINE"; display:block; text-align:center;}
 body.camdown #camDead{display:flex}
 body.camdown #camBox{opacity:.06}
 body.camdown #static{opacity:.5}
@@ -397,6 +399,7 @@ body.camdown #static{opacity:.5}
 
 #sensorBtn{
   position:absolute; left:22px; bottom:100px; z-index:5; pointer-events:auto;
+  width:250px; min-width:250px; max-width:250px;
   padding:12px 18px; font-size:11px; letter-spacing:.18em; cursor:pointer;
   color:#8fe0b4; background:rgba(6,10,7,.94); border:1px solid #46614f;
 }
@@ -404,14 +407,36 @@ body.camdown #static{opacity:.5}
 #sensorBtn:disabled{opacity:.32; cursor:not-allowed}
 #sensorBtn.engaged{color:var(--shell); background:var(--amber); border-color:var(--amber)}
 
+/* Faults and sensor events are shown by the interface itself rather than by a
+   notification stack in the corner. */
+#alerts{display:none !important}
+
 #audioBtn{
   position:absolute; left:22px; bottom:58px; z-index:5; pointer-events:auto;
+  width:250px; min-width:250px; max-width:250px;
   padding:12px 18px; font-size:11px; letter-spacing:.18em; cursor:pointer;
   color:#8fe0b4; background:rgba(6,10,7,.94); border:1px solid #46614f;
 }
 #audioBtn:hover:not(:disabled){color:var(--phos); border-color:var(--phos-dim)}
 #audioBtn:disabled{opacity:.32; cursor:not-allowed}
+#audioBtn.fault{opacity:1; color:#ffaaa3; background:rgba(70,10,8,.92); border-color:var(--alarm); box-shadow:0 0 0 1px rgba(255,95,82,.18) inset,0 0 10px rgba(255,95,82,.18)}
 #audioBtn.firing{color:var(--shell); background:var(--amber); border-color:var(--amber)}
+
+
+/* ALL-20 HALLUCINATIONS --------------------------------------------------- */
+.hallucLurker{opacity:0 !important;pointer-events:none;transition:none;}
+.doorway.halluc-present .hallucLurker{opacity:.92 !important;}
+.hallucLurker.halluc-fade{animation:hallucDoorFade var(--hallucDoorMs,2800ms) ease-in-out forwards;}
+@keyframes hallucDoorFade{0%{opacity:.02}10%{opacity:.92}55%{opacity:.92}100%{opacity:0}}
+body.all20-office-flicker #officeArt img{animation:all20OfficeLightFlicker .78s steps(1,end) both;}
+body.all20-office-flicker #darkVeil{animation:all20VeilFlicker .78s steps(1,end) both;}
+body.all20-office-flicker #warningVeil{opacity:0}
+@keyframes all20OfficeLightFlicker{0%,100%{filter:var(--grade-office)}12%{filter:brightness(.30) contrast(1.35) saturate(.16) hue-rotate(-14deg)}23%{filter:var(--grade-office)}39%{filter:brightness(.30) contrast(1.35) saturate(.16) hue-rotate(-14deg)}54%{filter:brightness(.42) contrast(1.24) saturate(.22) hue-rotate(-10deg)}67%{filter:brightness(.30) contrast(1.35) saturate(.16) hue-rotate(-14deg)}82%{filter:var(--grade-office)}}
+@keyframes all20VeilFlicker{0%,100%{opacity:0}12%{opacity:1}23%{opacity:0}39%{opacity:1}54%{opacity:.72}67%{opacity:1}82%{opacity:0}}
+#titleScreen.all20-preNight #preNightLabel,#titleScreen.all20-preNight #preNightNight,#titleScreen.all20-preNight #preNightTime{color:#ff5f52;text-shadow:2px 0 0 rgba(255,95,82,.55),-2px 0 0 rgba(255,180,170,.25),0 0 28px rgba(255,70,55,.35)}
+#titleScreen.all20-preNight #preNightNight,#titleScreen.all20-preNight #preNightLabel{animation:all20StartFlicker .34s steps(2,end) infinite}
+#titleScreen.all20-preNight #preNightTime{animation:all20StartFlicker .29s steps(2,end) infinite reverse}
+@keyframes all20StartFlicker{0%,100%{opacity:1;filter:none}18%{opacity:.30}24%{opacity:1}41%{opacity:.62}47%{opacity:1}72%{opacity:.24}77%{opacity:1}}
 
 /* ---- the monitor's own controls ------------------------------------------
    These sit OUTSIDE #monitor, in their own layer above the CRT, because the
@@ -649,9 +674,7 @@ body.camburn #camFeed{animation:camTear .19s steps(2) infinite}
   100%{filter:brightness(1.2)  contrast(.85) saturate(.5); transform:translateX(2px)}
 }
 body.feeddead #camFeed{opacity:0}
-body.feeddead #camBox::after{content:"FEED LOST"; position:absolute; inset:0;
-  display:flex; align-items:center; justify-content:center;
-  font-size:12px; letter-spacing:.34em; color:#6a4a46; background:#050505}
+body.feeddead #camBox::after{content:""; position:absolute; inset:0; display:block; background:#050505}
 
 /* ---- the outage --------------------------------------------------------- */
 /* Darker than a power cut, because it is not one — there is no residual line
@@ -874,8 +897,9 @@ body.nearRight #panel::before{opacity:1}
 #audioBtn.firing{color:var(--shell); background:var(--amber); border-color:var(--amber)}
 /* Both monitor utility controls keep the same footprint even when their labels change. */
 #audioBtn, #sensorBtn{
-  width:230px; min-width:230px; white-space:nowrap;
+  width:250px; min-width:250px; max-width:250px; white-space:nowrap;
 }
+#pickTitle .customPick, #pickLose .customPick{width:110px; min-width:110px; white-space:nowrap}
 /* Audio failure is communicated by the control itself, not a text alert. */
 #audioBtn.audio-error{
   color:#ffd7d2; border-color:var(--alarm);
@@ -898,6 +922,11 @@ body.nearRight #panel::before{opacity:1}
   84%{opacity:1; filter:brightness(1.35)}
 }
 .camPin.motion-hit{animation:sensorRoomFlicker 1s steps(2,end) both; z-index:8}
+
+/* Camera hallucinations use the same calibrated sprite placement as a real body,
+   but resolve and fade out without becoming a gameplay object. */
+.subject.hallucination{animation:hallucinationFade var(--hallucHoldMs,2500ms) ease-in-out both;pointer-events:none;}
+@keyframes hallucinationFade{0%{opacity:0}12%{opacity:.90}58%{opacity:.90}100%{opacity:0}}
 
 /* ---- the monitor's own controls ------------------------------------------
    These sit OUTSIDE #monitor, in their own layer above the CRT, because the
@@ -976,6 +1005,12 @@ body.camsup #powerBtn{opacity:0; pointer-events:none}
   100%{opacity:0}
 }
 #titleEyes.flash{animation:eyeFlash .24s steps(2) both}
+/* All-20 Gordon is not orange. His eyes inherit the same hostile red used by the
+   Custom Night handoff, so the startup screen immediately reads as the special mode. */
+#titleScreen.all20-preNight #titleEyes i{
+  background:radial-gradient(circle at 40% 38%,#ffe8e5 0 18%,#ff776e 38%,#e32619 72%,transparent 74%);
+  box-shadow:0 0 7px rgba(255,95,82,.98), 0 0 20px rgba(255,45,30,.72);
+}
 @keyframes faceDrift{
   0%   {transform:translate(0,0)      scale(1.00)}
   33%  {transform:translate(-1.2%,.6%) scale(1.03)}
@@ -1073,6 +1108,60 @@ body.camsup #powerBtn{opacity:0; pointer-events:none}
   animation:startPulse 3.1s ease-in-out infinite}
 @keyframes startPulse{0%,100%{opacity:.25; transform:scale(1)}
   50%{opacity:.7; transform:scale(1.02)}}
+
+/* ---- custom night -------------------------------------------------------- */
+.customScreen{
+  background:radial-gradient(circle at 50% 16%,rgba(93,182,135,.08),transparent 42%),linear-gradient(180deg,#020403 0%,#050806 100%);
+  color:#e6f6ec; overflow:hidden;
+}
+.customFrame{
+  position:relative; width:min(1040px,94vw); height:min(760px,92vh);
+  display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+  padding:30px 34px 74px;
+  background:linear-gradient(180deg,rgba(18,29,24,.97),rgba(5,10,8,.985));
+  border:1px solid #355447;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.045),inset 0 0 0 1px rgba(0,0,0,.35),0 18px 70px rgba(0,0,0,.70);
+}
+.customFrame::before{content:"";position:absolute;inset:8px;border:1px solid rgba(125,250,176,.07);pointer-events:none}
+.customTitle{font-size:18px;letter-spacing:.34em;color:#d9f8e4;text-shadow:0 0 16px rgba(125,250,176,.10);margin-bottom:8px}
+.customHint{font-size:8px;letter-spacing:.22em;color:#779b89;margin-bottom:24px}
+.customAnimatics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;width:100%;align-items:stretch}
+.customCard{min-width:0;min-height:0;overflow:hidden;text-align:center;padding:14px 12px 15px;background:linear-gradient(180deg,rgba(17,27,23,.94),rgba(8,14,11,.96));border:1px solid #294238;box-shadow:inset 0 1px 0 rgba(255,255,255,.028),0 5px 18px rgba(0,0,0,.24);transition:border-color .14s,background .14s,transform .14s}
+.customCard:hover{border-color:#46695a;transform:translateY(-1px)}
+.customCard.off{background:linear-gradient(180deg,rgba(12,19,16,.90),rgba(6,10,8,.96))}
+.customCard.off .customArt{filter:grayscale(.95) brightness(.48) contrast(1.05)}
+.customName{font-size:11px;letter-spacing:.20em;color:#d6e8dc;margin-bottom:11px}
+.customArtFrame{width:100%;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;margin:0 auto 13px;background:radial-gradient(circle at 50% 42%,rgba(125,250,176,.055),rgba(0,0,0,.18) 68%);border:1px solid #253a31;box-shadow:inset 0 0 24px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.035);overflow:hidden}
+.customArt{display:block;width:92%;height:92%;object-fit:contain;filter:contrast(1.04) brightness(.95);image-rendering:auto;transition:filter .14s,transform .14s}
+.customCard:hover .customArt{transform:scale(1.015)}
+.customAILabel{display:flex;justify-content:space-between;align-items:center;font-size:8px;letter-spacing:.16em;color:#7f9c8c;margin-bottom:7px}
+.customAILabel .customLevelState{color:#648272;font-size:7px;letter-spacing:.14em}
+.customCard:not(.off) .customLevelState{color:#98d7b4}
+.customControl{display:grid;grid-template-columns:28px minmax(0,1fr) 28px;align-items:center;gap:6px;padding:0 1px}
+.customValue{display:flex;align-items:center;justify-content:center;min-width:0;height:38px;font-size:29px;line-height:1;font-variant-numeric:tabular-nums;color:#effff6;background:rgba(3,8,6,.72);border-top:1px solid rgba(255,255,255,.035);border-bottom:1px solid rgba(255,255,255,.035);text-shadow:0 0 11px rgba(100,255,170,.18)}
+.customStep{width:28px;height:28px;padding:0;margin:0;border:1px solid #30473c;border-radius:2px;cursor:pointer;background:linear-gradient(180deg,#26342d,#18231e);color:#cfe4d6;font:18px/1 Georgia,serif;box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 2px 0 #0a0f0c}
+.customStep:hover:not(:disabled){border-color:#638a74;color:#effff6;background:linear-gradient(180deg,#30463b,#1d2a24)}
+.customStep:active:not(:disabled){transform:translateY(1px);box-shadow:inset 0 2px 4px rgba(0,0,0,.55)}
+.customStep:disabled{opacity:.22;cursor:not-allowed}
+.customLevelTrack{height:4px;margin-top:11px;background:#101814;border:1px solid #22352d;overflow:hidden}
+.customLevelFill{display:block;width:0;height:100%;background:linear-gradient(90deg,#4aa879,#9be9c0);box-shadow:0 0 8px rgba(125,250,176,.25);transition:width .12s ease-out}
+.customBottom{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;margin-top:18px;width:100%}
+.customPresetRow{display:flex;align-items:center;justify-content:center;gap:9px;width:100%}
+.customReadyRow{display:flex;align-items:center;justify-content:center;width:100%}
+.customPreset{min-width:96px;height:34px;font:inherit;font-size:8px;letter-spacing:.15em;padding:0 12px;cursor:pointer;color:#8fb4a0;background:#0c1410;border:1px solid #30483d}
+.customPreset:hover{color:#d5f5e2;border-color:#648a76;background:#122019}
+.customReady{min-width:150px;height:42px;font:inherit;font-size:10px;letter-spacing:.22em;padding:0 18px;cursor:pointer;color:#08100c;background:linear-gradient(180deg,#b8f9d3,#78d9aa);border:1px solid #b8f9d3;box-shadow:0 0 16px rgba(120,255,180,.10),inset 0 1px 0 rgba(255,255,255,.42)}
+.customReady:hover{background:linear-gradient(180deg,#d5ffe4,#9ae7bf)}
+.customBack{position:absolute;left:20px;bottom:18px;min-width:82px;height:34px;font:inherit;font-size:8px;letter-spacing:.16em;color:#89a897;background:#0a110d;border:1px solid #30463c;cursor:pointer}
+.customBack:hover{color:#d2f1de;border-color:#5c7c6b;background:#111b16}
+.customTotal{position:absolute;right:20px;bottom:19px;font-size:9px;letter-spacing:.13em;color:#a4baad}
+.customTier{position:absolute;right:20px;bottom:36px;font-size:7px;letter-spacing:.14em;color:#628171}
+@media (max-width:760px){
+  .customFrame{height:96vh;padding:20px 12px 70px}.customTitle{font-size:15px}
+  .customAnimatics{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;overflow:auto;padding:1px 1px 4px}
+  .customCard{padding:11px 9px 12px}.customArtFrame{margin-bottom:9px}.customName{font-size:9px;margin-bottom:8px}
+  .customBottom{margin-top:11px}.customPresetRow{gap:7px}.customTotal{right:12px;bottom:14px}.customTier{right:12px;bottom:29px}.customBack{left:12px;bottom:13px}
+}
 
 .screen{position:absolute; inset:0; z-index:70; display:none; flex-direction:column;
   align-items:center; justify-content:center; background:var(--shell);
@@ -1260,7 +1349,11 @@ body.touch #panel{width:min(340px,76vw); padding:20px 16px}
 body.touch #pullTab{opacity:.5}
 body.touch.camsup #pullTab{opacity:0}
 body.touch .dock{width:132px; font-size:11px; padding:16px 0 22px}
-body.touch #audioBtn, body.touch #sensorBtn{padding:15px 20px; font-size:12px; width:230px; min-width:230px}
+body.touch #audioBtn, body.touch #sensorBtn{padding:15px 20px; font-size:12px; width:250px; min-width:250px; max-width:250px}
+body.touch #audioBtn, body.touch #sensorBtn{left:106px}
+body.touch .customPanel{padding:12px 10px 10px}
+body.touch .customRow{grid-template-columns:minmax(76px,1fr) 34px 54px 34px; gap:5px}
+body.touch .customStep{width:28px}
 body.touch .camPin{min-width:52px; padding:10px 8px; font-size:12px}
 body.touch .rebootBtn{padding:16px; font-size:12px}
 /* A door pin is the only control in the game you may have to hit while
@@ -1297,8 +1390,8 @@ input, textarea, [contenteditable]{ -webkit-user-select:text; user-select:text; 
   <div id="officeView">
     <div id="officeScene">
       <div id="officeArt"></div>
-      <div class="doorway left"  id="doorLeft"><img class="lurker" alt=""></div>
-      <div class="doorway right" id="doorRight"><img class="lurker" alt=""></div>
+      <div class="doorway left"  id="doorLeft"><img class="lurker" alt=""><img class="lurker hallucLurker" alt=""></div>
+      <div class="doorway right" id="doorRight"><img class="lurker" alt=""><img class="lurker hallucLurker" alt=""></div>
       <div id="darkVeil"></div>
       <div id="warningVeil"></div>
   <div id="pullTab"><span>▲</span></div>
@@ -1311,7 +1404,7 @@ input, textarea, [contenteditable]{ -webkit-user-select:text; user-select:text; 
     </div></div>
     <div id="static"></div>
     <img id="jeffreyArt" alt="">
-    <div id="camDead">CAMERA SYSTEM OFFLINE</div>
+    <div id="camDead"></div>
   </div>
 
   <!-- The monitor's controls, lifted out of the monitor so the CRT vignette
@@ -1387,7 +1480,7 @@ input, textarea, [contenteditable]{ -webkit-user-select:text; user-select:text; 
       <button id="btnStart">CLOCK IN</button>
       <div class="stars" id="starsTitle"></div>
     </div>
-    <div id="titleVersion" aria-label="Game version">V 2.0.11</div>
+    <div id="titleVersion" aria-label="Game version">V 2.1.4</div>
     <div id="preNightContent" aria-live="polite" aria-atomic="true">
       <div id="preNightLabel"></div>
       <div id="preNightNight">NIGHT 1</div>
@@ -1396,6 +1489,26 @@ input, textarea, [contenteditable]{ -webkit-user-select:text; user-select:text; 
       <div id="preNightHint"></div>
     </div>
     <div id="titleTear"></div>
+  </div>
+
+  <div class="screen customScreen" id="customScreen">
+    <div class="customFrame">
+      <div class="customTitle">CUSTOM NIGHT</div>
+      <div class="customHint">SET EACH THREAT FROM 0 TO 20 &nbsp;·&nbsp; 0 = OFF</div>
+      <div id="customAnimatics" class="customAnimatics"></div>
+      <div class="customBottom">
+        <div class="customPresetRow">
+          <button class="customPreset" id="customAll0" type="button">ALL 0</button>
+          <button class="customPreset" id="customAll20" type="button">ALL 20</button>
+        </div>
+        <div class="customReadyRow">
+          <button class="customReady" id="customReady" type="button">READY</button>
+        </div>
+      </div>
+      <button class="customBack" id="customBack" type="button">BACK</button>
+      <div class="customTier" id="customTier">BUILDING DIFFICULTY  ·  NIGHT 1</div>
+      <div class="customTotal" id="customTotal">TOTAL A.I. 0 / 80</div>
+    </div>
   </div>
 
   <div class="screen" id="loseScreen">
@@ -1446,11 +1559,11 @@ input, textarea, [contenteditable]{ -webkit-user-select:text; user-select:text; 
     const completed = Number.parseInt(localStorage.getItem("fnaac-completed-night"), 10);
     const unlocked = Number.parseInt(localStorage.getItem("fnaac-unlocked-night"), 10);
     boot.unlockedNight = Number.isInteger(completed)
-      ? Math.min(7, Math.max(1, completed + 1))
+      ? Math.min(8, Math.max(1, completed + 1))
       : Number.isInteger(unlocked)
-        ? Math.min(7, Math.max(1, unlocked))
+        ? Math.min(8, Math.max(1, unlocked))
         : 1;
-    boot.night = boot.unlockedNight;
+    boot.night = boot.unlockedNight >= 8 ? 7 : boot.unlockedNight;
   } catch (_) {
     boot.unlockedNight = 1;
   }
@@ -1470,20 +1583,22 @@ input, textarea, [contenteditable]{ -webkit-user-select:text; user-select:text; 
     label.textContent = "NIGHT";
     picker.appendChild(label);
 
-    for (let n = 1; n <= 7; n++) {
-      if (n > 5 && n > boot.unlockedNight) continue;
+    for (let n = 1; n <= 8; n++) {
+      if (n > boot.unlockedNight) continue;
       const b = document.createElement("button");
       b.type = "button";
-      b.textContent = n;
+      b.textContent = n === 8 ? "CUSTOM" : n;
       b.dataset.night = n;
+      b.classList.toggle("customPick", n === 8);
       b.disabled = n > boot.unlockedNight;
       if (n === boot.night) b.classList.add("on");
       b.addEventListener("click", e => {
         e.stopPropagation();
         if (b.disabled || boot.ready) return;
+        if (n === 8){ boot.openCustomRequested = true; return; }
         boot.night = n;
         picker.querySelectorAll("button").forEach(x =>
-          x.classList.toggle("on", +x.dataset.night === boot.night)
+          x.classList.toggle("on", +x.dataset.night !== 8 && +x.dataset.night === boot.night)
         );
       });
       picker.appendChild(b);
@@ -1542,146 +1657,7 @@ input, textarea, [contenteditable]{ -webkit-user-select:text; user-select:text; 
 })();
 </script>
 
-<script>
-/* ============================================================================
-   PRESENTATION-ONLY FAULT FEEDBACK
 
-   The gameplay script already publishes fault/motion information through the
-   existing alert DOM. Keep that mechanism as an internal state bus, but translate
-   it into visual feedback instead of showing the alert text to the player.
-   ============================================================================ */
-(() => {
-  const alerts = document.getElementById("alerts");
-  const audioBtn = document.getElementById("audioBtn");
-  const mapPlan = document.getElementById("mapPlan");
-  if (!alerts || !audioBtn || !mapPlan) return;
-
-  const normalize = value => String(value || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-
-  const faultActive = (text, kind) => {
-    const t = normalize(text);
-    if (kind === "audio") {
-      return /audio (?:error|fault|failure|failed|offline|down|unavailable)|(?:error|fault|failure|failed|offline|down).{0,18}audio/.test(t)
-        && !/(audio).{0,18}(?:fixed|restored|online|okay|ok|clear|cleared)/.test(t);
-    }
-    if (kind === "doorArray") {
-      return /door\s*array(?:\s+(?:error|fault|failure|failed|offline|down|jammed|unavailable))?/.test(t)
-        && !/(door\s*array).{0,22}(?:fixed|restored|online|okay|ok|clear|cleared)/.test(t);
-    }
-    return false;
-  };
-
-  function setAudioError(isBad) {
-    audioBtn.classList.toggle("audio-error", !!isBad);
-    audioBtn.setAttribute("data-fault", isBad ? "audio" : "");
-  }
-
-  function setDoorArrayDown(isDown) {
-    mapPlan.querySelectorAll(".doorPin").forEach(pin => {
-      pin.classList.toggle("arraydown", !!isDown);
-    });
-  }
-
-  // Recover whenever the map is rebuilt by game.js.
-  function refreshDoorVisual() {
-    setDoorArrayDown(faultActive(alerts.textContent, "doorArray"));
-  }
-
-  function pinAliases(pin) {
-    const values = [
-      pin.textContent,
-      pin.getAttribute("aria-label"),
-      pin.getAttribute("title"),
-      pin.dataset.room,
-      pin.dataset.name,
-      pin.dataset.location,
-      pin.dataset.label
-    ];
-    return values.map(normalize).filter(v => v.length >= 2);
-  }
-
-  function pinIsOnCurrentFloor(pin) {
-    if (!mapPlan.contains(pin) || pin.hidden) return false;
-    const style = getComputedStyle(pin);
-    if (style.display === "none" || style.visibility === "hidden") return false;
-
-    const declaredFloor = normalize(
-      pin.dataset.floor || pin.dataset.level || pin.dataset.story || pin.getAttribute("data-floor")
-    );
-    if (!declaredFloor) return true; // Pins are generated inside the currently displayed map.
-
-    const lower = mapPlan.classList.contains("lower");
-    const isLower = /2|lower|bottom|down/.test(declaredFloor);
-    return lower === isLower;
-  }
-
-  function triggerPin(pin) {
-    if (!pin || !pinIsOnCurrentFloor(pin)) return;
-    pin.classList.remove("motion-hit");
-    // Force a reflow so the 1-second flicker can fire again for back-to-back events.
-    void pin.offsetWidth;
-    pin.classList.add("motion-hit");
-    window.setTimeout(() => pin.classList.remove("motion-hit"), 1100);
-  }
-
-  function triggerMotionFlicker(detailText) {
-    if (!document.body.classList.contains("camsup")) return;
-
-    const text = normalize(detailText);
-    if (!text || !/(motion|sensor|detected|entered|arrived)/.test(text)) return;
-
-    const sensorPins = [...mapPlan.querySelectorAll(".camPin.sensor")]
-      .filter(pinIsOnCurrentFloor)
-      .filter(pin => !pin.classList.contains("dead"));
-    if (!sensorPins.length) return;
-
-    // Prefer the sensor room/camera explicitly named by the event.
-    let match = null;
-    let matchLength = 0;
-    for (const pin of sensorPins) {
-      for (const alias of pinAliases(pin)) {
-        if (alias.length > matchLength && text.includes(alias)) {
-          match = pin;
-          matchLength = alias.length;
-        }
-      }
-    }
-
-    // When the game's motion message only says that the mounted sensor fired,
-    // the mounted pin itself is the best available room target.
-    if (match) {
-      triggerPin(match);
-    } else if (sensorPins.length === 1) {
-      triggerPin(sensorPins[0]);
-    } else {
-      sensorPins.forEach(triggerPin);
-    }
-  }
-
-  function refreshFromAlerts() {
-    const text = alerts.textContent || "";
-    setAudioError(faultActive(text, "audio"));
-    setDoorArrayDown(faultActive(text, "doorArray"));
-    triggerMotionFlicker(text);
-  }
-
-  const observer = new MutationObserver(() => refreshFromAlerts());
-  observer.observe(alerts, {subtree:true, childList:true, characterData:true, attributes:true});
-
-  const bodyObserver = new MutationObserver(() => refreshDoorVisual());
-  bodyObserver.observe(document.body, {childList:true, subtree:true});
-
-  // Expose one small bridge for game.js/other scripts to use for an exact motion event.
-  // Passing the room name or camera name is enough; the correct-floor/camera checks remain here.
-  window.fnaacMotionAlert = detail => triggerMotionFlicker(detail);
-
-  refreshFromAlerts();
-  refreshDoorVisual();
-})();
-</script>
 
 </body>
 </html>

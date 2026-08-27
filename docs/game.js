@@ -798,6 +798,131 @@ const NIGHTS = [
 ];
 
 /* ---------------------------------------------------------------------------
+   CUSTOM NIGHT
+
+   Difficulty 1 is the Night 1 tuning for Eugene and Sloppy. Difficulty 17 is
+   exactly Night 7. Levels 18-20 continue past Night 7 so an all-20 setup can
+   be substantially nastier than the hardest authored night.
+
+   Gordon first exists on Night 3, so his level-1 anchor is his existing Night 3
+   tuning; level 17 still lands exactly on his Night 7 values.
+--------------------------------------------------------------------------- */
+const CUSTOM_DEFAULTS = { eugene:0, sloppy:0, gordon:0, jeffrey:0 };
+const CUSTOM_KEY = "fnaac-custom-night";
+const CUSTOM_20_KEY = "fnaac-custom-20-complete";
+let customLevels = { ...CUSTOM_DEFAULTS };
+let custom20Complete = false;
+
+function loadCustomLevels(){
+  try {
+    const raw = JSON.parse(localStorage.getItem(CUSTOM_KEY) || "{}");
+    for (const id of Object.keys(CUSTOM_DEFAULTS)){
+      if (Number.isFinite(raw[id]))
+        customLevels[id] = Math.max(0, Math.min(20, Math.round(raw[id])));
+    }
+    custom20Complete = localStorage.getItem(CUSTOM_20_KEY) === "1";
+  } catch (_) {}
+}
+
+function saveCustomLevels(){
+  try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(customLevels)); } catch (_) {}
+}
+
+function saveCustom20Complete(){
+  custom20Complete = true;
+  try { localStorage.setItem(CUSTOM_20_KEY, "1"); } catch (_) {}
+}
+
+function customLevel(id){
+  return S.night === 8 ? customLevels[id] : null;
+}
+
+/* 1 = Night 1 baseline, 17 = Night 7 baseline. Levels 18-20 push beyond 7. */
+function customScale(level){
+  const d = Math.max(1, Math.min(20, level));
+  return (d - 1) / 16 + Math.max(0, d - 17) * 0.17;
+}
+
+function lerp(a, b, t){ return a + (b - a) * t; }
+
+function customPairCfg(id){
+  const d = customLevel(id);
+  if (d === null || d === 0) return null;
+  const t = customScale(d);
+  const a = NIGHTS[0], b = NIGHTS[6];
+  return {
+    moveMs:     Math.max(1800, lerp(a.moveMs, b.moveMs, t)),
+    approach:   Math.min(0.995, Math.max(0, lerp(a.approach, b.approach, t))),
+    doubleStep: Math.min(0.78, Math.max(0, lerp(a.doubleStep, b.doubleStep, t))),
+    idleChance: Math.max(0, lerp(a.idleChance, b.idleChance, t)),
+    breachMs:   Math.max(2400, lerp(a.breachMs, b.breachMs, t)),
+    respiteMs:  Math.max(3500, lerp(a.respiteMs, b.respiteMs, t)),
+    enterMs:    Math.max(650, lerp(a.enterMs, b.enterMs, t))
+  };
+}
+
+function customGordonCfg(){
+  const d = customLevel("gordon");
+  if (d === null || d === 0) return null;
+  const t = customScale(d);
+  const n3 = 2, n7 = 6;
+  return {
+    moveMs:  Math.max(5200, lerp(GORDON.moveMs[n3], GORDON.moveMs[n7], t)),
+    doorMs:  Math.max(1800, lerp(GORDON.doorMs[n3], GORDON.doorMs[n7], t)),
+    enterMs: Math.max(900,  lerp(GORDON.enterMs[n3], GORDON.enterMs[n7], t)),
+    breakMs: Math.max(17000, lerp(GORDON.breakMs[n3], GORDON.breakMs[n7], t))
+  };
+}
+
+function customJeffreyCfg(){
+  const d = customLevel("jeffrey");
+  if (d === null || d === 0) return null;
+  const t = customScale(d);
+  /* Jeffrey is absent from Nights 1-2, so level 1 uses Night 3. His main
+     Custom-Night difficulty is the show window: time available to change feeds. */
+  return {
+    firstMs: Math.max(6000, lerp(JEFFREY.firstMs[2], JEFFREY.firstMs[6], t)),
+    gapMs:   Math.max(3500, lerp(JEFFREY.gapMs[2],   JEFFREY.gapMs[6],   t)),
+    showMs:  Math.max(550,  lerp(JEFFREY.showMs[2],  JEFFREY.showMs[6],  t))
+  };
+}
+
+function customEnabled(id){
+  return S.night !== 8 || customLevel(id) > 0;
+}
+
+/* All global, night-authored settings use the total Custom Night level.
+   This keeps the building itself on one of the seven authored difficulty tiers
+   while each animatronic keeps its own independent A.I. level.
+
+   Total level partitions:
+     0-11 -> Night 1
+     12-23 -> Night 2
+     24-35 -> Night 3
+     36-47 -> Night 4
+     48-57 -> Night 5
+     58-67 -> Night 6
+     68-80 -> Night 7
+
+   Power economy, system-fault rates, hallucination frequency, and ambience
+   frequency all use this same partition. */
+const CUSTOM_SETTING_BANDS = [12,24,36,48,58,68];
+function customTotalLevel(){
+  return Object.values(customLevels).reduce(
+    (sum, v) => sum + Math.max(0, Math.min(20, Number(v) || 0)), 0
+  );
+}
+function customSettingNightIndex(){
+  const total = customTotalLevel();
+  let idx = 0;
+  while (idx < CUSTOM_SETTING_BANDS.length && total >= CUSTOM_SETTING_BANDS[idx]) idx++;
+  return idx;
+}
+function authoredSettingNightIndex(){
+  return S.night === 8 ? customSettingNightIndex() : nightIdx();
+}
+
+/* ---------------------------------------------------------------------------
    SLOPPY'S COMMITMENT
 
    She does not run on a countdown. When she reaches a doorway a meter starts:
@@ -900,6 +1025,13 @@ const SLOPPY = {
 };
 
 function sloppyCfg(){
+  if (S.night === 8){
+    const t = customScale(customLevels.sloppy);
+    return {
+      doorMs: Math.max(1700, lerp(SLOPPY.doorMs[0], SLOPPY.doorMs[6], t)),
+      moveMult: Math.max(1.95, lerp(SLOPPY.moveMult[0], SLOPPY.moveMult[6], t))
+    };
+  }
   const h = nightIdx();
   return { doorMs:SLOPPY.doorMs[h], moveMult:SLOPPY.moveMult[h] };
 }
@@ -915,13 +1047,15 @@ const RAMP = { approach:0.035, idle:0.030, moveMs:0.035 };
    reads difficulty goes through here, never NIGHTS directly. */
 function tuned(){
   const n = night(), h = Math.min(5, S.hour);
+  let base = n;
+  if (S.night === 8) base = customPairCfg("eugene");
   return {
-    moveMs:     n.moveMs * Math.pow(1 - RAMP.moveMs, h),
-    approach:   Math.min(0.95, n.approach + RAMP.approach * h),
-    idleChance: Math.max(0, n.idleChance - RAMP.idle * h),
-    doubleStep: n.doubleStep,
-    breachMs:   n.breachMs,
-    respiteMs:  n.respiteMs
+    moveMs:     base.moveMs * Math.pow(1 - RAMP.moveMs, h),
+    approach:   Math.min(0.99, base.approach + RAMP.approach * h),
+    idleChance: Math.max(0, base.idleChance - RAMP.idle * h),
+    doubleStep: base.doubleStep,
+    breachMs:   base.breachMs,
+    respiteMs:  base.respiteMs
   };
 }
 
@@ -2061,6 +2195,28 @@ const nightStartFx = () => {
   setTimeout(() => noise(0.16, "lowpass", 260, .17, undefined, t => (1 - t) ** 2), 205);
 };
 
+/* All-20 laugh: a deep, breathy, irregular chuckle. It is intentionally synthesized
+   so the special-mode sound works even without an optional WAV asset. */
+const all20LaughFx = () => {
+  if (!actx) return;
+  const beats = [
+    {f:82, d:.28, v:.15, to:58},
+    {f:70, d:.24, v:.17, to:49},
+    {f:78, d:.30, v:.16, to:54},
+    {f:63, d:.42, v:.18, to:42}
+  ];
+  let at = 0;
+  beats.forEach((b, i) => {
+    setTimeout(() => {
+      tone(b.f, b.d, "sine", b.v, b.to);
+      noise(.18 + i * .02, "lowpass", 260, .055, undefined, t =>
+        Math.pow(Math.sin(t * Math.PI), 1.7));
+    }, at);
+    at += 120 + i * 55;
+  });
+  setTimeout(() => tone(48, .62, "triangle", .10, 31), 330);
+};
+
 /* ===========================================================================
    ROOM TONE
 
@@ -2423,6 +2579,7 @@ const SFX = {
      rather than becoming part of the room tone. */
   titleStab: { src:"sounds/title_stab.wav", vol:0.72, synth:() => titleStabFx() },
   nightStart: { src:"sounds/night_start.wav", vol:0.76, synth:() => nightStartFx() },
+  all20Laugh: { src:null, vol:0.78, synth:() => all20LaughFx() },
   lightsOff: { src:"sounds/lights_off.wav", vol:0.74, synth:() => lightsOffFx() },
   lightsOn:  { src:"sounds/lights_on.wav",  vol:0.70, synth:() => lightsOnFx() },
   powerWarn: { src:"sounds/power_warn.wav", vol:0.50, synth:() => {
@@ -3010,6 +3167,8 @@ const S = {
   units:[], sys:{}, lure:null, lureReadyAt:0,
   failAcc:0, lastFrame:0, raf:null, breathAcc:0, flicker:0, ambAcc:0,
   darkCamAcc:0, boxPlayed:false, ventAlarmAcc:0, transitUntil:0, hallucAcc:0,
+  darkCamAcc:0, boxPlayed:false, ventAlarmAcc:0, transitUntil:0, hallucAcc:0,
+  all20LaughAcc:0,
   sensorOn:null,          // camera id the motion sensor is mounted on
   sensorAcc:0,
   passedOut:0,            // ms remaining face-down
@@ -3209,6 +3368,12 @@ function buildPanel(){
    part of half a minute — so her delay is a floor on when she starts walking,
    not on when she is first seen. */
 function entryDelay(u, i){
+  if (S.night === 8){
+    if (u.commitModel)
+      return customPairCfg("sloppy").enterMs + Math.random() * 2500;
+    const jitter = u.id === "eugene" ? EUGENE.entryJitterMs : 6000;
+    return customPairCfg("eugene").enterMs + i * CONFIG.entryStaggerMs + Math.random() * jitter;
+  }
   if (u.commitModel)
     return SLOPPY.enterMs[nightIdx()] + Math.random() * 4000;
   const jitter = u.id === "eugene" ? EUGENE.entryJitterMs : 6000;
@@ -3220,13 +3385,21 @@ function startNight(n){
   trackGameEvent("night_start", { night_number:n });
   S.monUp = false; S.panelOpen = false; S.panelTab = false; S.power = true; S.powerBackAt = 0;
   S.o2 = 100; S.lure = null; S.lureReadyAt = 0; S.failAcc = 0; S.breathAcc = 0;
-  S.sensorOn = null; S.sensorAcc = 0; S.passedOut = 0; S.doom = null; S.flicker = 0;
+  S.sensorOn = null; S.sensorAcc = 0;
+  S.passedOut = 0; S.doom = null; S.flicker = 0;
   S.ambAcc = CONFIG.ambienceFirstMs; S.darkCamAcc = 0; S.boxPlayed = false;
   S.shownSecs = -1;
   S.transitUntil = 0; S.hallucAcc = hallucinationGap();
+  S.hallucDoor = null;
+  S.all20SoundAcc = all20Mode() ? (7000 + Math.random() * 7000) : 0;
+  S.all20LaughAcc = all20Mode() ? (12000 + Math.random() * 9000) : 0;
+  S.all20LightAcc = all20Mode() ? (10000 + Math.random() * 16000) : 0;
+  S.all20LightHold = 0;
+  S.all20DoorAcc = all20Mode() ? (9000 + Math.random() * 11000) : 0;
+  document.body.classList.remove("all20-office-flicker");
   S.jeffrey = null; S.jeffreyScare = 0;
   S.jeffreyArmed = false; S.jeffreyLeft = null;
-  S.jeffreyAcc = JEFFREY.firstMs[nightIdx()] * (0.8 + Math.random() * 0.4);
+  { const jc = jeffreyCfg(); S.jeffreyAcc = jc ? jc.firstMs * (0.8 + Math.random() * 0.4) : Infinity; }
   hideJeffrey();
   S.activeCam = "C04";
 
@@ -3252,7 +3425,7 @@ function startNight(n){
   // Two roamers, dropped at distinct outside markers. A Fisher–Yates shuffle
   // gives all three entrances an equal chance instead of favouring list order.
   const spots = shuffled(SPAWNS);
-  S.units = ROSTER.slice(0, 2).map((a, i) => ({
+  S.units = ROSTER.slice(0, 2).filter(a => customEnabled(a.id)).map((a, i) => ({
     ...a,
     node: spots[i % spots.length],
     // Out of step on purpose. Each one carries its own rhythm multiplier and
@@ -3293,7 +3466,7 @@ function startNight(n){
   const oimg = mountArt(el.officeArt, OFFICE_ART, "(wide panorama from your desk)");
   if (oimg){ oimg.addEventListener("load", () => fitOfficeScene(oimg)); fitOfficeScene(oimg); }
   applyDoorVars();
-  el.nightLabel.textContent = "NIGHT " + n;
+  el.nightLabel.textContent = n === 8 ? "CUSTOM NIGHT" : "NIGHT " + n;
   syncChrome();
 
   S.lastFrame = performance.now();
@@ -3639,9 +3812,11 @@ el.audioBtn.onclick  = e => { e.stopPropagation(); playCue(); };
 $("floorBtn").onclick = e => { e.stopPropagation(); toggleMapFloor(); };
 
 el.sensorBtn.onclick = e => { e.stopPropagation(); mountSensor(S.activeCam); };
+$("customBack").onclick = e => { e.stopPropagation(); closeCustomMenu(); };
+$("customReady").onclick = e => { e.stopPropagation(); startCustomNight(); };
 
-/* The picker exists on all three start-from screens, so there is never a state
-   where you have to lose on purpose to get back to the one you wanted. */
+/* Menu state. Night 7 remains the default after Custom Night unlocks.
+   Custom opens a separate screen and only becomes Night 8 when READY is pressed. */
 const PICKERS = ["pickTitle", "pickLose"];
 const PROGRESS_KEY = "fnaac-unlocked-night";
 const COMPLETED_KEY = "fnaac-completed-night";
@@ -3654,23 +3829,19 @@ function loadProgress(){
     const savedUnlocked = Number.parseInt(localStorage.getItem(PROGRESS_KEY), 10);
     const savedCompleted = Number.parseInt(localStorage.getItem(COMPLETED_KEY), 10);
     if (Number.isInteger(savedCompleted)) {
-      completedNight = Math.min(NIGHTS.length, Math.max(0, savedCompleted));
-      unlockedNight = Math.min(NIGHTS.length, completedNight + 1);
+      completedNight = Math.min(7, Math.max(0, savedCompleted));
+      unlockedNight = Math.min(8, completedNight + 1);
     } else if (Number.isInteger(savedUnlocked)) {
-      // Carry progress saved by the earlier unlock-only version forward.
-      unlockedNight = Math.min(NIGHTS.length, Math.max(1, savedUnlocked));
-      completedNight = unlockedNight - 1;
+      unlockedNight = Math.min(8, Math.max(1, savedUnlocked));
+      completedNight = Math.min(7, unlockedNight - 1);
     }
-  } catch (_) {
-    // The game still works when browser storage is unavailable.
-  }
-  S.night = unlockedNight;
+  } catch (_) {}
+  S.night = unlockedNight >= 8 ? 7 : unlockedNight;
   try {
     const early = window.__FNAAC;
     if (early && Number.isInteger(early.night) &&
-        early.night >= 1 && early.night <= unlockedNight) {
-      S.night = early.night;
-    }
+        early.night >= 1 && early.night <= unlockedNight) S.night = early.night;
+    if (unlockedNight >= 8 && S.night === 8) S.night = 7;
   } catch (_) {}
 }
 
@@ -3690,24 +3861,129 @@ function resetProgress(){
 }
 
 function unlockNextNight(){
-  completedNight = Math.max(completedNight, S.night);
-  unlockedNight = Math.min(NIGHTS.length, completedNight + 1);
+  if (S.night === 7) {
+    completedNight = Math.max(completedNight, 7);
+    unlockedNight = 8;
+    S.night = 7;
+  } else if (S.night < 7) {
+    completedNight = Math.max(completedNight, S.night);
+    unlockedNight = Math.min(7, completedNight + 1);
+    S.night = Math.min(7, S.night + 1);
+  } else {
+    completedNight = Math.max(completedNight, 7);
+    unlockedNight = 8;
+    S.night = 7;
+  }
   saveProgress();
+}
+
+function customAllAt(level){
+  return Object.keys(customLevels).every(k => customLevels[k] === level);
+}
+
+function all20Mode(){
+  return S.night === 8 && customAllAt(20);
+}
+
+function buildCustomMenu(){
+  const host = $("customAnimatics");
+  if (!host) return;
+  const defs = [
+    { id:"eugene",  name:"EUGENE",  art:"images/characters/ani_eugene.png" },
+    { id:"sloppy",  name:"SLOPPY",  art:"images/characters/ani_sloppy.png" },
+    { id:"gordon",  name:"GORDON",  art:"images/characters/ani_gordon.png" },
+    { id:"jeffrey", name:"JEFFREY", art:"images/characters/ani_jeffrey.png" }
+  ];
+  host.innerHTML = defs.map(d =>
+    '<div class="customCard" data-anim="'+d.id+'">' +
+      '<div class="customName">'+d.name+'</div>' +
+      '<div class="customArtFrame"><img class="customArt" src="'+d.art+'" alt=""></div>' +
+      '<div class="customAILabel"><span>A.I. LEVEL</span><span class="customLevelState">OFF</span></div>' +
+      '<div class="customControl">' +
+        '<button type="button" class="customStep" data-dir="-1" aria-label="Decrease '+d.name+'">‹</button>' +
+        '<span class="customValue">0</span>' +
+        '<button type="button" class="customStep" data-dir="1" aria-label="Increase '+d.name+'">›</button>' +
+      '</div>' +
+      '<div class="customLevelTrack"><i class="customLevelFill"></i></div>' +
+    '</div>'
+  ).join('');
+  host.querySelectorAll('.customStep').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const id = btn.closest('.customCard').dataset.anim;
+      customLevels[id] = Math.max(0, Math.min(20, customLevels[id] + Number(btn.dataset.dir)));
+      saveCustomLevels();
+      refreshCustomMenu();
+    });
+  });
+  const all0 = $("customAll0"), all20 = $("customAll20");
+  if (all0) all0.onclick = e => { e.stopPropagation(); Object.keys(customLevels).forEach(k => customLevels[k]=0); saveCustomLevels(); refreshCustomMenu(); };
+  if (all20) all20.onclick = e => { e.stopPropagation(); Object.keys(customLevels).forEach(k => customLevels[k]=20); saveCustomLevels(); refreshCustomMenu(); };
+  refreshCustomMenu();
+}
+
+function refreshCustomMenu(){
+  const host = $("customAnimatics");
+  if (!host) return;
+  host.querySelectorAll('.customCard').forEach(card => {
+    const id = card.dataset.anim, value = customLevels[id];
+    card.querySelector('.customValue').textContent = String(value);
+    const fill = card.querySelector('.customLevelFill');
+    if (fill) fill.style.width = (value / 20 * 100) + "%";
+    card.classList.toggle('off', value === 0);
+    const state = card.querySelector('.customLevelState');
+    if (state) state.textContent = value === 0 ? "OFF" : (value === 20 ? "MAX" : "ACTIVE");
+    card.querySelectorAll('.customStep').forEach(btn => {
+      btn.disabled = Number(btn.dataset.dir) < 0 ? value <= 0 : value >= 20;
+    });
+  });
+  const total = customTotalLevel();
+  const totalEl = $("customTotal");
+  if (totalEl) totalEl.textContent = "TOTAL A.I. " + total + " / 80";
+  const tierEl = $("customTier");
+  if (tierEl) tierEl.textContent = "BUILDING DIFFICULTY  ·  NIGHT " + (customSettingNightIndex() + 1);
+}
+
+function openCustomMenu(){
+  if (unlockedNight < 8) return;
+  buildCustomMenu();
+  [el.title, el.lose, el.win, el.scare, el.death].forEach(s => s.classList.remove("show"));
+  $("customScreen").classList.add("show");
+  document.body.classList.add("custom-menu");
+}
+
+function closeCustomMenu(){
+  $("customScreen").classList.remove("show");
+  document.body.classList.remove("custom-menu");
+  S.night = 7;
+  markPickers();
+  el.title.classList.add("show");
+}
+
+function startCustomNight(){
+  if (unlockedNight < 8) return;
+  saveCustomLevels();
+  S.night = 8;
+  $("customScreen").classList.remove("show");
+  document.body.classList.remove("custom-menu");
+  el.title.classList.add("show");
+  clockIn();
 }
 
 function buildPickers(){
   PICKERS.forEach(id => {
     const host = $(id);
     host.innerHTML = "<span>NIGHT</span>";
-    for (let n = 1; n <= NIGHTS.length; n++){
-      // The final two nights arrive as surprises after their prerequisite win.
-      if (n > 5 && n > unlockedNight) continue;
+    for (let n = 1; n <= 8; n++){
+      if (n > unlockedNight) continue;
       const b = document.createElement("button");
-      b.textContent = n;
+      b.textContent = n === 8 ? "CUSTOM" : n;
       b.dataset.night = n;
+      b.classList.toggle('customPick', n === 8);
       b.onclick = e => {
         e.stopPropagation();
         if (n > unlockedNight) return;
+        if (n === 8){ openCustomMenu(); return; }
         S.night = n;
         markPickers();
       };
@@ -3718,7 +3994,7 @@ function buildPickers(){
 }
 
 function markStars(){
-  const stars = completedNight >= 7 ? 2 : completedNight >= 6 ? 1 : 0;
+  const stars = custom20Complete ? 3 : (completedNight >= 7 ? 2 : completedNight >= 6 ? 1 : 0);
   STAR_DISPLAYS.forEach(id => $(id).textContent = "★".repeat(stars));
 }
 
@@ -3726,9 +4002,9 @@ function markPickers(){
   PICKERS.forEach(id => $(id).querySelectorAll("button").forEach(b => {
     const n = +b.dataset.night;
     b.disabled = n > unlockedNight;
-    b.classList.toggle("on", n === S.night);
+    b.classList.toggle("on", n !== 8 && n === S.night);
   }));
-  el.nightLabel.textContent = "NIGHT " + S.night;
+  el.nightLabel.textContent = S.night === 8 ? "CUSTOM NIGHT" : "NIGHT " + S.night;
   markStars();
 }
 
@@ -3745,7 +4021,7 @@ function markPickers(){
    the building rather than a texture. */
 document.documentElement.style.setProperty("--titleFace", "url(" + GORDON.art + ")");
 
-let titleGlitch = null, titleAlive = false;
+let titleGlitch = null, titleAlive = false, all20TitleLaugh = null;
 
 /* WHY THIS IS SCHEDULED AND NOT RANDOM PER FRAME.
 
@@ -3805,15 +4081,30 @@ function scheduleGlitch(){
   }, wait);
 }
 
+function scheduleAll20TitleLaugh(){
+  clearTimeout(all20TitleLaugh);
+  all20TitleLaugh = null;
+  if (!titleAlive || !all20Mode()) return;
+  const wait = 900 + Math.random() * 1800;
+  all20TitleLaugh = setTimeout(() => {
+    if (!titleAlive || !all20Mode()) return;
+    play("all20Laugh", { vol:0.62 + Math.random() * 0.16, pan:Math.random() * .8 - .4 });
+    scheduleAll20TitleLaugh();
+  }, wait);
+}
+
 function titleScreenOn(){
   if (titleAlive) return;
   titleAlive = true;
   scheduleGlitch();
+  scheduleAll20TitleLaugh();
   startMenuMusic();
 }
 function titleScreenOff(){
   titleAlive = false;
   clearTimeout(titleGlitch);
+  clearTimeout(all20TitleLaugh);
+  all20TitleLaugh = null;
   stopMenuMusic();
 }
 
@@ -3833,7 +4124,8 @@ function showPreNight(){
   const start = $("btnStart");
   if (!title) return;
 
-  if (night) night.textContent = "NIGHT " + S.night;
+  if (night) night.textContent = S.night === 8 ? "CUSTOM NIGHT" : "NIGHT " + S.night;
+  title.classList.toggle("all20-preNight", typeof all20Mode === "function" && all20Mode());
   title.classList.add("preNight");
   if (start) start.disabled = true;
 
@@ -4534,18 +4826,20 @@ const unitsSeenBy = camId => S.units.filter(u => CAMERAS[camId].sees.includes(u.
    =========================================================================== */
 
 function gordonCfg(){
+  if (S.night === 8) return customGordonCfg();
   const h = nightIdx();
   return {
     moveMs: GORDON.moveMs[h],
     doorMs: GORDON.doorMs[h],
-    enterMs: GORDON.enterMs[h]
+    enterMs: GORDON.enterMs[h],
+    breakMs: GORDON.breakMs[h]
   };
 }
 
 function spawnGordon(){
-  if (S.night < GORDON.startNight) return null;
+  if (S.night < GORDON.startNight && S.night !== 8) return null;
   const cfg = gordonCfg();
-  if (!cfg.moveMs) return null;               // night has no numbers for him
+  if (!cfg || !cfg.moveMs) return null;               // disabled/not active
   return {
     ...GORDON,
     node: pick(GORDON.startNodes),
@@ -4600,7 +4894,7 @@ function gordonHitsDoor(g, sealed){
   if (!dl) return false;
 
   if (dl.oneShot){
-    const ms = GORDON.breakMs[nightIdx()] || 0;
+    const ms = (gordonCfg() && gordonCfg().breakMs) || 0;
     S.doorBroken[id] = true;
     S.doorShut = null;
     /* Shown for a few seconds and then gone. It used to sit in the alert strip
@@ -4930,7 +5224,7 @@ function faultSystem(id){
    is how the per-second rolls are made frame-rate independent. */
 function rollFault(id, spec, scale){
   if (!canFault(id)) return false;
-  const h = nightIdx();
+  const h = authoredSettingNightIndex();
   const wear = S.wear[id] || 0;
   const chance = Math.min(spec.max[h], spec.base[h] + spec.step[h] * wear) *
                  (scale === undefined ? 1 : scale);
@@ -4967,7 +5261,9 @@ const rollDoorJam = sealed =>
    readout can never drift away from what is actually being spent, and adding a
    consumer later means adding one line here and nowhere else.
 --------------------------------------------------------------------------- */
-function powerMult(){ return POWER.nightMult[nightIdx()]; }
+function powerMult(){
+  return POWER.nightMult[authoredSettingNightIndex()];
+}
 
 function currentDraw(){
   if (!S.running || S.outage) return 0;
@@ -5097,66 +5393,99 @@ function stepSystems(dt){
    Night one has none at all, so the rules are learned clean first.
 --------------------------------------------------------------------------- */
 const HALLUCINATION = {
-  gapMs:  [0, 52000, 36000, 26000, 18000, 12000, 3000],   // 0 = never
-  jitter: 0.5,        // gaps vary by this much either way
-  holdMs: 4150        // how long one lingers before it fades
+  gapMs:  [0, 52000, 36000, 26000, 18000, 12000, 3000],
+  jitter: 0.5,
+  holdMs: 4150,
+  all20GapMs: 7000,
+  all20DoorGapMs: 13500,
+  all20DoorHoldMs: 2800
 };
 
 function hallucinationGap(){
-  const g = HALLUCINATION.gapMs[nightIdx()];
+  const g = all20Mode() ? HALLUCINATION.all20GapMs
+                        : HALLUCINATION.gapMs[authoredSettingNightIndex()];
   if (!g) return 0;
-  return g * (1 - HALLUCINATION.jitter + Math.random() * HALLUCINATION.jitter * 2);
+  const jitter = all20Mode() ? 0.42 : HALLUCINATION.jitter;
+  return g * (1 - jitter + Math.random() * jitter * 2);
 }
 
-function stepHallucination(dt){
-  if (!S.hallucAcc) return;                       // disabled on night one
-  S.hallucAcc -= dt;
-  if (S.hallucAcc > 0) return;
-  S.hallucAcc = hallucinationGap();
+function hallucinationWhoForFloor(floor){
+  const choices = floor === 2
+    ? [GORDON, JEFFREY]
+    : [...ROSTER, ...(all20Mode() ? [GORDON, JEFFREY] : [])];
+  const live = choices.filter(a => sprites[a.id] && sprites[a.id].dataset.ok === "1");
+  return live.length ? pick(live) : null;
+}
 
-  // only where you would actually see one, and never in a doorway
-  if (!S.monUp || S.panelTab || !S.sys.cam.ok || S.doom) return;
-  if (camDead(S.activeCam) || S.outage) return;
-  const cam = CAMERAS[S.activeCam];
-  /* UPPER FLOOR ONLY. A hallucination is a lie you cannot immediately check,
-     and downstairs it would be a lie you can check for free: Eugene and Sloppy
-     never go down there, so a figure on a basement feed is knowably false the
-     instant you see it. Worse, it would read as Gordon and send you closing a
-     door against nothing, which is a real cost paid for a fake. */
-  const spots = cam.sees.filter(n => floorOf(n) === 1 && DO[n] !== 1 &&
-                                     !unitsOn(n).length);
-  if (!spots.length) return;
-
-  const node = pick(spots);
-  const who  = pick(ROSTER);
-  if (sprites[who.id].dataset.ok !== "1") return;
-
-  /* It has to be standing where a body would stand. Reading only the shared
-     SHOTS meant a hallucination used the uncalibrated fallback placement —
-     centre frame, one size for every room — so it read as a sprite pasted onto
-     the picture rather than as something in the room, and you could tell a
-     fake from a real one at a glance without checking anything. It now goes
-     through the same shotFor() the real ones do, so it lands on the calibrated
-     spot for that node, on that camera, for that body: same scale, same
-     mirroring, same crop behind the same furniture. The only difference left
-     is that it fades. */
-  const shot = shotFor(who, node, S.activeCam);
+function createHallucination(node, who, camId){
+  const shot = shotFor(who, node, camId);
   const s = document.createElement("img");
-  s.className = "subject jeffrey";
+  s.className = "subject hallucination";
   s.src = who.art; s.alt = "";
-  s.style.left   = shot.left + "%";
+  s.style.left = shot.left + "%";
   s.style.bottom = shot.bottom + "%";
-  s.style.width  = shot.width + "%";
+  s.style.width = shot.width + "%";
   s.style.height = "auto";
   s.style.transform = shotTransform(shot);
   s.style.filter = "grayscale(.6) contrast(1.1) brightness(" + (0.65 * shot.dim) + ")";
-  const cT = shot.clipT || 0, cR = shot.clipR || 0,
-        cB = shot.clipB || 0, cL = shot.clipL || 0;
+  const cT = shot.clipT || 0, cR = shot.clipR || 0, cB = shot.clipB || 0, cL = shot.clipL || 0;
   if (cT || cR || cB || cL)
     s.style.clipPath = "inset(" + cT + "% " + cR + "% " + cB + "% " + cL + "%)";
-  s.style.animationDuration = HALLUCINATION.holdMs + "ms";
+  const hold = all20Mode() ? 2500 : HALLUCINATION.holdMs;
+  s.style.animationDuration = hold + "ms";
   el.camPan.appendChild(s);
-  setTimeout(() => s.remove(), HALLUCINATION.holdMs + 60);
+  setTimeout(() => s.remove(), hold + 80);
+}
+
+function createDoorHallucination(side, who){
+  const box = doorEl(side);
+  const img = box && box.querySelector(".hallucLurker");
+  if (!box || !img || !sprites[who.id] || sprites[who.id].dataset.ok !== "1") return;
+  img.src = who.art;
+  applyDoorShot(img, who, side);
+  img.style.animationDuration = HALLUCINATION.all20DoorHoldMs + "ms";
+  box.classList.add("halluc-present");
+  img.classList.remove("halluc-fade");
+  void img.offsetWidth;
+  img.classList.add("halluc-fade");
+  setTimeout(() => {
+    box.classList.remove("halluc-present");
+    img.classList.remove("halluc-fade");
+  }, HALLUCINATION.all20DoorHoldMs + 80);
+}
+
+function stepHallucination(dt){
+  if (!S.hallucAcc && !all20Mode()) return;
+  if (S.hallucAcc > 0) S.hallucAcc -= dt;
+
+  if (all20Mode() && !S.monUp && !S.panelTab && S.power && !S.outage && !S.doom){
+    S.all20DoorAcc -= dt;
+    if (S.all20DoorAcc <= 0){
+      S.all20DoorAcc = HALLUCINATION.all20DoorGapMs * (0.65 + Math.random() * 0.7);
+      const realDoors = S.units.some(u => u.breaching) || (S.gordon && S.gordon.phase === "door");
+      if (!realDoors){
+        const who = hallucinationWhoForFloor(1);
+        if (who) createDoorHallucination(Math.random() < 0.5 ? "left" : "right", who);
+      }
+    }
+  } else if (!all20Mode()) {
+    S.all20DoorAcc = 0;
+  }
+
+  if (S.hallucAcc > 0) return;
+  S.hallucAcc = hallucinationGap();
+  if (!S.monUp || S.panelTab || !S.sys.cam.ok || S.doom) return;
+  if (camDead(S.activeCam) || S.outage) return;
+  const cam = CAMERAS[S.activeCam];
+  const floor = camFloor(S.activeCam);
+  const spots = (cam.sees || []).filter(n =>
+    floorOf(n) === floor && DO[n] !== 1 && !unitsOn(n).length
+  );
+  if (!spots.length) return;
+  const node = pick(spots);
+  const who = hallucinationWhoForFloor(floor);
+  if (!who) return;
+  createHallucination(node, who, S.activeCam);
 }
 
 /* ---------------------------------------------------------------------------
@@ -5166,8 +5495,16 @@ function stepHallucination(dt){
    you are watching one. He picks the camera you are ON — there is no searching
    for him and no warning, and the answer is always the same: any other camera.
 --------------------------------------------------------------------------- */
+function jeffreyCfg(){
+  if (S.night === 8) return customJeffreyCfg();
+  const i = nightIdx();
+  return { firstMs:JEFFREY.firstMs[i], gapMs:JEFFREY.gapMs[i], showMs:JEFFREY.showMs[i] };
+}
+
 function jeffreyGap(){
-  const g = JEFFREY.gapMs[nightIdx()];
+  const cfg = jeffreyCfg();
+  if (!cfg) return Infinity;
+  const g = cfg.gapMs;
   return g * (1 - JEFFREY.jitter + Math.random() * JEFFREY.jitter * 2);
 }
 
@@ -5244,6 +5581,8 @@ function jeffreyOnEntry(){
 }
 
 function stepJeffrey(dt){
+  const jcfg = jeffreyCfg();
+  if (!jcfg) return;
   // his frame is up: hold it, then hand the office back
   if (S.jeffreyScare > 0){
     S.jeffreyScare -= dt;
@@ -5278,7 +5617,7 @@ function stepJeffrey(dt){
        there before you can see him, and none of that counts against you. */
     if (feedCoveredByStatic()) return;
     S.jeffrey.acc += dt;
-    if (S.jeffrey.acc >= JEFFREY.showMs[nightIdx()]) return jeffreyTakes();
+    if (S.jeffrey.acc >= jcfg.showMs) return jeffreyTakes();
     return;
   }
 
@@ -5340,13 +5679,63 @@ function jeffreyTakes(){
 const AMBIENCE = ["ambBox","ambKnock","ambCreak","ambPipes","ambSigh",
                   "ambDoor","ambDrip","ambChair","ambFloor","ambDistant"];
 
+const ALL20_THREAT_SOUNDS = {
+  eugene:["enterA","walkByA","stepClose"],
+  sloppy:["enterB","walkByB","tellB"],
+  gordon:["gordonTell","gordonStepConcrete","gordonStepCarpet","gordonStepTile"],
+  jeffrey:["jeffreyIn"]
+};
+
+function stepAll20Sounds(dt){
+  if (!all20Mode() || S.outage || S.doom || S.passedOut > 0) return;
+  S.all20SoundAcc -= dt;
+  if (S.all20SoundAcc > 0) return;
+  S.all20SoundAcc = 8500 + Math.random() * 9500;
+  const live = ["eugene","sloppy","gordon","jeffrey"].filter(id =>
+    id === "gordon" ? !!S.gordon : id === "jeffrey" ? !!jeffreyCfg() : customLevel(id) > 0
+  );
+  if (!live.length) return;
+  const names = ALL20_THREAT_SOUNDS[pick(live)];
+  if (names && names.length)
+    play(pick(names), { vol:0.20 + Math.random()*0.18, pan:Math.random()*1.2-0.6, rate:0.94+Math.random()*0.12 });
+}
+
+function stepAll20Laugh(dt){
+  if (!all20Mode() || S.outage || S.doom || S.passedOut) return;
+  S.all20LaughAcc -= dt;
+  if (S.all20LaughAcc > 0) return;
+  S.all20LaughAcc = 14500 + Math.random() * 12500;
+  play("all20Laugh", { vol:0.72 + Math.random() * 0.18, pan:Math.random() * 1.0 - 0.5 });
+}
+
+function stepAll20OfficeFlicker(dt){
+  if (!all20Mode() || S.outage || S.monUp || S.panelTab || !S.power || S.passedOut > 0 || S.doom){
+    if (S.all20LightHold <= 0) document.body.classList.remove("all20-office-flicker");
+    return;
+  }
+  if (S.all20LightHold > 0){
+    S.all20LightHold -= dt;
+    if (S.all20LightHold <= 0){
+      S.all20LightHold = 0;
+      document.body.classList.remove("all20-office-flicker");
+      S.all20LightAcc = 15000 + Math.random()*18000;
+    }
+    return;
+  }
+  S.all20LightAcc -= dt;
+  if (S.all20LightAcc <= 0){
+    S.all20LightHold = 350 + Math.random()*750;
+    document.body.classList.add("all20-office-flicker");
+  }
+}
+
 function stepAmbience(dt){
   S.ambAcc -= dt;
   if (S.ambAcc > 0) return;
   /* The building gets noisier as the week goes on. By night six the gaps are
      less than half what they were, so silence stops being the default state
      and a sound stops being worth turning your head for. */
-  const squeeze = CONFIG.ambienceScale[nightIdx()];
+  const squeeze = CONFIG.ambienceScale[authoredSettingNightIndex()];
   S.ambAcc = (CONFIG.ambienceMinMs +
               Math.random() * (CONFIG.ambienceMaxMs - CONFIG.ambienceMinMs)) * squeeze;
   /* The music box is once a night at most, and often not at all. A thing that
@@ -5389,6 +5778,9 @@ function loop(now){
     }
 
     stepAmbience(dt);
+    stepAll20Sounds(dt);
+    stepAll20Laugh(dt);
+    stepAll20OfficeFlicker(dt);
     stepPower(dt);
     if (S.running && !S.outage) stepSystems(dt);
     if (S.running && S.sensorAcc > 0) S.sensorAcc -= dt;
@@ -5430,6 +5822,7 @@ function render(dt){
   const officeLightWarning = !S.monUp && S.power &&
     !S.sys.vent.ok;
   document.body.classList.toggle("warningLights", officeLightWarning);
+  if (!all20Mode()) document.body.classList.remove("all20-office-flicker");
 
   /* The ventilation alarm. It repeats, it gets faster as the air thins, and it
      is the only warning you get — there is no gauge to glance at any more. */
@@ -5647,6 +6040,7 @@ function render(dt){
       : cam.unstable ? "FEED TOO WEAK FOR SENSOR"
       : S.sensorOn === S.activeCam ? "REMOVE SENSOR  [M]" : "MOUNT SENSOR  [M]";
     el.audioBtn.disabled = !S.sys.audio.ok || performance.now() < S.lureReadyAt;
+    el.audioBtn.classList.toggle("audio-error", !S.sys.audio.ok);
     el.audioBtn.textContent = !S.sys.audio.ok ? "AUDIO RELAY DOWN"
       : performance.now() < S.lureReadyAt
         ? "RECHARGING " + Math.ceil((S.lureReadyAt - performance.now())/1000) + "s"
@@ -5969,12 +6363,26 @@ function mountSensor(camId){
   blip();
 }
 
+function pulseSensorCamera(camId){
+  /* The map pin is the visual counterpart to the sensor chirp. Only pulse it
+     when the player can actually see the camera map and is looking at the same
+     floor; otherwise the event remains audio-only, as it should be. */
+  if (!S.monUp || S.panelTab || camFloor(camId) !== S.mapFloor) return;
+  const btn = el.mapPlan.querySelector('.camPin[data-cam="' + camId + '"]');
+  if (!btn || btn.classList.contains("dead")) return;
+  btn.classList.remove("motion-hit");
+  void btn.offsetWidth;
+  btn.classList.add("motion-hit");
+  window.setTimeout(() => btn.classList.remove("motion-hit"), 1100);
+}
+
 function pingSensor(u, wasNode){
   if (!S.sensorOn || S.sensorAcc > 0) return;
   const covered = CAMERAS[S.sensorOn].sees;
   const inNow = covered.includes(u.node);
   if (inNow && !u.seenBySensor){
     play(u.chirp);                                 // only on entry, not on loitering
+    pulseSensorCamera(S.sensorOn);
     // the chirp names which of them it was, so the bot learns a room from it
     if (BOT.on) BOT.mem[u.id] = { cam:S.sensorOn, t:performance.now(), via:"sensor" };
   }
@@ -6512,8 +6920,8 @@ function winNight(){
                                  "outage", "dark", "warningLights");
   S.outage = null;
   clearLurkers();
+  if (S.night === 8 && customAllAt(20)) saveCustom20Complete();
   unlockNextNight();
-  S.night = Math.min(S.night + 1, NIGHTS.length);   // teed up, still changeable
   buildPickers();
   showVictory();
 }
@@ -6538,6 +6946,7 @@ if (location.protocol.startsWith("http")){
 makeNoise();
 document.body.style.setProperty("--warning-light-cycle", CONFIG.warningLightCycleMs + "ms");
 loadProgress();
+loadCustomLevels();
 buildPickers();
 applyDoorVars();
 {
@@ -6584,6 +6993,11 @@ try {
     }
     early.ready = true;
     if (typeof early.removeEarlyCapture === "function") early.removeEarlyCapture();
+
+    if (early.openCustomRequested && typeof openCustomMenu === "function") {
+      early.openCustomRequested = false;
+      openCustomMenu();
+    }
 
     if (early.startRequested) {
       early.startRequested = false;
