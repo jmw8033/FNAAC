@@ -6297,19 +6297,11 @@ let deathTimer = null;
 
 function playDeathInterference(){
   if (!actx) return;
-  /* Several overlapping dead-channel bursts instead of one long white-noise
-     block. The level rises and falls irregularly, like a receiver struggling to
-     lock onto a signal after the scare. */
-  noise(.34, "bandpass", 2300, .11, undefined, t => Math.sin(t*Math.PI) * (.55 + .45*Math.random()));
-  tone(72, .52, "sawtooth", .055, 44);
-  setTimeout(() => noise(.48, "highpass", 1500, .075, undefined, t => (1-t)**.45), 120);
-  setTimeout(() => noise(.24, "bandpass", 4200, .085, undefined, t => Math.sin(t*Math.PI)**.8), 430);
-  setTimeout(() => tone(980, .11, "square", .032, 620), 690);
-  setTimeout(() => noise(.62, "lowpass", 620, .075, undefined, t => Math.sin(t*Math.PI)**1.4), 880);
-  setTimeout(() => noise(.28, "bandpass", 2900, .055, undefined, t => Math.sin(t*Math.PI)), 1540);
-  setTimeout(() => tone(118, .72, "sine", .045, 58), 1780);
-  setTimeout(() => noise(.42, "highpass", 2400, .07, undefined, t => (1-t)**1.15), 2030);
-  setTimeout(() => tone(510, .18, "triangle", .028, 280), 2390);
+  /* One abrupt dead-channel burst right as the interference screen appears.
+     The screen remains visually noisy, but the audio falls completely silent
+     afterward so the moment stays unnerving instead of becoming a soundtrack. */
+  noise(.34, "bandpass", 2300, .11, undefined, t =>
+    Math.sin(t*Math.PI) * (.55 + .45*Math.random()));
 }
 
 function showDeathInterference(){
