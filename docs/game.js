@@ -2037,19 +2037,15 @@ const titleStabFx = () => {
                          t => (1 - t) ** 1.4), 60);
 };
 
-/* The sound immediately before a shift begins. It used to be a clean relay
-   confirmation, but the handoff deserves something that feels less like a
-   machine welcoming you and more like the building noticing you. This is an
-   original synthesized sting: a low sub-bass pull, a pair of detuned tones
-   slipping downward, a short burst of filtered air, and a final hollow hit. */
+/* The sound immediately before a shift begins. It is deliberately short and
+   unlike the menu music: two relay-like clicks, a descending confirmation tone,
+   and a low thump. The fallback means the transition still has a sound even if
+   the optional WAV is unavailable. */
 const nightStartFx = () => {
-  tone(78, .72, "sine", .18, 41);
-  tone(155, .46, "triangle", .07, 83);
-  setTimeout(() => tone(612, .19, "sawtooth", .065, 188), 90);
-  setTimeout(() => tone(617, .22, "square", .028, 191), 94);
-  setTimeout(() => noise(0.34, "bandpass", 1450, .12, undefined, t => (1 - t) ** 1.7), 180);
-  setTimeout(() => tone(96, .48, "sine", .14, 49), 270);
-  setTimeout(() => noise(0.22, "lowpass", 520, .13, undefined, t => (1 - t) ** 2), 300);
+  tone(620, .075, "square", .11, 430);
+  setTimeout(() => tone(430, .11, "square", .10, 300), 85);
+  setTimeout(() => tone(220, .20, "sawtooth", .12, 92), 180);
+  setTimeout(() => noise(0.16, "lowpass", 260, .17, undefined, t => (1 - t) ** 2), 205);
 };
 
 /* ===========================================================================
@@ -2326,6 +2322,10 @@ const SFX = {
      dry, because you do it constantly and anything with a tail would turn a
      sweep of the building into a chord. */
   camSwitch: { src:"sounds/cam_switch.wav", vol:0.20, synth:() => camClunk() },
+  camOpen:   { src:null, vol:0.58, synth:() => camOpenFx() },
+  camClose:  { src:null, vol:0.54, synth:() => camCloseFx() },
+  panelOpen: { src:null, vol:0.50, synth:() => panelOpenFx() },
+  panelClose:{ src:null, vol:0.48, synth:() => panelCloseFx() },
   /* Him arriving on the feed. Not an alarm — a swell of interference, the
      sound of the picture going wrong, so that the thing you actually react to
      is the shape and not the cue. */
@@ -2597,6 +2597,44 @@ const softTell = () => {
   setTimeout(() => tone(392, .13, "triangle", .045), 40);
 };
 const cueChirp = () => { tone(520,.22,"triangle",.12,760); setTimeout(()=>tone(430,.3,"triangle",.1,300),200); };
+
+/* --- interface movement ---------------------------------------------------
+   These are deliberately physical rather than musical: a heavy monitor arm,
+   a short burst of picture static, and the soft hollow travel of the panel.
+   The sounds are generated here so they add no network cost. */
+function camOpenFx(){
+  if (!actx) return;
+  tone(92, .18, "sine", .12, 58);
+  noise(.16, "bandpass", 1500, .11, undefined, t => Math.sin(t * Math.PI) ** 1.5);
+  setTimeout(() => {
+    noise(.22, "highpass", 2100, .075, undefined, t => (1 - t) ** 1.8);
+    tone(520, .055, "square", .025, 350);
+  }, 55);
+}
+
+function camCloseFx(){
+  if (!actx) return;
+  tone(74, .20, "sine", .14, 42);
+  noise(.12, "bandpass", 900, .085, undefined, t => Math.sin(t * Math.PI) ** 1.2);
+  setTimeout(() => tone(130, .07, "square", .035, 78), 55);
+}
+
+function panelOpenFx(){
+  if (!actx) return;
+  tone(128, .20, "sine", .10, 82);
+  noise(.34, "lowpass", 620, .13, undefined, t => Math.sin(t * Math.PI) ** .9);
+  setTimeout(() => noise(.18, "bandpass", 1200, .055, undefined, t => (1 - t) ** 1.5), 90);
+}
+
+function panelCloseFx(){
+  if (!actx) return;
+  noise(.22, "lowpass", 520, .11, undefined, t => Math.sin(t * Math.PI) ** .8);
+  setTimeout(() => {
+    tone(96, .11, "square", .045, 62);
+    tone(188, .05, "sine", .030, 120);
+  }, 135);
+}
+
 /* THE FEED CHANGING.
 
    Three of them, because it is the sound you will hear more than any other in
@@ -3285,7 +3323,10 @@ function toggleMonitor(){
     S.panelTab = false; S.panelOpen = false;
     document.body.classList.remove("paneltab");
   }
+  const wasMonUp = S.monUp;
   S.monUp = !S.monUp;
+  if (!wasMonUp && S.monUp) play("camOpen");
+  if (wasMonUp && !S.monUp) play("camClose");
   if (!S.monUp){                              // dropping the monitor closes the page too
     S.panelTab = false; S.panelOpen = false;
     document.body.classList.remove("paneltab");
@@ -3303,12 +3344,15 @@ function togglePanel(){
   if (!S.running || !S.power || S.passedOut > 0 || S.doom) return;
   if (S.outage) return;                       // and nothing left to fix
   if (S.panelTab && rebootActive()) cancelReboots();
+  const wasOpen = S.panelTab;
   // Drop the monitor FIRST. Lowering it clears the panel flag, so setting the
   // flag before lowering was immediately undoing itself — the panel opened and
   // shut in the same frame.
   if (!S.panelTab && S.monUp) toggleMonitor();
   S.panelTab = !S.panelTab;
   S.panelOpen = S.panelTab;
+  if (!wasOpen && S.panelTab) play("panelOpen");
+  if (wasOpen && !S.panelTab) play("panelClose");
   document.body.classList.toggle("paneltab", S.panelTab);
   syncChrome();
 }
@@ -3789,22 +3833,17 @@ function showPreNight(){
   titleScreenOn();
 
   clearTimeout(preNightTimer);
-  /* Three seconds total: the eerie cue begins 260 ms before the night starts,
-     with Gordon's eyes flashing just before the sting. */
   preNightTimer = setTimeout(() => {
-    title.classList.add("eyesFlash");
     play("nightStart");
-    setTimeout(() => title.classList.remove("eyesFlash"), 240);
     preNightTimer = setTimeout(() => {
       titleScreenOff();
       initAudio();
       startNight(S.night);
       title.classList.remove("preNight");
-      title.classList.remove("eyesFlash");
       if (start) start.disabled = false;
       preNightActive = false;
     }, 260);
-  }, 2740);
+  }, 1840);
 }
 
 const clockIn = () => {
@@ -6271,19 +6310,27 @@ function jumpscare(unit, why){
   }, 1500);
 }
 
-// Change this value to make the normal victory screen shorter or longer.
+// Change these values to make the victory screen shorter or longer.
 const VICTORY_DURATION_MS = 5000;
 const VICTORY_REDUCED_DURATION_MS = 1100;
 const VICTORY = { raf:0, active:false };
 
 function playVictoryJingle(){
   if (!actx) return;
-  const startsAt = actx.currentTime + .04;
+  const startsAt = actx.currentTime + .03;
+  const dst = master || actx.destination;
+
+  /* More of a building powering down cleanly than a cheerful level-up. A
+     relay click answers each rising note, then the last chord hangs in the
+     room while the clock rolls over to 6 AM. */
   const notes = [
-    [523.25, 0.00, .16, .11], [659.25, .20, .16, .11],
-    [783.99, .40, .16, .12], [1046.50, .64, .34, .13],
-    [783.99, 1.06, .14, .10], [1046.50, 1.24, .22, .12],
-    [1318.51, 1.52, .52, .12], [1046.50, 1.52, .46, .08]
+    [392.00, 0.00, .24, .08],
+    [493.88, 0.23, .24, .09],
+    [587.33, 0.46, .34, .10],
+    [739.99, 0.82, .55, .10],
+    [493.88, 1.18, .26, .06],
+    [659.25, 1.46, .72, .075],
+    [783.99, 1.46, .82, .055]
   ];
   notes.forEach(([freq, offset, length, volume]) => {
     const oscillator = actx.createOscillator();
@@ -6291,13 +6338,21 @@ function playVictoryJingle(){
     const start = startsAt + offset;
     oscillator.type = "triangle";
     oscillator.frequency.setValueAtTime(freq, start);
+    oscillator.detune.value = -7;
     gain.gain.setValueAtTime(.0001, start);
-    gain.gain.exponentialRampToValueAtTime(volume, start + .018);
+    gain.gain.exponentialRampToValueAtTime(volume, start + .016);
     gain.gain.exponentialRampToValueAtTime(.0001, start + length);
-    oscillator.connect(gain).connect(master || actx.destination);
+    oscillator.connect(gain).connect(dst);
     oscillator.start(start);
-    oscillator.stop(start + length + .03);
+    oscillator.stop(start + length + .04);
   });
+  [0, 235, 470, 820].forEach((offset, i) => {
+    setTimeout(() => tone(
+      180 - i * 18, .055 + i * .008, "square", .045, 180 - i * 12
+    ), offset);
+  });
+  setTimeout(() => noise(.34, "lowpass", 900, .035, undefined,
+                          t => Math.exp(-5 * t)), 900);
 }
 
 function stopVictory(){
@@ -6311,6 +6366,9 @@ function showVictory(){
   const canvas = $("victoryFireworks");
   const ctx = canvas.getContext("2d");
   const time = $("victoryTime");
+  const status = $("winStatus");
+  const shift = $("winShift");
+  const next = $("winNext");
   const scale = Math.min(devicePixelRatio || 1, 2);
   const width = canvas.clientWidth || innerWidth;
   const height = canvas.clientHeight || innerHeight;
@@ -6318,27 +6376,36 @@ function showVictory(){
   canvas.height = Math.ceil(height * scale);
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
 
-  const particles = [];
-  const colours = ["#ecd56c", "#8fe0b4", "#ff958b", "#f8eee8"];
+  const sparks = [];
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const duration = reduceMotion ? VICTORY_REDUCED_DURATION_MS : VICTORY_DURATION_MS;
   const started = performance.now();
-  let previous = started, nextBurst = 80, bursts = 0;
+  let previous = started, nextSpark = 260;
+
   time.textContent = "5 AM";
+  status.textContent = "NOMINAL";
+  shift.textContent = "NIGHT " + S.night;
+  next.textContent = S.night >= NIGHTS.length
+    ? "ALL SCHEDULED SHIFTS COMPLETE"
+    : "NEXT SHIFT: NIGHT " + (S.night + 1);
   el.winNote.textContent = "SHIFT COMPLETE";
   el.win.classList.add("show");
   VICTORY.active = true;
   playVictoryJingle();
 
-  function burst(){
-    const x = width * (0.18 + Math.random() * 0.64);
-    const y = height * (0.16 + Math.random() * 0.42);
-    const colour = colours[bursts % colours.length];
-    for (let i = 0; i < 30; i++){
+  function sparkBurst(){
+    const x = width * (.34 + Math.random() * .32);
+    const y = height * (.30 + Math.random() * .16);
+    for (let i = 0; i < 22; i++){
       const angle = Math.random() * Math.PI * 2;
-      const speed = 1.3 + Math.random() * 3.1;
-      particles.push({ x, y, vx:Math.cos(angle) * speed, vy:Math.sin(angle) * speed,
-        life:520 + Math.random() * 460, age:0, colour });
+      const speed = .55 + Math.random() * 2.4;
+      sparks.push({
+        x, y,
+        vx:Math.cos(angle) * speed,
+        vy:Math.sin(angle) * speed - .45,
+        life:320 + Math.random() * 440, age:0,
+        size:1 + Math.random() * 1.6
+      });
     }
   }
 
@@ -6347,32 +6414,55 @@ function showVictory(){
     const elapsed = now - started;
     const dt = Math.min(2.5, (now - previous) / 16.67);
     previous = now;
-    if (!reduceMotion && elapsed >= nextBurst && bursts < 10){
-      burst(); bursts++; nextBurst += 420;
+
+    if (!reduceMotion && elapsed >= nextSpark && elapsed < duration * .78){
+      sparkBurst();
+      nextSpark += 520 + Math.random() * 180;
     }
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = "rgba(4,8,5,.26)";
+
+    ctx.clearRect(0, 0, width, height);
+    const wash = ctx.createRadialGradient(width/2, height*.48, 0, width/2, height*.48, height*.82);
+    wash.addColorStop(0, "rgba(125,250,176,.070)");
+    wash.addColorStop(.42, "rgba(32,76,52,.032)");
+    wash.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = wash;
     ctx.fillRect(0, 0, width, height);
-    for (let i = particles.length - 1; i >= 0; i--){
-      const p = particles[i];
+
+    // Slow CRT-like scan band: a visual sense of the building waking after 5 AM.
+    const bandY = ((elapsed / 3200) * height * .8) % (height * 1.25) - height * .10;
+    const band = ctx.createLinearGradient(0, bandY - 70, 0, bandY + 70);
+    band.addColorStop(0, "rgba(125,250,176,0)");
+    band.addColorStop(.5, "rgba(125,250,176,.045)");
+    band.addColorStop(1, "rgba(125,250,176,0)");
+    ctx.fillStyle = band;
+    ctx.fillRect(0, bandY - 70, width, 140);
+
+    for (let i = sparks.length - 1; i >= 0; i--){
+      const p = sparks[i];
       p.age += dt * 16.67;
-      if (p.age >= p.life){ particles.splice(i, 1); continue; }
+      if (p.age >= p.life){ sparks.splice(i, 1); continue; }
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.vy += .045 * dt;
-      ctx.globalAlpha = (1 - p.age / p.life) * .9;
-      ctx.fillStyle = p.colour;
-      ctx.fillRect(p.x, p.y, 2.4, 2.4);
+      p.vy += .022 * dt;
+      const alpha = (1 - p.age / p.life) * .72;
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = "rgba(236,213,108,1)";
+      ctx.fillRect(p.x, p.y, p.size, p.size * 2.2);
     }
-    time.textContent = elapsed < duration * .42 ? "5 AM" : "6 AM";
+    ctx.globalAlpha = 1;
+
+    time.textContent = elapsed < duration * .58 ? "5 AM" : "6 AM";
     if (elapsed >= duration){
       stopVictory();
       el.win.classList.remove("show");
       el.title.classList.add("show");
+      titleScreenOn();
       return;
     }
     VICTORY.raf = requestAnimationFrame(frame);
   }
+
+  if (!reduceMotion) sparkBurst();
   VICTORY.raf = requestAnimationFrame(frame);
 }
 
