@@ -6297,11 +6297,10 @@ let deathTimer = null;
 
 function playDeathInterference(){
   if (!actx) return;
-  /* One abrupt dead-channel burst right as the interference screen appears.
-     The screen remains visually noisy, but the audio falls completely silent
-     afterward so the moment stays unnerving instead of becoming a soundtrack. */
-  noise(.34, "bandpass", 2300, .11, undefined, t =>
-    Math.sin(t*Math.PI) * (.55 + .45*Math.random()));
+  /* One continuous dead-channel static bed. Keep it heavy and uninterrupted
+     for the full death-interference screen; no extra tones or bursts. */
+  noise(DEATH_INTERFERENCE_DURATION_MS / 1000, "bandpass", 2300, .13, undefined,
+    t => .78 + .22 * Math.random());
 }
 
 function showDeathInterference(){
