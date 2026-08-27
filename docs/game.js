@@ -1482,6 +1482,19 @@ const walkable = n => n !== "OFFICE" && !GRAPH[n].outside;
 const DOOR_BY_ID = {};
 DOOR_LINKS.forEach(d => DOOR_BY_ID[d.id] = d);
 
+/* Floor 2 door cameras: only the feed with direct sight of a closed door
+   should show the red warning. These are explicit because map connectivity
+   does not describe which camera lens actually sees each doorway. */
+const FLOOR2_DOOR_CAMERA = Object.freeze({
+  D1:"C22",
+  D2:"C17",
+  D3:"C15",
+  D4:"C15",
+  D5:"C19",
+  D6:"C24",
+  D7:"C24"
+});
+
 /* Every door touching a square, so a step can be tested without a scan. */
 const DOORS_AT = {};
 DOOR_LINKS.forEach(d => {
@@ -5622,7 +5635,10 @@ function render(dt){
        rest of the CRT work. */
     /* A door you are holding, shown on the feed rather than only on the map —
        the map tells you WHICH door, this tells you THAT one is costing you. */
-    document.body.classList.toggle("doorshut", !!S.doorShut && !S.outage);
+    const floor2DoorCam = S.doorShut ? FLOOR2_DOOR_CAMERA[S.doorShut] : null;
+    const directDoorSight = !S.outage && !!floor2DoorCam && floor2DoorCam === S.activeCam;
+    const legacyDoorWarning = !S.outage && !!S.doorShut && !floor2DoorCam;
+    document.body.classList.toggle("doorshut", directDoorSight || legacyDoorWarning);
     document.body.classList.toggle("camburn", camBurnFrac() > 0.22);
     document.body.classList.toggle("feeddead", dead);
     el.sensorBtn.disabled = !!cam.unstable || dead;
@@ -6393,17 +6409,17 @@ function showVictory(){
   playVictoryJingle();
 
   function sparkBurst(){
-    const x = width * (.34 + Math.random() * .32);
-    const y = height * (.30 + Math.random() * .16);
-    for (let i = 0; i < 22; i++){
+    const x = width * (.18 + Math.random() * .64);
+    const y = height * (.18 + Math.random() * .40);
+    for (let i = 0; i < 38; i++){
       const angle = Math.random() * Math.PI * 2;
-      const speed = .55 + Math.random() * 2.4;
+      const speed = .85 + Math.random() * 3.35;
       sparks.push({
         x, y,
         vx:Math.cos(angle) * speed,
-        vy:Math.sin(angle) * speed - .45,
-        life:320 + Math.random() * 440, age:0,
-        size:1 + Math.random() * 1.6
+        vy:Math.sin(angle) * speed - .62,
+        life:420 + Math.random() * 560, age:0,
+        size:1.25 + Math.random() * 2.05
       });
     }
   }
