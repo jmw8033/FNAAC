@@ -1088,6 +1088,35 @@ body.camsup #powerBtn{opacity:0; pointer-events:none}
 .keys{font-size:clamp(7px,min(1.15vh,9px),9px); letter-spacing:.13em;
   color:var(--phos-dim); line-height:1.9}
 
+/* DEATH INTERFERENCE — a short burst of dead-channel noise between the scare and
+   the title. It shares the title screen's shell, but the signal is much more
+   unstable: this should feel like the monitor losing the last frame of you. */
+#deathScreen{z-index:88; background:#040605; overflow:hidden; opacity:0;}
+#deathScreen.show{display:flex; opacity:1;}
+#deathStatic{position:absolute; inset:-16%; pointer-events:none;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.72) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.28) 0 1px, transparent 1px 4px),
+    radial-gradient(ellipse at 50% 45%, rgba(120,255,190,.08), rgba(0,0,0,.72) 72%);
+  mix-blend-mode:screen; opacity:.72;
+  animation:deathStaticA .075s steps(3) infinite, deathStaticB .22s steps(2) infinite;}
+#deathStatic::before{content:""; position:absolute; inset:-8%;
+  background:repeating-linear-gradient(0deg, transparent 0 7px, rgba(210,255,230,.16) 8px 9px, transparent 10px 15px);
+  opacity:.65; animation:deathLines .14s steps(2) infinite;}
+#deathStatic::after{content:""; position:absolute; left:-5%; right:-5%; top:35%; height:22%;
+  background:linear-gradient(180deg, transparent, rgba(205,255,225,.18), transparent);
+  opacity:.55; animation:deathBand .32s steps(3) infinite;}
+@keyframes deathStaticA{0%{transform:translate(0,0) scale(1)}33%{transform:translate(-1.4%,-.8%) scale(1.015)}66%{transform:translate(1.2%,1.1%) scale(1.01)}100%{transform:translate(-.6%,.3%) scale(1)}}
+@keyframes deathStaticB{0%{filter:contrast(1)}50%{filter:contrast(1.55) brightness(1.18)}100%{filter:contrast(.82) brightness(.92)}}
+@keyframes deathLines{from{transform:translateY(-7%)}to{transform:translateY(8%)}}
+@keyframes deathBand{0%{transform:translateY(-130%); opacity:.12}50%{opacity:.7}100%{transform:translateY(240%); opacity:.05}}
+#deathVig{position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(ellipse at center, transparent 18%, rgba(0,0,0,.32) 58%, rgba(0,0,0,.92) 100%);
+  mix-blend-mode:multiply;}
+@media (prefers-reduced-motion: reduce){
+  #deathStatic,#deathStatic::before,#deathStatic::after{animation:none;}
+}
+
 #scare{z-index:90; background:#000; padding:0; gap:0; overflow:hidden}
 /* THE FACE IS THE PICTURE. EVERYTHING HERE PROTECTS THE TOP OF IT.
 
@@ -1311,7 +1340,7 @@ input, textarea, [contenteditable]{ -webkit-user-select:text; user-select:text; 
       <button id="btnStart">CLOCK IN</button>
       <div class="stars" id="starsTitle"></div>
     </div>
-    <div id="titleVersion" aria-label="Game version">V 2.0.6</div>
+    <div id="titleVersion" aria-label="Game version">V 2.0.7</div>
     <div id="preNightContent" aria-live="polite" aria-atomic="true">
       <div id="preNightLabel">SHIFT COMMENCING</div>
       <div id="preNightNight">NIGHT 1</div>
@@ -1328,6 +1357,11 @@ input, textarea, [contenteditable]{ -webkit-user-select:text; user-select:text; 
     <div class="nights" id="pickLose"></div>
     <button id="btnRetry">CLOCK IN</button>
     <div class="stars" id="starsLose"></div>
+  </div>
+
+  <div class="screen" id="deathScreen" aria-hidden="true">
+    <div id="deathStatic"></div>
+    <div id="deathVig"></div>
   </div>
 
   <div class="screen" id="winScreen">

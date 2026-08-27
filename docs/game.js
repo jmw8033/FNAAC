@@ -3032,7 +3032,7 @@ const el = {
   sysList:$("sysList"), panel:$("panel"), usage:$("usage"),
   clockHour:$("clockHour"), nightLabel:$("nightLabel"),
   alerts:$("alerts"),
-  title:$("titleScreen"), lose:$("loseScreen"), win:$("winScreen"),
+  title:$("titleScreen"), lose:$("loseScreen"), win:$("winScreen"), death:$("deathScreen"),
   scare:$("scare"), scareArt:$("scareArt"),
   loseNote:$("loseNote"), winNote:$("winNote"),
   monBtn:$("monBtn"), panelBtn:$("panelBtn"), powerBtn:$("powerBtn")
@@ -3285,7 +3285,7 @@ function startNight(n){
   });
 
   stopVictory();
-  [el.title, el.lose, el.win, el.scare].forEach(s => s.classList.remove("show"));
+  [el.title, el.lose, el.win, el.scare, el.death].forEach(s => s.classList.remove("show"));
   document.body.classList.remove("camsup","dark","ventbad","warningLights","camdown","paneltab",
                                 "warn-left","warn-right","flicker","out","doom","atdoor");
   el.monitor.classList.remove("up");
@@ -6292,6 +6292,37 @@ function stepBot(dt){
    13. ENDINGS
    =========================================================================== */
 
+const DEATH_INTERFERENCE_DURATION_MS = 2900;
+let deathTimer = null;
+
+function playDeathInterference(){
+  if (!actx) return;
+  /* Several overlapping dead-channel bursts instead of one long white-noise
+     block. The level rises and falls irregularly, like a receiver struggling to
+     lock onto a signal after the scare. */
+  noise(.34, "bandpass", 2300, .11, undefined, t => Math.sin(t*Math.PI) * (.55 + .45*Math.random()));
+  tone(72, .52, "sawtooth", .055, 44);
+  setTimeout(() => noise(.48, "highpass", 1500, .075, undefined, t => (1-t)**.45), 120);
+  setTimeout(() => noise(.24, "bandpass", 4200, .085, undefined, t => Math.sin(t*Math.PI)**.8), 430);
+  setTimeout(() => tone(980, .11, "square", .032, 620), 690);
+  setTimeout(() => noise(.62, "lowpass", 620, .075, undefined, t => Math.sin(t*Math.PI)**1.4), 880);
+  setTimeout(() => noise(.28, "bandpass", 2900, .055, undefined, t => Math.sin(t*Math.PI)), 1540);
+  setTimeout(() => tone(118, .72, "sine", .045, 58), 1780);
+  setTimeout(() => noise(.42, "highpass", 2400, .07, undefined, t => (1-t)**1.15), 2030);
+  setTimeout(() => tone(510, .18, "triangle", .028, 280), 2390);
+}
+
+function showDeathInterference(){
+  clearTimeout(deathTimer);
+  if (el.death) el.death.classList.add("show");
+  playDeathInterference();
+  deathTimer = setTimeout(() => {
+    if (el.death) el.death.classList.remove("show");
+    el.title.classList.add("show");
+    titleScreenOn();
+  }, DEATH_INTERFERENCE_DURATION_MS);
+}
+
 function jumpscare(unit, why){
   stopRoomTone();
   /* Losing sends you back to the title rather than a dedicated loss screen.
@@ -6317,19 +6348,11 @@ function jumpscare(unit, why){
 
   setTimeout(() => {
     el.scare.classList.remove("show");
-    /* BACK TO THE TITLE, not to a loss screen.
-
-       The menu already does everything a loss screen was doing and more — it
-       carries the music, the glitches and the face, and it is where the night
-       picker lives. Sending you there makes a shift something you clock into
-       rather than a level you retry, and it means the seconds after a death
-       are spent in the most atmospheric part of the game rather than looking
-       at a button.
-
-       titleScreenOn() is what restarts the music and the glitch scheduler;
-       both were stopped when you clocked in and neither restarts on its own. */
-    el.title.classList.add("show");
-    titleScreenOn();
+    /* Hold the player in dead-channel interference before the title returns.
+       This gives the scare a visual/audio afterimage instead of snapping straight
+       back to the ordinary menu. The menu music does not resume until the static
+       has finished. */
+    showDeathInterference();
   }, 1500);
 }
 
