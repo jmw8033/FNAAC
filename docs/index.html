@@ -4,6 +4,49 @@
 <!-- Google Analytics 4: site traffic is sent to the FNAAC web data stream. -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-NQHBMRYR39"></script>
 <script>
+/* ===========================================================================
+   BOOT DIAGNOSTICS
+
+   Installed before anything else runs. If the script dies, the message goes on
+   the screen instead of into a console nobody is looking at — which matters
+   most in exactly the case where it is hardest to debug: a hosted build, on a
+   phone, where "it just sits on the menu" is all you would otherwise know.
+
+   Silent in normal operation. It costs nothing until something breaks.
+   =========================================================================== */
+(function(){
+  var shown = false;
+  function report(what, detail){
+    if (shown) return; shown = true;
+    try {
+      var box = document.createElement("div");
+      box.setAttribute("style",
+        "position:fixed;left:0;right:0;bottom:0;z-index:99999;max-height:45vh;" +
+        "overflow:auto;background:#180a0a;color:#ff9a90;border-top:2px solid #ff5f52;" +
+        "font:12px/1.6 ui-monospace,Menlo,Consolas,monospace;padding:12px 14px;" +
+        "white-space:pre-wrap;word-break:break-word");
+      box.textContent = "THE GAME FAILED TO START\n\n" + what + "\n" + (detail || "") +
+        "\n\nThis message is from the boot diagnostic, not the game.";
+      (document.body || document.documentElement).appendChild(box);
+    } catch (e) {}
+  }
+  window.addEventListener("error", function(e){
+    report((e.message || "script error"),
+           (e.filename ? e.filename.split("/").pop() : "") +
+           (e.lineno ? "  line " + e.lineno + ":" + (e.colno || 0) : ""));
+  });
+  window.addEventListener("unhandledrejection", function(e){
+    report("unhandled promise rejection", String((e.reason && e.reason.message) || e.reason || ""));
+  });
+  /* If the script never reaches its end, say so. The game clears this the
+     moment it finishes wiring itself up. */
+  window.__bootTimer = setTimeout(function(){
+    report("the script stopped part-way through and never finished loading.",
+           "Everything after the failure point is missing, which is why the menu " +
+           "is there but nothing on it works.");
+  }, 6000);
+})();
+
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag("js", new Date());
@@ -5016,9 +5059,34 @@ const audioRunning = () => !!actx && actx.state === "running";
 const UNBLOCK = ["pointerdown","pointerup","mousedown","click","keydown",
                  "touchstart","touchend","wheel","scroll"];
 
+/* Every attempt is guarded, and the whole thing gives up after a while.
+
+   Without the guard, a browser that refuses to construct an AudioContext at
+   all throws here on every tick — four times a second, forever — and each one
+   is an uncaught error. That is noise in the console at best, and on a page
+   with an error reporter it looks exactly like the game has crashed when in
+   fact it is running perfectly with no sound.
+
+   audioTries stops the poll after roughly two minutes. If audio has not
+   started by then it is not going to, and a permanent timer for a permanent
+   failure is just a battery drain. */
+let audioTries = 0;
+
 function tryUnblock(){
-  if (!actx) initAudio();
+  try {
+    if (!actx) initAudio();
+  } catch (e) {
+    /* No Web Audio here. Stop asking; every sound in the game is optional. */
+    if (audioWatch){ clearInterval(audioWatch); audioWatch = null; }
+    UNBLOCK.forEach(ev => document.removeEventListener(ev, tryUnblock, true));
+    audioWaiters.length = 0;
+    return;
+  }
   if (!actx) return;
+  if (++audioTries > 480){          // ~2 minutes at 250 ms
+    if (audioWatch){ clearInterval(audioWatch); audioWatch = null; }
+    return;
+  }
   if (actx.state === "suspended"){
     // nothing is chained to this — the poll is what decides we are running
     try { actx.resume(); } catch (e) {}
@@ -5058,7 +5126,6 @@ function armTitle(){
   titleScreenOn();
   startUnblocking();
 }
-armTitle();
 $("btnRetry").onclick = clockIn;
 
 addEventListener("keydown", e => {
@@ -7591,6 +7658,17 @@ applyDoorVars();
    than a way to stop the night. The warning is left switched on so that any
    FUTURE door with the same property announces itself instead of being
    discovered as a Gordon who mysteriously stopped walking. */
+/* LAST, AND GUARDED. The music and the glitch scheduler are the only things
+   in this file that touch an API a browser may refuse outright, so they run
+   after everything else is already working. A title screen with no music is a
+   disappointment; a title screen that stops the game loading is a bug. */
+try { armTitle(); } catch (e) {
+  console.warn("title screen could not start:", e);
+}
+
+/* The script reached its end, so the watchdog has nothing to report. */
+try { clearTimeout(window.__bootTimer); } catch (e) {}
+
 auditBuilding();
 buildMap();
 buildPanel();
