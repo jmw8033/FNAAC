@@ -2322,10 +2322,10 @@ const SFX = {
      dry, because you do it constantly and anything with a tail would turn a
      sweep of the building into a chord. */
   camSwitch: { src:"sounds/cam_switch.wav", vol:0.20, synth:() => camClunk() },
-  camOpen:   { src:null, vol:0.58, synth:() => camOpenFx() },
-  camClose:  { src:null, vol:0.54, synth:() => camCloseFx() },
-  panelOpen: { src:null, vol:0.50, synth:() => panelOpenFx() },
-  panelClose:{ src:null, vol:0.48, synth:() => panelCloseFx() },
+  camOpen:   { src:null, vol:0.34, synth:() => camOpenFx() },
+  camClose:  { src:null, vol:0.31, synth:() => camCloseFx() },
+  panelOpen: { src:null, vol:0.32, synth:() => panelOpenFx() },
+  panelClose:{ src:null, vol:0.30, synth:() => panelCloseFx() },
   /* Him arriving on the feed. Not an alarm — a swell of interference, the
      sound of the picture going wrong, so that the thing you actually react to
      is the shape and not the cue. */
@@ -2604,35 +2604,32 @@ const cueChirp = () => { tone(520,.22,"triangle",.12,760); setTimeout(()=>tone(4
    The sounds are generated here so they add no network cost. */
 function camOpenFx(){
   if (!actx) return;
-  tone(92, .18, "sine", .12, 58);
-  noise(.16, "bandpass", 1500, .11, undefined, t => Math.sin(t * Math.PI) ** 1.5);
-  setTimeout(() => {
-    noise(.22, "highpass", 2100, .075, undefined, t => (1 - t) ** 1.8);
-    tone(520, .055, "square", .025, 350);
-  }, 55);
+  tone(88, .15, "sine", .040, 76);
+  noise(.10, "bandpass", 1200, .028, undefined, t => Math.sin(t * Math.PI) ** 1.8);
+  setTimeout(() => tone(410, .042, "square", .010, 300), 46);
 }
 
 function camCloseFx(){
   if (!actx) return;
-  tone(74, .20, "sine", .14, 42);
-  noise(.12, "bandpass", 900, .085, undefined, t => Math.sin(t * Math.PI) ** 1.2);
-  setTimeout(() => tone(130, .07, "square", .035, 78), 55);
+  tone(70, .16, "sine", .036, 60);
+  noise(.085, "bandpass", 760, .023, undefined, t => Math.sin(t * Math.PI) ** 1.4);
+  setTimeout(() => tone(118, .05, "square", .014, 82), 48);
 }
 
 function panelOpenFx(){
   if (!actx) return;
-  tone(128, .20, "sine", .10, 82);
-  noise(.34, "lowpass", 620, .13, undefined, t => Math.sin(t * Math.PI) ** .9);
-  setTimeout(() => noise(.18, "bandpass", 1200, .055, undefined, t => (1 - t) ** 1.5), 90);
+  tone(118, .17, "sine", .044, 101);
+  noise(.23, "lowpass", 560, .038, undefined, t => Math.sin(t * Math.PI) ** 1.1);
+  setTimeout(() => noise(.12, "bandpass", 980, .014, undefined, t => (1 - t) ** 1.8), 78);
 }
 
 function panelCloseFx(){
   if (!actx) return;
-  noise(.22, "lowpass", 520, .11, undefined, t => Math.sin(t * Math.PI) ** .8);
+  noise(.15, "lowpass", 470, .032, undefined, t => Math.sin(t * Math.PI) ** .95);
   setTimeout(() => {
-    tone(96, .11, "square", .045, 62);
-    tone(188, .05, "sine", .030, 120);
-  }, 135);
+    tone(92, .08, "square", .014, 68);
+    tone(176, .042, "sine", .009, 116);
+  }, 100);
 }
 
 /* THE FEED CHANGING.
@@ -3834,16 +3831,26 @@ function showPreNight(){
 
   clearTimeout(preNightTimer);
   preNightTimer = setTimeout(() => {
+    /* Flash Gordon's actual eye positions just before the handoff. The eye layer
+       now follows the same drift transform as the sprite underneath it. */
+    const eyes = $("titleEyes");
+    if (eyes){
+      eyes.classList.remove("flash");
+      void eyes.offsetWidth;
+      eyes.classList.add("flash");
+    }
     play("nightStart");
+
     preNightTimer = setTimeout(() => {
       titleScreenOff();
       initAudio();
       startNight(S.night);
       title.classList.remove("preNight");
       if (start) start.disabled = false;
+      if (eyes) eyes.classList.remove("flash");
       preNightActive = false;
-    }, 260);
-  }, 1840);
+    }, 300);
+  }, 2700);
 }
 
 const clockIn = () => {
@@ -6366,9 +6373,6 @@ function showVictory(){
   const canvas = $("victoryFireworks");
   const ctx = canvas.getContext("2d");
   const time = $("victoryTime");
-  const status = $("winStatus");
-  const shift = $("winShift");
-  const next = $("winNext");
   const scale = Math.min(devicePixelRatio || 1, 2);
   const width = canvas.clientWidth || innerWidth;
   const height = canvas.clientHeight || innerHeight;
@@ -6383,11 +6387,6 @@ function showVictory(){
   let previous = started, nextSpark = 260;
 
   time.textContent = "5 AM";
-  status.textContent = "NOMINAL";
-  shift.textContent = "NIGHT " + S.night;
-  next.textContent = S.night >= NIGHTS.length
-    ? "ALL SCHEDULED SHIFTS COMPLETE"
-    : "NEXT SHIFT: NIGHT " + (S.night + 1);
   el.winNote.textContent = "SHIFT COMPLETE";
   el.win.classList.add("show");
   VICTORY.active = true;
