@@ -197,6 +197,11 @@ body.artmode #wrap{display:none}
 .artMeta b{color:var(--phos); margin-right:5px}
 .artMeta .tiny{display:block; color:var(--dim); margin-top:3px}
 .artMeta em{color:var(--amber); font-style:normal}
+.artDark{display:flex; align-items:center; gap:9px; padding:0 11px 9px}
+.artDark label{font-size:10px; letter-spacing:.16em; color:var(--dim)}
+.artDark select{flex:1; font:inherit; font-size:11px; color:var(--amber);
+  background:rgba(8,14,10,.8); border:1px solid rgba(255,199,102,.30);
+  padding:4px 6px}
 .artBtns{display:flex; gap:8px; padding:0 11px 11px}
 .artBtns .act{flex:1; text-align:center; cursor:pointer}
 #artGrid .artUndo{flex:0 0 auto}
@@ -3032,10 +3037,14 @@ const cxOff = s => (s.left + s.width/2) < 0 || (s.left + s.width/2) > 100;
 function dump(){
   if (S.mode2 === "art"){
     const n = Object.keys(newArt).length;
-    document.getElementById("out").textContent = n
-      ? n + " picture" + (n === 1 ? "" : "s") + " staged. Press DOWNLOAD PATCHED "
-        + "and they are written into index.html in place."
-      : "Choose a photograph for any camera. Nothing leaves your machine.";
+    const curve = darkCurve()
+      .map(c => "night " + c.n + ": " + c.lit + " lit / " + c.dark + " dark")
+      .join("\n  ");
+    document.getElementById("out").textContent =
+      (n ? n + " picture" + (n === 1 ? "" : "s") + " staged.\n\n"
+         : "") +
+      "HOW MUCH OF THE BUILDING YOU CAN STILL SEE\n  " + curve +
+      "\n\n" + blockDark();
     return;
   }
   document.getElementById("out").textContent = (S.mode2 === "map")
@@ -3119,7 +3128,8 @@ function patchText(text){
   const sb = blockShots(), ub = blockUnit(), db = blockDoor();
   if (!sane(sb, "SHOTS") || !sane(ub, "SHOTS_UNIT") ||
       !sane(blockRooms(), "ROOMS") || !sane(blockDoorBox(), "OFFICE_DOOR") ||
-      !sane(blockRoomsB(), "ROOMS_B") || !sane(blockDoorLinks(), "DOOR_LINKS")) return null;
+      !sane(blockRoomsB(), "ROOMS_B") || !sane(blockDoorLinks(), "DOOR_LINKS") ||
+      !sane(blockDark(), "DARK_FROM")) return null;
 
   text = applyTuning(text);
   text = text.replace(/const SHOTS = \{[\s\S]*?\s\};/, () => sb);
@@ -3159,6 +3169,10 @@ function patchText(text){
     text = text.replace(/const ROOMS_B = \[[\s\S]*?\s\];/, () => blockRoomsB());
   if (/const DOOR_LINKS = \[/.test(text))
     text = text.replace(/const DOOR_LINKS = \[[\s\S]*?\s\];/, () => blockDoorLinks());
+  /* The darkness schedule. Written only if the target file has one, so this
+     tool stays usable against a build from before the lights started going. */
+  if (/const DARK_FROM = \{/.test(text))
+    text = text.replace(/const DARK_FROM = \{[\s\S]*?\n\};/, () => blockDark());
 
   // the doorway opening itself
   text = text.replace(/const OFFICE_DOOR = \{[^}]*\};/, () => blockDoorBox());
@@ -3744,7 +3758,6 @@ document.getElementById("tab-art").onclick     = () => setMode("art");
 const newArt = {};
 
 
-
 /* WHICH CAMERAS ALREADY HAVE A PHOTOGRAPH, read from the file you loaded.
 
    Not from `cams[].art`. The DATA block in this tool carries the on-disk path
@@ -3867,6 +3880,12 @@ function buildArtEditor(){
         ' \u00b7 pan ' + c.pan +
         (newArt[id] ? ' \u00b7 <em>' + kb(newArt[id]) + ' staged</em>' : '') +
       '</span></div>' +
+      '<div class="artDark"><label>GOES DARK</label>' +
+        '<select data-dark="' + id + '">' +
+          [1,2,3,4,5,6,7].map(nn => '<option value="' + nn + '"' +
+            (darkFrom(id) === nn ? " selected" : "") + '>night ' + nn +
+            (nn === 7 ? " (last)" : "") + '</option>').join("") +
+        '</select></div>' +
       '<div class="artBtns">' +
         '<label class="act">CHOOSE\u2026<input type="file" accept="image/*" hidden></label>' +
         (newArt[id] ? '<button class="act artUndo">UNDO</button>' : '') +
@@ -3881,6 +3900,11 @@ function buildArtEditor(){
         newArt[id] = await shrink(raw, ART_MAX_W, ART_QUALITY);
         buildArtEditor(); dump();
       } catch (err){ alert(err.message); }
+    });
+    const dsel = card.querySelector("select[data-dark]");
+    if (dsel) dsel.addEventListener("change", () => {
+      DARK[id] = parseInt(dsel.value, 10);
+      buildArtEditor(); dump();
     });
     const undo = card.querySelector(".artUndo");
     if (undo) undo.addEventListener("click", () => { delete newArt[id]; buildArtEditor(); dump(); });
