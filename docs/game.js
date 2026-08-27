@@ -2037,6 +2037,17 @@ const titleStabFx = () => {
                          t => (1 - t) ** 1.4), 60);
 };
 
+/* The sound immediately before a shift begins. It is deliberately short and
+   unlike the menu music: two relay-like clicks, a descending confirmation tone,
+   and a low thump. The fallback means the transition still has a sound even if
+   the optional WAV is unavailable. */
+const nightStartFx = () => {
+  tone(620, .075, "square", .11, 430);
+  setTimeout(() => tone(430, .11, "square", .10, 300), 85);
+  setTimeout(() => tone(220, .20, "sawtooth", .12, 92), 180);
+  setTimeout(() => noise(0.16, "lowpass", 260, .17, undefined, t => (1 - t) ** 2), 205);
+};
+
 /* ===========================================================================
    ROOM TONE
 
@@ -2394,6 +2405,7 @@ const SFX = {
      POWER.warnAt threshold — twice a night at most, so it stays a warning
      rather than becoming part of the room tone. */
   titleStab: { src:"sounds/title_stab.wav", vol:0.72, synth:() => titleStabFx() },
+  nightStart: { src:"sounds/night_start.wav", vol:0.76, synth:() => nightStartFx() },
   lightsOff: { src:"sounds/lights_off.wav", vol:0.74, synth:() => lightsOffFx() },
   lightsOn:  { src:"sounds/lights_on.wav",  vol:0.70, synth:() => lightsOnFx() },
   powerWarn: { src:"sounds/power_warn.wav", vol:0.50, synth:() => {
@@ -3752,7 +3764,45 @@ function titleScreenOff(){
    phase, so nothing downstream can re-enable it by accident. */
 document.addEventListener("dragstart", e => e.preventDefault(), true);
 
-const clockIn = () => { titleScreenOff(); initAudio(); startNight(S.night); };
+let preNightTimer = null;
+let preNightActive = false;
+
+function showPreNight(){
+  if (preNightActive) return;
+  preNightActive = true;
+  const title = $("titleScreen");
+  const night = $("preNightNight");
+  const start = $("btnStart");
+  if (!title) return;
+
+  if (night) night.textContent = "NIGHT " + S.night;
+  title.classList.add("preNight");
+  if (start) start.disabled = true;
+
+  /* Keep the title layer alive for the whole handoff. That preserves both the
+     menu music and the CRT background while the player is being told which
+     shift they are about to enter. */
+  titleScreenOn();
+
+  clearTimeout(preNightTimer);
+  preNightTimer = setTimeout(() => {
+    play("nightStart");
+    preNightTimer = setTimeout(() => {
+      titleScreenOff();
+      initAudio();
+      startNight(S.night);
+      title.classList.remove("preNight");
+      if (start) start.disabled = false;
+      preNightActive = false;
+    }, 260);
+  }, 1840);
+}
+
+const clockIn = () => {
+  if (preNightActive) return;
+  if (!actx) initAudio();
+  showPreNight();
+};
 $("btnStart").onclick = clockIn;
 
 /* ---------------------------------------------------------------------------
@@ -6411,9 +6461,7 @@ try {
       early.startRequested = false;
       const start = $("btnStart");
       if (start) { start.disabled = false; start.textContent = "CLOCK IN"; }
-      titleScreenOff();
-      initAudio();
-      startNight(S.night);
+      clockIn();
     }
   }
 } catch (e) {
