@@ -62,7 +62,40 @@ body.doormode #guides{display:none}
 #read{font-size:11px;letter-spacing:.1em;margin-right:auto;white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis}
 /* ---- map editor ---- */
-#mapEdit{position:absolute; inset:0; display:none; align-items:center; justify-content:center}
+#mapEdit{position:absolute; inset:0; display:none; align-items:center;
+  justify-content:center; flex-direction:column; gap:10px}
+#floorSwap{padding:9px 18px; font:inherit; font-size:11px; letter-spacing:.22em;
+  cursor:pointer; color:#8fe0b4; background:rgba(6,10,7,.8);
+  border:1px solid #46614f}
+#floorSwap:hover{color:var(--phos); border-color:var(--phos)}
+/* The lower plan is a different colour from top to bottom, exactly as it is in
+   the game, so which storey you are editing is answered by a glance rather than
+   by reading the button. */
+body.lowerfloor #floorSwap{color:#8ab6e0; border-color:#3f5a74; background:rgba(6,9,14,.85)}
+#mapBoard.lower{border-color:rgba(63,90,116,.6)}
+#mapBoard.lower .mRoom{border-color:rgba(150,175,200,.34)}
+#mapBoard.lower .mPin{color:#8ab6e0; border-color:#3f5a74; background:rgba(6,9,14,.8)}
+#mapLegend{max-width:640px; text-align:center; font-size:10px; line-height:1.7;
+  color:var(--dim); margin:0}
+/* Ducts: marked, never draggable. */
+.mDuct{position:absolute; transform:translate(-50%,-50%); z-index:4;
+  font-size:calc(14px * var(--pinScale,1)); line-height:1; cursor:grab;
+  padding:3px 5px;
+  color:#e0b070; text-shadow:0 0 6px rgba(224,176,112,.8), 0 1px 2px #000}
+.mDuct.moved{color:#ffd79a}
+.mDuct.drag{cursor:grabbing}
+/* A room name you have positioned yourself, rather than left centred. */
+.mRoom b.drag{cursor:grabbing; color:var(--amber)}
+/* Doors: draggable, and visibly different once moved off their midpoint. */
+.mDoor{position:absolute; transform:translate(-50%,-50%); z-index:5;
+  min-width:calc(26px * var(--pinScale,1));
+  padding:calc(5px * var(--pinScale,1)) calc(6px * var(--pinScale,1));
+  font-size:calc(10px * var(--pinScale,1));
+  text-align:center; cursor:grab; border-style:solid;
+  border-width:calc(1px * var(--pinScale,1));
+  color:#cfe4f7; background:rgba(10,16,24,.9); border-color:#5f7d9c}
+.mDoor.moved{color:var(--shell); background:var(--amber); border-color:var(--amber)}
+.mDoor.drag{cursor:grabbing}
 body.mapmode #mapEdit{display:flex}
 body.mapmode #screen{display:none}
 
@@ -118,16 +151,55 @@ body.tunemode #hint{display:none}
    same PIXEL size read as much smaller. Everything scales by --pinScale, the
    ratio between this board and the real one, so what you see is the proportion
    you will get. */
+/* These numbers are the game's, at GAME_MAP_PX. If #map in index.html changes
+   size or padding, both this block and GAME_MAP_PX have to follow or the
+   editor will quietly be framing against a map that does not exist. */
 .mPin{position:absolute; transform:translate(-50%,-50%);
-  min-width:calc(42px * var(--pinScale,1));
-  padding:calc(7px * var(--pinScale,1)) calc(8px * var(--pinScale,1));
-  font-size:calc(11px * var(--pinScale,1));
+  min-width:calc(52px * var(--pinScale,1));
+  padding:calc(9px * var(--pinScale,1)) calc(10px * var(--pinScale,1));
+  font-size:calc(13px * var(--pinScale,1));
   border-width:calc(1px * var(--pinScale,1));
   text-align:center; cursor:grab; z-index:3;
   color:#8fe0b4; background:rgba(6,10,7,.78); border-style:solid; border-color:#46614f}
 .mPin.on{background:var(--phos); color:var(--shell); border-color:var(--phos)}
 .mPin.drag{cursor:grabbing}
 
+
+/* ---- CAMERA ART -------------------------------------------------------- */
+/* Shares the first grid row with #wrap rather than covering the viewport.
+
+   The first version used position:absolute; inset:0, which laid it over the
+   ENTIRE page — including the toolbar with the tabs and DOWNLOAD PATCHED on
+   it. Opening CAMERA ART trapped you in it with no way back and no way to
+   save, which is about as bad as an interface bug gets. It is in the flow
+   now, so the toolbar is always there. */
+#artPane{grid-row:1; grid-column:1; display:none; flex-direction:column;
+  background:var(--shell); overflow:hidden; min-height:0}
+body.artmode #artPane{display:flex}
+body.artmode #wrap{display:none}
+#artHead{display:flex; align-items:center; gap:18px; padding:14px 18px;
+  border-bottom:1px solid var(--hair); font-size:12px; letter-spacing:.22em;
+  color:var(--phos); flex:none}
+#artNote{margin:0; padding:10px 18px; font-size:11px; line-height:1.7;
+  color:var(--dim); border-bottom:1px solid var(--hair); flex:none}
+#artNote b{color:var(--phos-dim); font-weight:400}
+#artGrid{flex:1; overflow:auto; padding:16px 18px; display:grid; gap:14px;
+  grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); align-content:start}
+.artCard{border:1px solid var(--hair); background:rgba(8,14,10,.5);
+  display:flex; flex-direction:column}
+.artCard.missing{border-color:#5a3a36}
+.artCard.changed{border-color:var(--amber); box-shadow:0 0 0 1px rgba(255,199,102,.25)}
+.artThumb{aspect-ratio:16/10; background:#050806; display:flex;
+  align-items:center; justify-content:center; overflow:hidden; text-align:center;
+  color:#6a4a46; line-height:1.6; word-break:break-all; padding:6px}
+.artThumb img{width:100%; height:100%; object-fit:cover; display:block}
+.artMeta{padding:9px 11px; font-size:12px; color:var(--phos); line-height:1.5}
+.artMeta b{color:var(--phos); margin-right:5px}
+.artMeta .tiny{display:block; color:var(--dim); margin-top:3px}
+.artMeta em{color:var(--amber); font-style:normal}
+.artBtns{display:flex; gap:8px; padding:0 11px 11px}
+.artBtns .act{flex:1; text-align:center; cursor:pointer}
+#artGrid .artUndo{flex:0 0 auto}
 
 #out{height:210px;overflow:auto;resize:vertical;
   background:#050806;border-top:1px solid var(--hair);padding:12px 16px;
@@ -155,7 +227,11 @@ button.act:hover{color:var(--phos);border-color:var(--dim)}
   <div id="wrap">
     <!-- map editor: drag the camera pins, click a room to rename it -->
     <div id="mapEdit">
+      <button id="floorSwap" title="Switch which storey the plan is showing">FLOOR 1  UPPER</button>
       <div id="mapBoard"></div>
+      <p id="mapLegend">Drag camera pins and door pins. Right-click a door pin to
+        put it back on the midpoint of the two squares it joins. Duct marks are
+        fixed to their basement square and cannot be moved from here.</p>
     </div>
     <div id="screen">
       <div id="frame">
@@ -184,6 +260,7 @@ button.act:hover{color:var(--phos);border-color:var(--dim)}
     <button class="act" id="tab-sprites">SPRITES</button>
     <button class="act" id="tab-map">MAP</button>
     <button class="act" id="tab-tuning">TUNING</button>
+    <button class="act" id="tab-art">CAMERA ART</button>
     <span id="read"></span>
     <label class="tiny">VIEW
       <select id="mode">
@@ -212,11 +289,61 @@ button.act:hover{color:var(--phos);border-color:var(--dim)}
     <button class="act" id="fold">HIDE CODE</button>
     <span id="count"></span>
   </div>
+<div id="artPane">
+  <div id="artHead">
+    <span>CAMERA ART</span>
+    <span class="tiny" id="artCount"></span>
+    <label class="tiny">SHOW
+      <select id="artFilter">
+        <option value="all">every camera</option>
+        <option value="missing">only the ones still missing art</option>
+        <option value="new">only the ones I have changed</option>
+      </select>
+    </label>
+    <button class="act" id="artClear">FORGET MY CHANGES</button>
+  </div>
+  <p class="tiny" id="artNote">
+    Shoot them at the aspect the feed uses and they will letterbox themselves.
+    A camera with a wide <b>pan</b> value is swept horizontally by the game, so
+    give those a wider photograph than the frame. Changes live here until you
+    press DOWNLOAD PATCHED.
+  </p>
+  <div id="artGrid"></div>
+
   <div id="out"></div>
+</div>
+
+<!-- ==========================================================================
+     CAMERA ART
+
+     Every camera in the game already carries its photograph as a base64 data
+     URI inside index.html, which is why the file is nine megabytes. Adding a
+     new one by hand means encoding it and pasting a megabyte-long string into
+     the right object — possible, miserable, and easy to get wrong in a way
+     that breaks the whole file.
+
+     This does it for you. Pick a camera, choose a JPEG, and DOWNLOAD PATCHED
+     writes it into the file the same way the existing thirteen are written.
+     Nothing is uploaded anywhere: FileReader runs in your browser and the
+     result goes straight into the text you download.
+     ====================================================================== -->
+
 </div>
 
 <script>
 const DATA = {
+ "defaultShot": {
+  "left": 42,
+  "bottom": 12,
+  "width": 16,
+  "flip": false,
+  "rotate": 0,
+  "dim": 1,
+  "clipT": 0,
+  "clipR": 0,
+  "clipB": 0,
+  "clipL": 0
+ },
  "cams": {
   "C01": {
    "name": "1A  NORTH-WEST ROOM",
@@ -227,9 +354,10 @@ const DATA = {
    "peek": [],
    "pan": 102.0,
    "unstable": false,
+   "floor": 1,
    "pin": {
-    "x": 20.1,
-    "y": 3.2
+    "x": 36.4,
+    "y": 7.7
    }
   },
   "C02": {
@@ -241,9 +369,10 @@ const DATA = {
    "peek": [],
    "pan": 102.0,
    "unstable": false,
+   "floor": 1,
    "pin": {
-    "x": 61.6,
-    "y": 3.2
+    "x": 59.9,
+    "y": 7.8
    }
   },
   "C03": {
@@ -255,9 +384,10 @@ const DATA = {
    "peek": [],
    "pan": 131.0,
    "unstable": false,
+   "floor": 1,
    "pin": {
-    "x": 83.2,
-    "y": 4.1
+    "x": 80.6,
+    "y": 8.0
    }
   },
   "C04": {
@@ -274,9 +404,10 @@ const DATA = {
    "peek": [],
    "pan": 102.0,
    "unstable": false,
+   "floor": 1,
    "pin": {
-    "x": 85.3,
-    "y": 14.2
+    "x": 81.8,
+    "y": 15.7
    }
   },
   "C05": {
@@ -288,9 +419,10 @@ const DATA = {
    "peek": [],
    "pan": 132.0,
    "unstable": false,
+   "floor": 1,
    "pin": {
-    "x": 58.2,
-    "y": 22.6
+    "x": 54.6,
+    "y": 31.5
    }
   },
   "C06": {
@@ -302,9 +434,10 @@ const DATA = {
    "peek": [],
    "pan": 102.0,
    "unstable": false,
+   "floor": 1,
    "pin": {
-    "x": 82.2,
-    "y": 25.3
+    "x": 83.1,
+    "y": 27.4
    }
   },
   "C07": {
@@ -321,9 +454,10 @@ const DATA = {
    "peek": [],
    "pan": 102.0,
    "unstable": true,
+   "floor": 1,
    "pin": {
-    "x": 52.1,
-    "y": 58.5
+    "x": 50.1,
+    "y": 43.2
    }
   },
   "C08": {
@@ -337,9 +471,10 @@ const DATA = {
    ],
    "pan": 162.0,
    "unstable": false,
+   "floor": 1,
    "pin": {
-    "x": 37.2,
-    "y": 40.0
+    "x": 39.1,
+    "y": 46.2
    }
   },
   "C09": {
@@ -352,9 +487,10 @@ const DATA = {
    "peek": [],
    "pan": 149.0,
    "unstable": false,
+   "floor": 1,
    "pin": {
-    "x": 66.5,
-    "y": 47.0
+    "x": 63.9,
+    "y": 53.7
    }
   },
   "C10": {
@@ -366,9 +502,10 @@ const DATA = {
    "peek": [],
    "pan": 122.0,
    "unstable": false,
+   "floor": 1,
    "pin": {
-    "x": 67.5,
-    "y": 68.7
+    "x": 63.7,
+    "y": 65.6
    }
   },
   "C11": {
@@ -380,8 +517,9 @@ const DATA = {
    "peek": [],
    "pan": 125.0,
    "unstable": false,
+   "floor": 1,
    "pin": {
-    "x": 66.9,
+    "x": 63.9,
     "y": 78.5
    }
   },
@@ -396,202 +534,575 @@ const DATA = {
    ],
    "pan": 137.0,
    "unstable": false,
+   "floor": 1,
    "pin": {
-    "x": 35.9,
-    "y": 78.0
+    "x": 39.1,
+    "y": 78.3
    }
   },
-  "C13": {
-   "name": "6A  SOUTH HALL",
+  "C14": {
+   "name": "7A  ENGINEERING",
    "art": "images/cam_13.jpg",
    "sees": [
+    "b02",
     "n25",
     "n18",
     "n19"
    ],
    "peek": [],
-   "pan": 123.0,
+   "pan": 124.0,
    "unstable": false,
+   "floor": 1,
    "pin": {
-    "x": 31.4,
-    "y": 88.0
+    "x": 49.7,
+    "y": 86.0
+   }
+  },
+  "C15": {
+   "name": "7B  NORTH HALL",
+   "art": "images/cam_14.jpg",
+   "sees": [
+    "b03",
+    "b04"
+   ],
+   "peek": [
+    "b05"
+   ],
+   "pan": 118.0,
+   "unstable": false,
+   "floor": 2,
+   "pin": {
+    "x": 92.5,
+    "y": 87.8
+   }
+  },
+  "C16": {
+   "name": "7C  ENG OFFICE EAST",
+   "art": "images/cam_15.jpg",
+   "sees": [
+    "b06",
+    "b07"
+   ],
+   "peek": [],
+   "pan": 126.0,
+   "unstable": false,
+   "floor": 2,
+   "pin": {
+    "x": 60.0,
+    "y": 75.0
+   }
+  },
+  "C25": {
+   "name": "7E  ENG OFFICE WEST",
+   "art": "images/cam_16.jpg",
+   "sees": [
+    "b08"
+   ],
+   "peek": [
+    "b07"
+   ],
+   "pan": 102.0,
+   "unstable": false,
+   "floor": 2,
+   "pin": {
+    "x": 76.7,
+    "y": 55.0
+   }
+  },
+  "C17": {
+   "name": "7D  OFFICE A",
+   "art": "images/cam_17.jpg",
+   "sees": [
+    "b09"
+   ],
+   "peek": [],
+   "pan": 102.0,
+   "unstable": false,
+   "floor": 2,
+   "pin": {
+    "x": 48.3,
+    "y": 53.9
+   }
+  },
+  "C18": {
+   "name": "8A  VAULT",
+   "art": "images/cam_18.jpg",
+   "sees": [
+    "b12",
+    "b13"
+   ],
+   "peek": [],
+   "pan": 108.0,
+   "unstable": false,
+   "floor": 2,
+   "pin": {
+    "x": 96.0,
+    "y": 41.1
+   }
+  },
+  "C19": {
+   "name": "8B  PAYROLL",
+   "art": "images/cam_19.jpg",
+   "sees": [
+    "b16",
+    "b17",
+    "b18"
+   ],
+   "peek": [
+    "b10",
+    "b11"
+   ],
+   "pan": 130.0,
+   "unstable": false,
+   "floor": 2,
+   "pin": {
+    "x": 65.0,
+    "y": 27.8
+   }
+  },
+  "C20": {
+   "name": "8C  NORTH OFFICE",
+   "art": "images/cam_20.jpg",
+   "sees": [
+    "b19"
+   ],
+   "peek": [],
+   "pan": 102.0,
+   "unstable": false,
+   "floor": 2,
+   "pin": {
+    "x": 13.3,
+    "y": 38.0
+   }
+  },
+  "C21": {
+   "name": "9A  WASHROOM ROW",
+   "art": "images/cam_21.jpg",
+   "sees": [
+    "b20",
+    "b21",
+    "b22"
+   ],
+   "peek": [],
+   "pan": 120.0,
+   "unstable": false,
+   "floor": 2,
+   "pin": {
+    "x": 57.7,
+    "y": 18.7
+   }
+  },
+  "C22": {
+   "name": "9B  CENTRE CORRIDOR",
+   "art": "images/cam_22.jpg",
+   "sees": [
+    "b23",
+    "b24",
+    "b15"
+   ],
+   "peek": [],
+   "pan": 122.0,
+   "unstable": true,
+   "floor": 2,
+   "pin": {
+    "x": 48.3,
+    "y": 15.2
+   }
+  },
+  "C23": {
+   "name": "9C  SALES FLOOR",
+   "art": "images/cam_23.jpg",
+   "sees": [
+    "b25",
+    "b26",
+    "b27",
+    "b23"
+   ],
+   "peek": [],
+   "pan": 126.0,
+   "unstable": false,
+   "floor": 2,
+   "pin": {
+    "x": 83.3,
+    "y": 10.6
+   }
+  },
+  "C24": {
+   "name": "9D  ATRIUM",
+   "art": "images/cam_24.jpg",
+   "sees": [
+    "b28",
+    "b29",
+    "b30"
+   ],
+   "peek": [],
+   "pan": 114.0,
+   "unstable": false,
+   "floor": 2,
+   "pin": {
+    "x": 8.3,
+    "y": 21.7
    }
   }
  },
  "shots": {
   "n01": {
-   "left": 40.0,
-   "bottom": 14.0,
-   "width": 17.0,
-   "flip": false
+   "left": 40,
+   "bottom": 14,
+   "width": 17
   },
   "n02": {
-   "left": 44.0,
-   "bottom": 14.0,
-   "width": 17.0,
-   "flip": false
+   "left": 44,
+   "bottom": 14,
+   "width": 17
   },
   "n03": {
-   "left": 38.0,
-   "bottom": 14.0,
-   "width": 17.0,
+   "left": 38,
+   "bottom": 14,
+   "width": 17,
    "flip": true
   },
   "n04": {
-   "left": 10.0,
-   "bottom": 22.0,
-   "width": 10.0,
-   "dim": 0.7,
-   "flip": false
+   "left": 10,
+   "bottom": 22,
+   "width": 10,
+   "dim": 0.7
   },
   "n20": {
-   "left": 26.0,
-   "bottom": 20.0,
-   "width": 12.0,
-   "dim": 0.8,
-   "flip": false
+   "left": 26,
+   "bottom": 20,
+   "width": 12,
+   "dim": 0.8
   },
   "n05": {
-   "left": 44.0,
-   "bottom": 17.0,
-   "width": 15.0,
-   "flip": false
+   "left": 44,
+   "bottom": 17,
+   "width": 15
   },
   "n21": {
-   "left": 62.0,
-   "bottom": 15.0,
-   "width": 18.0,
-   "flip": false
+   "left": 62,
+   "bottom": 15,
+   "width": 18
   },
   "n22": {
-   "left": 76.0,
-   "bottom": 13.0,
-   "width": 21.0,
-   "flip": false
+   "left": 76,
+   "bottom": 13,
+   "width": 21
   },
   "n06": {
-   "left": 36.0,
-   "bottom": 13.0,
-   "width": 18.0,
-   "flip": false
+   "left": 36,
+   "bottom": 13,
+   "width": 18
   },
   "n07": {
-   "left": 46.0,
-   "bottom": 14.0,
-   "width": 17.0,
-   "flip": false
+   "left": 46,
+   "bottom": 14,
+   "width": 17
   },
   "n08": {
-   "left": 44.0,
-   "bottom": 12.0,
-   "width": 20.0,
-   "flip": false
+   "left": 44,
+   "bottom": 12,
+   "width": 20
   },
   "n09": {
-   "left": 40.0,
-   "bottom": 15.0,
-   "width": 16.0,
-   "flip": false
+   "left": 40,
+   "bottom": 15,
+   "width": 16
   },
   "nDR": {
-   "left": 42.0,
-   "width": 65.9,
-   "flip": false
+   "left": 34.6,
+   "bottom": 15.1,
+   "width": 15.8
   },
   "nDL": {
-   "left": 33.0,
-   "bottom": 22.0,
-   "width": 18.0,
-   "flip": false
+   "left": 33,
+   "bottom": 22,
+   "width": 18
   },
   "n14": {
-   "left": 36.0,
-   "bottom": 32.0,
-   "width": 12.0,
-   "dim": 0.8,
-   "flip": false
+   "left": 36,
+   "bottom": 32,
+   "width": 12,
+   "dim": 0.8
   },
   "n11": {
-   "left": 38.0,
-   "bottom": 40.0,
-   "width": 8.0,
-   "dim": 0.7,
-   "flip": false
+   "left": 38,
+   "bottom": 40,
+   "width": 8,
+   "dim": 0.7
   },
   "n10": {
-   "left": 44.0,
-   "bottom": 12.0,
-   "width": 19.0,
-   "flip": false
+   "left": 44,
+   "bottom": 12,
+   "width": 19
   },
   "n16": {
-   "left": 42.0,
-   "bottom": 12.0,
-   "width": 19.0,
+   "left": 42,
+   "bottom": 12,
+   "width": 19,
    "flip": true
   },
   "n12": {
-   "left": 24.0,
-   "bottom": 20.0,
-   "width": 13.0,
-   "dim": 0.8,
-   "flip": false
+   "left": 24,
+   "bottom": 20,
+   "width": 13,
+   "dim": 0.8
   },
   "n13": {
-   "left": 58.0,
-   "bottom": 14.0,
-   "width": 18.0,
+   "left": 58,
+   "bottom": 14,
+   "width": 18,
    "flip": true
   },
   "n15": {
-   "left": 42.0,
-   "bottom": 14.0,
-   "width": 17.0,
-   "flip": false
+   "left": 42,
+   "bottom": 14,
+   "width": 17
   },
   "n17": {
-   "left": 38.0,
-   "bottom": 16.0,
-   "width": 16.0,
-   "flip": false
+   "left": 38,
+   "bottom": 16,
+   "width": 16
   },
   "n26": {
-   "left": 42.0,
-   "bottom": 12.0,
-   "width": 16.0,
-   "flip": false
+   "left": 35.7,
+   "bottom": 41.6,
+   "width": 5.6,
+   "flip": true
   },
   "n25": {
-   "left": 18.0,
-   "bottom": 20.0,
-   "width": 12.0,
-   "dim": 0.8,
-   "flip": false
+   "left": 18,
+   "bottom": 20,
+   "width": 12,
+   "dim": 0.8
   },
   "n19": {
-   "left": 62.0,
-   "bottom": 14.0,
-   "width": 18.0,
+   "left": 62,
+   "bottom": 14,
+   "width": 18,
    "flip": true
   },
   "gW": {
-   "left": 4.0,
-   "bottom": 26.0,
-   "width": 7.0,
+   "left": 31,
+   "bottom": 54.1,
+   "width": 2.8,
+   "flip": true,
    "dim": 0.55,
-   "flip": false
+   "clipR": 36,
+   "clipB": 54,
+   "clipL": 38
   },
   "n18@C07": {
-   "left": 42.0,
-   "bottom": 12.0,
-   "width": 16.0,
-   "flip": false
+   "left": 42,
+   "bottom": 12,
+   "width": 16
   },
   "n18@C13": {
    "left": 41.5,
-   "bottom": 23.0,
-   "width": 7.5,
-   "flip": false
+   "bottom": 23,
+   "width": 7.5
+  },
+  "b01": {
+   "left": 42,
+   "bottom": 12,
+   "width": 16
+  },
+  "b03": {
+   "left": 42,
+   "bottom": 12,
+   "width": 16
+  },
+  "b04": {
+   "left": 56.7,
+   "bottom": 20.5,
+   "width": 12.5
+  },
+  "b05": {
+   "left": 42,
+   "bottom": 12,
+   "width": 16
+  },
+  "b06": {
+   "left": 4.2,
+   "bottom": -231.3,
+   "width": 85.4
+  },
+  "b07": {
+   "left": 14.9,
+   "bottom": 30.1,
+   "width": 12.4,
+   "rotate": -4.7
+  },
+  "b08": {
+   "left": 75.1,
+   "bottom": 36.5,
+   "width": 14.1,
+   "rotate": -3
+  },
+  "b09": {
+   "left": 54.6,
+   "bottom": 13,
+   "width": 19.3
+  },
+  "b12": {
+   "left": 21.4,
+   "bottom": 25.2,
+   "width": 17,
+   "rotate": 3.8
+  },
+  "b13": {
+   "left": 7.5,
+   "bottom": 38.6,
+   "width": 14.1,
+   "rotate": 3.3,
+   "clipT": 2,
+   "clipR": 2,
+   "clipB": 44,
+   "clipL": 78
+  },
+  "b16": {
+   "left": 20.3,
+   "bottom": 32,
+   "width": 8.1,
+   "rotate": -3,
+   "clipT": 2,
+   "clipB": 38
+  },
+  "b17": {
+   "left": 14.5,
+   "bottom": -2.3,
+   "width": 17,
+   "rotate": -8.2,
+   "clipB": 36
+  },
+  "b18": {
+   "left": 57.3,
+   "bottom": -40.7,
+   "width": 28
+  },
+  "b10": {
+   "left": 42,
+   "bottom": 12,
+   "width": 16
+  },
+  "b11": {
+   "left": 42,
+   "bottom": 12,
+   "width": 16
+  },
+  "b19": {
+   "left": 2.1,
+   "bottom": -202,
+   "width": 90.9
+  },
+  "b20": {
+   "left": 41.2,
+   "bottom": -6.6,
+   "width": 21.8,
+   "rotate": 2,
+   "clipT": 40,
+   "clipB": 95,
+   "clipL": 52
+  },
+  "b21": {
+   "left": 36,
+   "bottom": -0.5,
+   "width": 21.8,
+   "rotate": 2.3,
+   "clipL": 52
+  },
+  "b22": {
+   "left": 42,
+   "bottom": 12,
+   "width": 16,
+   "clipT": 18,
+   "clipB": 95
+  },
+  "b24": {
+   "left": 32.2,
+   "bottom": -35.8,
+   "width": 26.3,
+   "rotate": 6
+  },
+  "b15": {
+   "left": 41.8,
+   "bottom": 11.9,
+   "width": 16,
+   "clipT": 95,
+   "clipB": 44
+  },
+  "b25": {
+   "left": -0.6,
+   "bottom": -282.5,
+   "width": 96.7
+  },
+  "b26": {
+   "left": 42,
+   "bottom": 12,
+   "width": 16,
+   "clipT": 16,
+   "clipB": 95
+  },
+  "b27": {
+   "left": 42,
+   "bottom": 12,
+   "width": 16,
+   "clipT": 16,
+   "clipB": 95
+  },
+  "b28": {
+   "left": 69.6,
+   "bottom": -20,
+   "width": 26.3
+  },
+  "b29": {
+   "left": 18.5,
+   "bottom": 34.2,
+   "width": 12.5,
+   "rotate": -3
+  },
+  "b30": {
+   "left": 42,
+   "bottom": 12,
+   "width": 16,
+   "clipT": 14,
+   "clipB": 95
+  },
+  "b02@C14": {
+   "left": 42,
+   "bottom": 12,
+   "width": 16
+  },
+  "b02@C15": {
+   "left": 76.1,
+   "bottom": 47.5,
+   "width": 4.6
+  },
+  "b23@C22": {
+   "left": 50.6,
+   "bottom": 39.5,
+   "width": 6.7,
+   "rotate": 6
+  },
+  "b23@C23": {
+   "left": 58.8,
+   "bottom": 19.9,
+   "width": 11,
+   "rotate": -1.5,
+   "clipT": 4,
+   "clipL": 56
+  },
+  "b02": {
+   "left": 42,
+   "bottom": 12,
+   "width": 16,
+   "clipT": 95,
+   "clipB": 20
+  },
+  "n18@C14": {
+   "left": -8,
+   "bottom": -244.4,
+   "width": 123.9
   }
  },
  "unit": {
@@ -599,26 +1110,24 @@ const DATA = {
    "nDR": {
     "left": 39.5,
     "bottom": 15.6,
-    "width": 11.1,
-    "flip": false
+    "width": 11.1
    },
    "nDL": {
     "left": 40.3,
     "bottom": 3.9,
-    "width": 14.0,
-    "flip": false
+    "width": 14
    },
    "n01": {
     "left": 3.9,
     "bottom": -24.6,
     "width": 26.2,
-    "flip": false
+    "clipR": 6,
+    "clipL": 6
    },
    "n02": {
     "left": -5.1,
     "bottom": -56.9,
-    "width": 31.6,
-    "flip": false
+    "width": 31.6
    },
    "n03": {
     "left": 15.9,
@@ -630,134 +1139,154 @@ const DATA = {
     "left": 25.8,
     "bottom": 21.3,
     "width": 11.7,
-    "flip": false
+    "rotate": -3.2
    },
    "n20": {
     "left": 30.2,
     "bottom": 43.4,
     "width": 6.5,
-    "dim": 0.8,
-    "flip": false
+    "rotate": -3.7,
+    "dim": 0.8
    },
    "n21": {
     "left": 34.1,
     "bottom": -6.7,
-    "width": 18.0,
-    "flip": false
+    "width": 18,
+    "rotate": -3.2
    },
    "n04": {
     "left": 27.4,
     "bottom": 47.6,
     "width": 5.4,
-    "dim": 0.7,
-    "flip": false
+    "rotate": -4.5,
+    "dim": 0.7
    },
    "n22": {
-    "left": 7.6,
-    "bottom": -129.9,
-    "width": 56.7,
-    "flip": false
+    "left": -13.1,
+    "bottom": -278.7,
+    "width": 99.1
    },
    "n07": {
-    "left": 39.6,
-    "bottom": 9.5,
+    "left": 42.3,
+    "bottom": 11.2,
     "width": 13.3,
-    "flip": false
+    "rotate": 7
    },
    "n08": {
-    "left": 17.6,
-    "bottom": -57.2,
-    "width": 35.0,
-    "flip": false
+    "left": 24.2,
+    "bottom": -57.7,
+    "width": 35,
+    "rotate": -9
    },
    "n14": {
     "left": 38.7,
     "bottom": 34.4,
     "width": 6.5,
-    "dim": 0.8,
-    "flip": false
+    "dim": 0.8
    },
    "n11": {
     "left": 41.9,
     "bottom": -77.2,
     "width": 35.5,
-    "dim": 0.7,
-    "flip": false
+    "dim": 0.7
    },
    "n10": {
     "left": 62.6,
     "bottom": -29.6,
     "width": 14.8,
-    "flip": false
+    "rotate": 12
    },
    "n12": {
     "left": 47.7,
     "bottom": 31.9,
     "width": 5.8,
-    "dim": 0.8,
-    "flip": false
+    "rotate": 6,
+    "dim": 0.8
    },
    "n13": {
-    "left": 14.5,
-    "bottom": -41.9,
-    "width": 18.0,
-    "flip": true
+    "left": 14,
+    "bottom": -62.1,
+    "width": 21.7,
+    "flip": true,
+    "rotate": -2.2
    },
    "n15": {
     "left": 14.3,
     "bottom": -15.9,
-    "width": 17.0,
-    "flip": false
+    "width": 17,
+    "rotate": -7
    },
    "n17": {
-    "left": 20.0,
-    "bottom": -5.8,
-    "width": 16.0,
-    "flip": false
+    "left": 11.7,
+    "bottom": -7.7,
+    "width": 16
    },
    "n16": {
-    "left": 71.6,
-    "bottom": -30.7,
-    "width": 19.0,
-    "flip": true
+    "left": 65.8,
+    "bottom": -33.4,
+    "width": 19,
+    "flip": true,
+    "rotate": 9
    },
    "n18@C07": {
-    "left": 38.0,
-    "bottom": 49.7,
-    "width": 2.2,
-    "clipB": 52.0,
-    "flip": false
+    "left": 37.6,
+    "bottom": 46.8,
+    "width": 3.2,
+    "clipT": 4,
+    "clipR": 30.8,
+    "clipB": 59,
+    "clipL": 21.6
    },
    "n18@C13": {
-    "left": 18.7,
-    "bottom": -80.4,
-    "width": 33.6,
-    "flip": false
+    "left": 16.3,
+    "bottom": -92.3,
+    "width": 38
    },
    "n25": {
-    "left": 69.6,
-    "bottom": 22.9,
+    "left": 69.2,
+    "bottom": 20.6,
     "width": 6.9,
-    "dim": 0.8,
-    "flip": false
+    "rotate": 13.5,
+    "dim": 0.8
    },
    "n19": {
-    "left": 18.2,
-    "bottom": 24.6,
-    "width": 6.3,
-    "flip": true
+    "left": 18.3,
+    "bottom": 21.8,
+    "width": 6.7,
+    "flip": true,
+    "rotate": -9
    },
    "n06": {
-    "left": 36.0,
-    "bottom": 13.0,
-    "width": 18.0,
-    "flip": false
+    "left": 36,
+    "bottom": 13,
+    "width": 18
    },
    "n09": {
-    "left": 40.0,
-    "bottom": 15.0,
-    "width": 16.0,
-    "flip": false
+    "left": 40,
+    "bottom": 15,
+    "width": 16
+   },
+   "n26": {
+    "left": 36.1,
+    "bottom": 41.6,
+    "width": 4.9
+   },
+   "n18@C14": {
+    "left": 7.4,
+    "bottom": -156.2,
+    "width": 52
+   },
+   "b02@C14": {
+    "left": 42,
+    "bottom": 12,
+    "width": 16,
+    "clipT": 95,
+    "clipB": 24
+   },
+   "b02@C15": {
+    "left": 76.1,
+    "bottom": 47.5,
+    "width": 3.6
    }
   },
   "sloppy": {
@@ -770,20 +1299,19 @@ const DATA = {
    "nDL": {
     "left": 39.7,
     "bottom": 3.4,
-    "width": 16.0,
+    "width": 16,
     "flip": true
    },
    "n01": {
     "left": 68.8,
     "bottom": -52.1,
-    "width": 35.8,
-    "flip": false
+    "width": 35.8
    },
    "n02": {
     "left": -7.3,
     "bottom": -55.2,
     "width": 35.8,
-    "flip": false
+    "flip": true
    },
    "n03": {
     "left": 15.3,
@@ -795,157 +1323,389 @@ const DATA = {
     "left": 25.2,
     "bottom": 21.5,
     "width": 13.2,
-    "flip": false
+    "rotate": -3.5
    },
    "n20": {
     "left": 29.9,
     "bottom": 43.1,
     "width": 7.3,
-    "dim": 0.8,
-    "flip": false
+    "flip": true,
+    "rotate": -3.7,
+    "dim": 0.8
    },
    "n21": {
     "left": 32.8,
     "bottom": -9.4,
     "width": 21.7,
-    "flip": false
+    "flip": true,
+    "rotate": -3.2
    },
    "n04": {
     "left": 27.2,
     "bottom": 47.1,
     "width": 6.1,
-    "dim": 0.7,
-    "flip": false
+    "flip": true,
+    "rotate": -3.2,
+    "dim": 0.7
    },
    "n22": {
     "left": 38.9,
     "bottom": -130.8,
-    "width": 60.3,
-    "flip": false
+    "width": 60.3
    },
    "n07": {
-    "left": 24.2,
-    "bottom": 5.6,
-    "width": 17.0,
-    "flip": false
+    "left": 23,
+    "bottom": 5,
+    "width": 17
    },
    "n08": {
-    "left": 56.0,
-    "bottom": -3.4,
+    "left": 56.4,
+    "bottom": 12.2,
     "width": 24.1,
-    "flip": false
+    "rotate": 18
    },
    "n14": {
     "left": 38.2,
-    "bottom": 35.0,
+    "bottom": 35,
     "width": 7.3,
-    "dim": 0.8,
-    "flip": false
+    "flip": true,
+    "dim": 0.8
    },
    "n11": {
     "left": 42.7,
     "bottom": -64.8,
     "width": 37.7,
-    "dim": 0.7,
-    "flip": false
+    "dim": 0.7
    },
    "n10": {
     "left": 62.2,
     "bottom": -23.8,
     "width": 15.8,
-    "flip": false
+    "rotate": 12
    },
    "n12": {
     "left": 47.5,
     "bottom": 31.8,
     "width": 6.6,
-    "dim": 0.8,
-    "flip": false
+    "rotate": 6,
+    "dim": 0.8
    },
    "n13": {
-    "left": 12.2,
-    "bottom": -51.3,
-    "width": 23.1,
-    "flip": true
+    "left": 11.7,
+    "bottom": -53.5,
+    "width": 24.6,
+    "flip": true,
+    "rotate": -3
    },
    "n15": {
     "left": 55.3,
     "bottom": -21.6,
     "width": 21.8,
-    "flip": false
+    "rotate": 3
    },
    "n17": {
-    "left": 61.3,
-    "bottom": -3.2,
-    "width": 16.0,
-    "flip": false
+    "left": 61.2,
+    "bottom": -6.7,
+    "width": 18.1,
+    "rotate": 10
    },
    "n16": {
-    "left": 20.2,
-    "bottom": 20.3,
+    "left": 20,
+    "bottom": 25.8,
     "width": 13.9,
-    "flip": true
+    "flip": true,
+    "rotate": 6
    },
    "n18@C07": {
-    "left": 37.6,
-    "bottom": 47.9,
-    "width": 3.0,
-    "clipT": 2.0,
-    "clipB": 54.0,
-    "flip": false
+    "left": 36.8,
+    "bottom": 42.7,
+    "width": 4.9,
+    "rotate": -1,
+    "clipT": 18.6,
+    "clipR": 36,
+    "clipB": 59.4,
+    "clipL": 33
    },
    "n18@C13": {
-    "left": 14.8,
-    "bottom": -94.0,
-    "width": 43.1,
-    "flip": false
+    "left": 12.6,
+    "bottom": -99.3,
+    "width": 45.9,
+    "flip": true
    },
    "n25": {
-    "left": 69.1,
-    "bottom": 22.9,
-    "width": 7.8,
-    "dim": 0.8,
-    "flip": false
+    "left": 68.2,
+    "bottom": 19.9,
+    "width": 8.3,
+    "rotate": 15.3,
+    "dim": 0.8
    },
    "n19": {
-    "left": 17.4,
-    "bottom": 24.3,
+    "left": 18.1,
+    "bottom": 20.3,
     "width": 7.6,
+    "flip": true,
+    "rotate": -9
+   },
+   "gW": {
+    "left": 30.8,
+    "bottom": 53.5,
+    "width": 3.1,
+    "dim": 0.55,
+    "clipR": 36,
+    "clipB": 54,
+    "clipL": 36
+   },
+   "n18@C14": {
+    "left": -2.9,
+    "bottom": -205.9,
+    "width": 71
+   },
+   "b02@C14": {
+    "left": 42,
+    "bottom": 12,
+    "width": 16,
+    "clipT": 95,
+    "clipB": 24
+   },
+   "b02@C15": {
+    "left": 75.9,
+    "bottom": 47.8,
+    "width": 4.1
+   }
+  },
+  "gordon": {
+   "n01": {
+    "left": -8.2,
+    "bottom": -259.4,
+    "width": 109.3
+   },
+   "n02": {
+    "left": -8.8,
+    "bottom": -257.2,
+    "width": 109.3
+   },
+   "n03": {
+    "left": 1.7,
+    "bottom": -273.3,
+    "width": 90.8,
     "flip": true
+   },
+   "n05": {
+    "left": 28,
+    "bottom": 21.3,
+    "width": 16,
+    "rotate": -5.2
+   },
+   "n20": {
+    "left": 28.7,
+    "bottom": 43.9,
+    "width": 8.3,
+    "rotate": -5.5,
+    "dim": 0.8
+   },
+   "n21": {
+    "left": 29.6,
+    "bottom": -14.7,
+    "width": 27.8,
+    "rotate": -3.5
+   },
+   "n04": {
+    "left": 28.1,
+    "bottom": 46.5,
+    "width": 7.8,
+    "rotate": -6,
+    "dim": 0.7
+   },
+   "n22": {
+    "left": -7.1,
+    "bottom": -238.6,
+    "width": 105.4
+   },
+   "n07": {
+    "left": 7.1,
+    "bottom": -221.6,
+    "width": 75.3
+   },
+   "n08": {
+    "left": -10.2,
+    "bottom": -260.9,
+    "width": 113.6
+   },
+   "nDR": {
+    "left": 34.6,
+    "bottom": 15.1,
+    "width": 15.8
+   },
+   "nDL": {
+    "left": 34.3,
+    "bottom": 3.2,
+    "width": 19.2
+   },
+   "n14": {
+    "left": 35.9,
+    "bottom": 34.5,
+    "width": 8.8,
+    "dim": 0.8
+   },
+   "n11": {
+    "left": -4.7,
+    "bottom": -233.7,
+    "width": 101.8,
+    "dim": 0.7
+   },
+   "n18@C07": {
+    "left": 36.1,
+    "bottom": 42.7,
+    "width": 5.9,
+    "rotate": -0.2,
+    "clipT": 13.6,
+    "clipR": 37.6,
+    "clipB": 63,
+    "clipL": 36.8
+   },
+   "n26": {
+    "left": 36.2,
+    "bottom": 41.6,
+    "width": 6.3,
+    "flip": true
+   },
+   "n10": {
+    "left": 17.7,
+    "bottom": -225.3,
+    "width": 61.8
+   },
+   "n12": {
+    "left": 47.9,
+    "bottom": 30.1,
+    "width": 8.4,
+    "rotate": 6,
+    "dim": 0.8
+   },
+   "n13": {
+    "left": 9.8,
+    "bottom": -258.6,
+    "width": 75,
+    "flip": true
+   },
+   "n15": {
+    "left": 0.3,
+    "bottom": -249.4,
+    "width": 90.8
+   },
+   "n17": {
+    "left": -4.5,
+    "bottom": -297,
+    "width": 102.9
+   },
+   "n16": {
+    "left": 5.1,
+    "bottom": -259.4,
+    "width": 84.2,
+    "flip": true
+   },
+   "n18@C13": {
+    "left": 3.2,
+    "bottom": -224.3,
+    "width": 84.3
+   },
+   "n25": {
+    "left": 68.4,
+    "bottom": 20.1,
+    "width": 10,
+    "rotate": 12,
+    "dim": 0.8
+   },
+   "n19": {
+    "left": 18.7,
+    "bottom": 22.1,
+    "width": 8.6,
+    "flip": true,
+    "rotate": -9
+   },
+   "n18@C14": {
+    "left": 1.5,
+    "bottom": -254.8,
+    "width": 90.9
+   },
+   "b02@C14": {
+    "left": 42,
+    "bottom": 12,
+    "width": 16,
+    "clipT": 95,
+    "clipB": 22
+   },
+   "b02@C15": {
+    "left": 72.5,
+    "bottom": 47.1,
+    "width": 4.1
+   },
+   "b03": {
+    "left": 68.7,
+    "bottom": 39,
+    "width": 6.7
    }
   }
  },
  "dist": {
   "OFFICE": 0,
-  "nDR": 1,
   "nDL": 1,
-  "n15": 2,
-  "n14": 2,
+  "nDR": 1,
   "n11": 2,
-  "n18": 3,
-  "n16": 3,
-  "n17": 3,
+  "n14": 2,
+  "n15": 2,
   "n10": 3,
-  "n12": 3,
   "n07": 3,
+  "n12": 3,
+  "n16": 3,
+  "n18": 3,
+  "n17": 3,
+  "n06": 4,
+  "n05": 4,
+  "n09": 4,
+  "n13": 4,
   "n19": 4,
   "n26": 4,
   "n25": 4,
-  "n13": 4,
-  "n05": 4,
-  "n06": 4,
-  "n09": 4,
-  "gS": 5,
   "n20": 5,
   "n21": 5,
   "n02": 5,
+  "gS": 5,
   "n04": 6,
   "n01": 6,
-  "n03": 6,
   "n22": 6,
+  "n03": 6,
   "gW": 7,
   "gE": 7,
-  "n08": 7
+  "n08": 7,
+  "b02": 4,
+  "b03": 5,
+  "b04": 6,
+  "b05": 7,
+  "b06": 4,
+  "b07": 3,
+  "b08": 2,
+  "b09": 5,
+  "b10": 11,
+  "b11": 10,
+  "b12": 12,
+  "b13": 11,
+  "b14": 11,
+  "b15": 7,
+  "b16": 10,
+  "b17": 9,
+  "b18": 8,
+  "b19": 9,
+  "b20": 9,
+  "b21": 10,
+  "b22": 10,
+  "b23": 8,
+  "b24": 9,
+  "b25": 9,
+  "b26": 9,
+  "b27": 10,
+  "b28": 9,
+  "b29": 8,
+  "b30": 7
  },
  "roster": [
   {
@@ -955,24 +1715,28 @@ const DATA = {
   {
    "id": "sloppy",
    "art": "images/ani_sloppy.png"
+  },
+  {
+   "id": "gordon",
+   "art": "images/ani_gordon.png"
   }
  ],
  "grade": "brightness(.50) contrast(1.22) saturate(.40) hue-rotate(-10deg)",
  "reach": 0.9,
  "officeDoor": {
-  "x": 36.3,
-  "w": 8.0,
-  "top": 36.5,
-  "h": 14.0
+  "x": 39.7,
+  "w": 5.2,
+  "top": 39.1,
+  "h": 12
  },
  "officeArt": "images/office.jpg",
  "rooms": [
   {
    "x1": 16.6,
    "y1": 1.7,
-   "x2": 42.0,
+   "x2": 42,
    "y2": 12.2,
-   "name": "NW",
+   "name": "OFFICE 1",
    "hall": false,
    "you": false
   },
@@ -981,16 +1745,16 @@ const DATA = {
    "y1": 1.7,
    "x2": 65.3,
    "y2": 12.2,
-   "name": "N",
+   "name": "OFFICE 2",
    "hall": false,
    "you": false
   },
   {
-   "x1": 66.0,
+   "x1": 66,
    "y1": 2.3,
    "x2": 86.1,
    "y2": 12.6,
-   "name": "NE",
+   "name": "OFFICE 3",
    "hall": false,
    "you": false
   },
@@ -998,7 +1762,7 @@ const DATA = {
    "x1": 16.6,
    "y1": 12.2,
    "x2": 87.2,
-   "y2": 20.0,
+   "y2": 20,
    "name": "NORTH HALL",
    "hall": true,
    "you": false
@@ -1008,7 +1772,7 @@ const DATA = {
    "y1": 20.4,
    "x2": 42.7,
    "y2": 35.8,
-   "name": "ANNEX",
+   "name": "OFFICE 4",
    "hall": false,
    "you": false
   },
@@ -1024,9 +1788,11 @@ const DATA = {
   {
    "x1": 74.5,
    "y1": 20.4,
-   "x2": 84.0,
+   "x2": 84,
    "y2": 27.3,
-   "name": "CLOSET",
+   "name": "BATHROOM",
+   "lx": 0,
+   "ly": 3.6,
    "hall": false,
    "you": false
   },
@@ -1035,7 +1801,7 @@ const DATA = {
    "y1": 29.4,
    "x2": 78.6,
    "y2": 35.8,
-   "name": "GALLERY",
+   "name": "SERVER ROOM",
    "hall": false,
    "you": false
   },
@@ -1044,7 +1810,7 @@ const DATA = {
    "y1": 35.8,
    "x2": 45.8,
    "y2": 50.3,
-   "name": "N OFFICE",
+   "name": "OFFICE 5",
    "hall": false,
    "you": false
   },
@@ -1052,17 +1818,17 @@ const DATA = {
    "x1": 34.4,
    "y1": 50.5,
    "x2": 45.6,
-   "y2": 67.0,
+   "y2": 67,
    "name": "YOU",
-   "hall": false,
-   "you": true
+   "you": true,
+   "hall": false
   },
   {
    "x1": 33.5,
    "y1": 67.7,
    "x2": 45.8,
    "y2": 82.5,
-   "name": "S OFFICE",
+   "name": "OFFICE 7",
    "hall": false,
    "you": false
   },
@@ -1079,8 +1845,8 @@ const DATA = {
    "x1": 53.2,
    "y1": 35.8,
    "x2": 69.5,
-   "y2": 58.0,
-   "name": "E WING",
+   "y2": 58,
+   "name": "BREAK ROOM",
    "hall": false,
    "you": false
   },
@@ -1089,7 +1855,7 @@ const DATA = {
    "y1": 58.2,
    "x2": 69.5,
    "y2": 69.6,
-   "name": "E STORE",
+   "name": "OFFICE 6",
    "hall": false,
    "you": false
   },
@@ -1098,7 +1864,7 @@ const DATA = {
    "y1": 70.2,
    "x2": 69.5,
    "y2": 82.5,
-   "name": "E DOCK",
+   "name": "OFFICE 8",
    "hall": false,
    "you": false
   },
@@ -1107,32 +1873,685 @@ const DATA = {
    "y1": 83.1,
    "x2": 70.5,
    "y2": 96.6,
-   "name": "SOUTH HALL",
+   "name": "ENGINEERING",
    "hall": true,
    "you": false
   }
  ],
+ "roomsB": [
+  {
+   "x1": 27.8,
+   "y1": 49.7,
+   "x2": 36,
+   "y2": 98.3,
+   "name": "NORTH HALL",
+   "hall": true,
+   "you": false
+  },
+  {
+   "x1": 36,
+   "y1": 74.9,
+   "x2": 97.5,
+   "y2": 98.3,
+   "name": "ENGINEERING OFFICE",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 60.2,
+   "y1": 63,
+   "x2": 97.5,
+   "y2": 74.9,
+   "name": "ENG OFFICE WEST",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 36,
+   "y1": 63,
+   "x2": 60.2,
+   "y2": 74.9,
+   "name": "OFFICE A",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 55.7,
+   "y1": 49.7,
+   "x2": 80.9,
+   "y2": 63,
+   "name": "OFFICE B",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 36,
+   "y1": 49.7,
+   "x2": 55.7,
+   "y2": 63,
+   "name": "OFFICE C",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 80.9,
+   "y1": 35.9,
+   "x2": 97.5,
+   "y2": 63,
+   "name": "VAULT",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 80.9,
+   "y1": 32.2,
+   "x2": 97.5,
+   "y2": 35.9,
+   "name": "CLOSET",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 80.9,
+   "y1": 22.3,
+   "x2": 97.5,
+   "y2": 32.2,
+   "name": "UTILITY CLOSET",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 26.7,
+   "y1": 31.2,
+   "x2": 80.9,
+   "y2": 49.7,
+   "name": "PAYROLL & BILLING",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 2.5,
+   "y1": 31.2,
+   "x2": 26.7,
+   "y2": 49.7,
+   "name": "NORTH OFFICE",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 63.9,
+   "y1": 22.3,
+   "x2": 80.9,
+   "y2": 31.2,
+   "name": "LADIES",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 50,
+   "y1": 22.3,
+   "x2": 63.9,
+   "y2": 31.2,
+   "name": "MENS",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 38.5,
+   "y1": 22.3,
+   "x2": 50,
+   "y2": 31.2,
+   "name": "EAST CLOSET",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 38.5,
+   "y1": 17.2,
+   "x2": 97.5,
+   "y2": 22.3,
+   "name": "CENTRE CORRIDOR",
+   "hall": true,
+   "you": false
+  },
+  {
+   "x1": 78.4,
+   "y1": 1.7,
+   "x2": 97.5,
+   "y2": 17.2,
+   "name": "SALES OFFICE",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 59.1,
+   "y1": 1.7,
+   "x2": 78.4,
+   "y2": 17.2,
+   "name": "SALES OFFICE 2",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 37.7,
+   "y1": 1.7,
+   "x2": 59.1,
+   "y2": 17.2,
+   "name": "SALES OFFICE 3",
+   "hall": false,
+   "you": false
+  },
+  {
+   "x1": 2.5,
+   "y1": 13.6,
+   "x2": 38.5,
+   "y2": 31.2,
+   "name": "ATRIUM",
+   "hall": true,
+   "you": false
+  },
+  {
+   "x1": 26.1,
+   "y1": 1.7,
+   "x2": 37.7,
+   "y2": 13.6,
+   "name": "ATRIUM SOUTH",
+   "hall": true,
+   "you": false
+  },
+  {
+   "x1": 2.5,
+   "y1": 1.7,
+   "x2": 26.1,
+   "y2": 13.6,
+   "name": "ENTRY",
+   "hall": false,
+   "you": false
+  }
+ ],
+ "ducts": [
+  {
+   "id": "V1",
+   "name": "UTILITY CLOSET",
+   "down": "b15",
+   "up": "n08"
+  },
+  {
+   "id": "V2",
+   "name": "ENG OFFICE WEST",
+   "down": "b08",
+   "up": "n11"
+  },
+  {
+   "id": "V3",
+   "name": "ENGINEERING",
+   "down": "b02",
+   "up": "n25"
+  },
+  {
+   "id": "V4",
+   "name": "ENTRY",
+   "down": "b30",
+   "up": "gE"
+  }
+ ],
+ "doorLinks": [
+  {
+   "id": "D1",
+   "name": "UTILITY CLOSET DOOR",
+   "a": "b23",
+   "b": "b15"
+  },
+  {
+   "id": "D2",
+   "name": "OFFICE A DOOR",
+   "a": "b09",
+   "b": "b06"
+  },
+  {
+   "id": "D3",
+   "name": "ENGINEERING DOOR",
+   "a": "b02",
+   "b": "b03"
+  },
+  {
+   "id": "D4",
+   "name": "ENG OFFICE DOOR",
+   "a": "b03",
+   "b": "b06"
+  },
+  {
+   "id": "D5",
+   "name": "PAYROLL DOOR",
+   "a": "b17",
+   "b": "b18",
+   "oneShot": true
+  },
+  {
+   "id": "D6",
+   "name": "ATRIUM DOOR",
+   "a": "b24",
+   "b": "b28"
+  },
+  {
+   "id": "D7",
+   "name": "ENTRY DOOR",
+   "a": "b29",
+   "b": "b30"
+  }
+ ],
+ "nodes": {
+  "gW": {
+   "x": 6.9,
+   "y": 12.9,
+   "floor": 1
+  },
+  "gE": {
+   "x": 92.9,
+   "y": 16.4,
+   "floor": 1
+  },
+  "gS": {
+   "x": 67.5,
+   "y": 99,
+   "floor": 1
+  },
+  "n01": {
+   "x": 26.6,
+   "y": 10.3,
+   "floor": 1
+  },
+  "n02": {
+   "x": 50,
+   "y": 10.3,
+   "floor": 1
+  },
+  "n03": {
+   "x": 71,
+   "y": 10.6,
+   "floor": 1
+  },
+  "n04": {
+   "x": 17,
+   "y": 16.5,
+   "floor": 1
+  },
+  "n20": {
+   "x": 30,
+   "y": 16.2,
+   "floor": 1
+  },
+  "n05": {
+   "x": 50,
+   "y": 17.7,
+   "floor": 1
+  },
+  "n21": {
+   "x": 70,
+   "y": 17,
+   "floor": 1
+  },
+  "n22": {
+   "x": 85,
+   "y": 16.5,
+   "floor": 1
+  },
+  "n06": {
+   "x": 33.1,
+   "y": 22.9,
+   "floor": 1
+  },
+  "n07": {
+   "x": 46.4,
+   "y": 33.2,
+   "floor": 1
+  },
+  "n08": {
+   "x": 79.2,
+   "y": 22.4,
+   "floor": 1
+  },
+  "n09": {
+   "x": 75.5,
+   "y": 32.9,
+   "floor": 1
+  },
+  "n11": {
+   "x": 48.6,
+   "y": 43,
+   "floor": 1
+  },
+  "nDL": {
+   "x": 48.6,
+   "y": 54,
+   "floor": 1
+  },
+  "nDR": {
+   "x": 48.8,
+   "y": 64,
+   "floor": 1
+  },
+  "n14": {
+   "x": 49.2,
+   "y": 74,
+   "floor": 1
+  },
+  "n10": {
+   "x": 39.4,
+   "y": 44.2,
+   "floor": 1
+  },
+  "n16": {
+   "x": 39.7,
+   "y": 73.5,
+   "floor": 1
+  },
+  "n12": {
+   "x": 57.4,
+   "y": 39,
+   "floor": 1
+  },
+  "n13": {
+   "x": 57.1,
+   "y": 54.8,
+   "floor": 1
+  },
+  "n15": {
+   "x": 58.9,
+   "y": 65.1,
+   "floor": 1
+  },
+  "n17": {
+   "x": 62.7,
+   "y": 77.7,
+   "floor": 1
+  },
+  "n25": {
+   "x": 33,
+   "y": 85,
+   "floor": 1
+  },
+  "n18": {
+   "x": 49.8,
+   "y": 84.8,
+   "floor": 1
+  },
+  "n19": {
+   "x": 64.2,
+   "y": 92.5,
+   "floor": 1
+  },
+  "n26": {
+   "x": 59,
+   "y": 85.5,
+   "floor": 1
+  },
+  "b02": {
+   "x": 32,
+   "y": 91.6,
+   "floor": 2
+  },
+  "b03": {
+   "x": 32,
+   "y": 84.3,
+   "floor": 2
+  },
+  "b04": {
+   "x": 32,
+   "y": 70.3,
+   "floor": 2
+  },
+  "b05": {
+   "x": 32,
+   "y": 56.2,
+   "floor": 2
+  },
+  "b06": {
+   "x": 48.1,
+   "y": 85.6,
+   "floor": 2
+  },
+  "b07": {
+   "x": 68.8,
+   "y": 85.6,
+   "floor": 2
+  },
+  "b08": {
+   "x": 89.5,
+   "y": 70.3,
+   "floor": 2
+  },
+  "b09": {
+   "x": 48.1,
+   "y": 69.1,
+   "floor": 2
+  },
+  "b10": {
+   "x": 68.8,
+   "y": 56.8,
+   "floor": 2
+  },
+  "b11": {
+   "x": 45.9,
+   "y": 56.8,
+   "floor": 2
+  },
+  "b12": {
+   "x": 89.2,
+   "y": 58.2,
+   "floor": 2
+  },
+  "b13": {
+   "x": 89.2,
+   "y": 42.2,
+   "floor": 2
+  },
+  "b14": {
+   "x": 89.2,
+   "y": 34,
+   "floor": 2
+  },
+  "b15": {
+   "x": 89.2,
+   "y": 27.2,
+   "floor": 2
+  },
+  "b16": {
+   "x": 72,
+   "y": 40.8,
+   "floor": 2
+  },
+  "b17": {
+   "x": 54.5,
+   "y": 40.8,
+   "floor": 2
+  },
+  "b18": {
+   "x": 34.5,
+   "y": 40.8,
+   "floor": 2
+  },
+  "b19": {
+   "x": 14.6,
+   "y": 40.8,
+   "floor": 2
+  },
+  "b20": {
+   "x": 72.5,
+   "y": 26.8,
+   "floor": 2
+  },
+  "b21": {
+   "x": 57,
+   "y": 26.8,
+   "floor": 2
+  },
+  "b22": {
+   "x": 44.3,
+   "y": 26.8,
+   "floor": 2
+  },
+  "b23": {
+   "x": 84.7,
+   "y": 19.7,
+   "floor": 2
+  },
+  "b24": {
+   "x": 52.9,
+   "y": 19.7,
+   "floor": 2
+  },
+  "b25": {
+   "x": 87.9,
+   "y": 9.4,
+   "floor": 2
+  },
+  "b26": {
+   "x": 68.8,
+   "y": 9.4,
+   "floor": 2
+  },
+  "b27": {
+   "x": 48.4,
+   "y": 9.4,
+   "floor": 2
+  },
+  "b28": {
+   "x": 21,
+   "y": 24.1,
+   "floor": 2
+  },
+  "b29": {
+   "x": 32.1,
+   "y": 8.1,
+   "floor": 2
+  },
+  "b30": {
+   "x": 14.6,
+   "y": 8.1,
+   "floor": 2
+  }
+ },
  "doorShots": {
   "left": {
-   "left": -46.0,
-   "bottom": -282.0,
-   "width": 100.0,
-   "flip": false
+   "left": -51.8,
+   "bottom": -252.9,
+   "width": 136.4,
+   "flip": true
   },
   "right": {
-   "left": 46.0,
-   "bottom": -282.0,
-   "width": 100.0,
-   "flip": false
+   "left": 24.3,
+   "bottom": -232.6,
+   "width": 128.2
   }
  },
  "doorUnit": {
-  "eugene": {},
-  "sloppy": {}
+  "eugene": {
+   "left": {
+    "left": -43,
+    "bottom": -229.1,
+    "width": 113.2
+   },
+   "right": {
+    "left": 31.4,
+    "bottom": -229.8,
+    "width": 113.2
+   }
+  },
+  "sloppy": {
+   "left": {
+    "left": -51.8,
+    "bottom": -252.9,
+    "width": 136.4,
+    "flip": true
+   },
+   "right": {
+    "left": 24.3,
+    "bottom": -232.6,
+    "width": 128.2
+   }
+  },
+  "gordon": {
+   "left": {
+    "left": -67.8,
+    "bottom": -258.7,
+    "width": 154.4,
+    "flip": true
+   },
+   "right": {
+    "left": 10.1,
+    "bottom": -259.3,
+    "width": 154.4
+   }
+  }
  }
 };
 const {cams, shots, unit, dist, roster, grade, reach,
        officeDoor, officeArt, doorShots, doorUnit, rooms} = DATA;
+
+/* THE FLOOR BELOW.
+
+   roomsB is the lower plan's rectangles, ducts and doorLinks are the two things
+   that only exist down there, and nodes carries every square's coordinates so
+   a door pin can be defaulted to the midpoint of the two squares it joins.
+
+   `dist` now covers the basement too, but it means something different down
+   there: distance THROUGH A DUCT — steps to the nearest one plus that duct's
+   exit distance from your office. It is the number that actually matters when
+   framing a shot on the lower floor (how close this square is to being your
+   problem) and it makes the node list sort sensibly instead of dumping twenty
+   squares under "?". */
+const roomsB    = DATA.roomsB    || [];
+const ducts     = DATA.ducts     || [];
+const doorLinks = DATA.doorLinks || [];
+const nodesXY   = DATA.nodes     || {};
+const camFloor  = id => (cams[id] && cams[id].floor) || 1;
+const nodeFloor = n  => (n && n.charAt(0) === "b") ? 2 : 1;
+/* Door pins are stored ONLY when moved. An unmoved door sits at the midpoint of
+   its two squares and should keep doing so if the basement is re-cut, so the
+   emitter below writes a pin: only for doors the user has actually dragged. */
+const doorPin = {};
+/* Where each duct's triangle is drawn, when it has been moved off its square. */
+const ductPin = {};
+doorLinks.forEach(d => { if (d.pin) doorPin[d.id] = { x:d.pin.x, y:d.pin.y }; });
+
+/* EVERY SQUARE A CAMERA CAN SEE GETS AN ENTRY.
+
+   The list on the left is built from the keys of `shots`, so a square with no
+   SHOTS entry simply does not appear — and the whole lower floor arrived with
+   none, which meant twenty new rooms that could not be framed from the one
+   tool built for framing them. The game falls back to DEFAULT_SHOT for those,
+   so seeding them here changes nothing about how it plays: it only makes them
+   reachable. Any square added upstairs in future is picked up the same way.
+
+   IT HAS TO RUN AFTER A LOAD AS WELL AS AT BOOT. Loading an index.html wipes
+   `shots` and refills it from the file's SHOTS block — which contains only the
+   squares that have ACTUALLY been calibrated, i.e. the upper floor. Seeding
+   once at startup therefore looked correct until the first load, at which
+   point every basement square vanished from the list with no way to get them
+   back. Hence a function rather than a block. */
+function seedUncalibrated(){
+  const seen = new Set();
+  Object.values(cams).forEach(c => {
+    (c.sees || []).forEach(n => seen.add(n));
+    (c.peek || []).forEach(n => seen.add(n));
+  });
+  let added = 0;
+  seen.forEach(n => {
+    if (shots[n]) return;
+    shots[n] = Object.assign({}, DATA.defaultShot);
+    added++;
+  });
+  if (added) console.info("seeded " + added + " uncalibrated squares from DEFAULT_SHOT");
+  return added;
+}
+seedUncalibrated();
+function doorPinOf(d){
+  if (doorPin[d.id]) return doorPin[d.id];
+  const A = nodesXY[d.a], B = nodesXY[d.b];
+  if (!A || !B) return { x:50, y:50 };
+  return { x:(A.x + B.x)/2, y:(A.y + B.y)/2 };
+}
 
 /* Two pseudo-nodes for the office doorway. They behave like any other entry —
    drag, resize, split per animatronic — but they are measured against the door
@@ -1235,8 +2654,16 @@ function buildList(){
 
   Object.keys(byCam).sort().forEach(cam => {
     const h = document.createElement("h2");
+    /* A key can name a camera that no longer exists — SHOTS entries like
+       "n18@C13" outlive the camera when one is retired or merged. Crashing the
+       whole list because of a stale key would make the tool unusable against
+       any file with history in it, so the heading degrades instead and says
+       plainly that the camera has gone. */
+    const meta = cams[cam];
     h.textContent = cam === "—" ? "NO CAMERA"
-                                : cam + "  " + cams[cam].name.replace(/^\S+\s+/,"");
+                  : meta ? cam + "  " + meta.name.replace(/^\S+\s+/,"")
+                         : cam + "  (RETIRED CAMERA — these entries are dead)";
+    if (!meta && cam !== "—") h.style.color = "#8a6a66";
     list.appendChild(h); listHeads.push(h);
     byCam[cam].sort((a,b)=>(dist[entryNode(a)]??9)-(dist[entryNode(b)]??9)).forEach(k => {
       const d = dist[entryNode(k)];
@@ -1603,8 +3030,20 @@ const round = v => Math.round(v * 10) / 10;
 const cxOff = s => (s.left + s.width/2) < 0 || (s.left + s.width/2) > 100;
 
 function dump(){
+  if (S.mode2 === "art"){
+    const n = Object.keys(newArt).length;
+    document.getElementById("out").textContent = n
+      ? n + " picture" + (n === 1 ? "" : "s") + " staged. Press DOWNLOAD PATCHED "
+        + "and they are written into index.html in place."
+      : "Choose a photograph for any camera. Nothing leaves your machine.";
+    return;
+  }
   document.getElementById("out").textContent = (S.mode2 === "map")
-    ? blockRooms() + "\n\n" + blockDoorBox() + "\n\n/* camera pins */\n" + blockPins()
+    ? (mapFloor === 2
+        ? blockRoomsB() + "\n\n" + blockDoorLinks() +
+          "\n\n/* camera pins — lower floor */\n" + blockPins(2)
+        : blockRooms() + "\n\n" + blockDoorBox() +
+          "\n\n/* camera pins — upper floor */\n" + blockPins(1))
     : blockShots() + "\n\n" + blockUnit() + "\n\n" + blockDoor() +
       "\n\n" + blockDoorBox();
 }
@@ -1679,7 +3118,8 @@ function patchText(text){
   if (!/const SHOTS = \{/.test(text)) return null;
   const sb = blockShots(), ub = blockUnit(), db = blockDoor();
   if (!sane(sb, "SHOTS") || !sane(ub, "SHOTS_UNIT") ||
-      !sane(blockRooms(), "ROOMS") || !sane(blockDoorBox(), "OFFICE_DOOR")) return null;
+      !sane(blockRooms(), "ROOMS") || !sane(blockDoorBox(), "OFFICE_DOOR") ||
+      !sane(blockRoomsB(), "ROOMS_B") || !sane(blockDoorLinks(), "DOOR_LINKS")) return null;
 
   text = applyTuning(text);
   text = text.replace(/const SHOTS = \{[\s\S]*?\s\};/, () => sb);
@@ -1687,8 +3127,38 @@ function patchText(text){
     ? text.replace(/const SHOTS_UNIT = \{[\s\S]*?\s\};/, () => ub)
     : text.replace(sb, () => sb + "\n\n" + ub);
 
+  /* ---- CAMERA ART -------------------------------------------------------
+     Each staged picture replaces that camera's `art:` value in place. The
+     entries are found by walking from the camera's id to its own `art:` key
+     rather than by one big regex, because several of these values are already
+     a megabyte of base64 and a greedy match across them would swallow half the
+     file. Bounded, per camera, and it leaves everything else byte-identical. */
+  Object.entries(newArt).forEach(([id, uri]) => {
+    const at = text.search(new RegExp("(^|[{,\\s])" + id + "\\s*:\\s*\\{"));
+    if (at < 0) return;
+    const key = text.indexOf("art:", at);
+    if (key < 0) return;
+    const q = text.indexOf('"', key);
+    if (q < 0) return;
+    // walk to the closing quote; base64 has no escapes so this is safe
+    const end = text.indexOf('"', q + 1);
+    if (end < 0) return;
+    text = text.slice(0, q + 1) + uri + text.slice(end);
+  });
+
   // rooms, replaced wholesale
   text = text.replace(/const ROOMS = \[[\s\S]*?\s\];/, () => blockRooms());
+
+  /* The lower plan and the doors. Both are written only if the target file
+     already has them, so this tool stays usable against an older build of the
+     game rather than injecting a basement into one that has no code to read it.
+     ROOMS_B must be replaced BEFORE ROOMS would be — it is matched by its own
+     name, so order does not actually matter here, but the two patterns are
+     deliberately anchored on the full declaration for exactly that reason. */
+  if (/const ROOMS_B = \[/.test(text))
+    text = text.replace(/const ROOMS_B = \[[\s\S]*?\s\];/, () => blockRoomsB());
+  if (/const DOOR_LINKS = \[/.test(text))
+    text = text.replace(/const DOOR_LINKS = \[[\s\S]*?\s\];/, () => blockDoorLinks());
 
   // the doorway opening itself
   text = text.replace(/const OFFICE_DOOR = \{[^}]*\};/, () => blockDoorBox());
@@ -1812,6 +3282,11 @@ function parseDoorBlocks(text){
 }
 
 function parseWorld(text){
+  /* Note which cameras already carry a photograph, so the CAMERA ART pane can
+     tell you what is actually left to shoot rather than guessing from the
+     tool's own summary of the building. */
+  try { scanArt(text); }  catch (e) { /* older file, no cameras to scan */ }
+  try { scanPan(text); }  catch (e) { /* older file, no pan blocks */ }
   parseDoorBlocks(text);
   const od = text.match(/const OFFICE_DOOR = \{\s*x:(-?[\d.]+),\s*w:(-?[\d.]+),\s*top:(-?[\d.]+),\s*h:(-?[\d.]+)\s*\}/);
   if (od){
@@ -1824,11 +3299,49 @@ function parseWorld(text){
     const list = [];
     rb[1].replace(/\{\s*x1:(-?[\d.]+),\s*y1:\s*(-?[\d.]+),\s*x2:(-?[\d.]+),\s*y2:\s*(-?[\d.]+),\s*name:"([^"]*)"([^}]*)\}/g,
       (_, x1, y1, x2, y2, name, rest) => {
-        list.push({ x1:+x1, y1:+y1, x2:+x2, y2:+y2, name,
-                    hall:/hall:true/.test(rest), you:/you:true/.test(rest) });
+        const _lx = /lx:(-?[\d.]+)/.exec(rest), _ly = /ly:(-?[\d.]+)/.exec(rest);
+        const _r = { x1:+x1, y1:+y1, x2:+x2, y2:+y2, name,
+                             hall:/hall:true/.test(rest), you:/you:true/.test(rest) };
+        if (_lx) _r.lx = +_lx[1];
+        if (_ly) _r.ly = +_ly[1];
+        list.push(_r);
         return "";
       });
     if (list.length){ rooms.length = 0; list.forEach(r => rooms.push(r)); }
+  }
+
+  /* THE LOWER PLAN.
+
+     Anchored on "const ROOMS_B = [" rather than scanned for generically, because
+     a looser pattern matching "ROOMS" would find this block first in some files
+     and the upper one in others depending on declaration order — and silently
+     loading the basement into `rooms` would look like the map editor had
+     scrambled the building. */
+  const rbb = text.match(/const ROOMS_B = \[([\s\S]*?)\s\];/);
+  if (rbb){
+    const list = [];
+    rbb[1].replace(/\{\s*x1:(-?[\d.]+),\s*y1:\s*(-?[\d.]+),\s*x2:(-?[\d.]+),\s*y2:\s*(-?[\d.]+),\s*name:"([^"]*)"([^}]*)\}/g,
+      (_, x1, y1, x2, y2, name, rest) => {
+        const _lx = /lx:(-?[\d.]+)/.exec(rest), _ly = /ly:(-?[\d.]+)/.exec(rest);
+        const _r = { x1:+x1, y1:+y1, x2:+x2, y2:+y2, name,
+                             hall:/hall:true/.test(rest), you:/you:true/.test(rest) };
+        if (_lx) _r.lx = +_lx[1];
+        if (_ly) _r.ly = +_ly[1];
+        list.push(_r);
+        return "";
+      });
+    if (list.length){ roomsB.length = 0; list.forEach(r => roomsB.push(r)); }
+  }
+
+  /* DOOR_LINKS. Only the pin is read back — the ids and the squares each door
+     joins are structure, not calibration, and this tool has no business
+     rewriting the shape of the building's graph. A door with no pin in the
+     file is left deriving its position from its two squares. */
+  const dlb = text.match(/const DOOR_LINKS = \[([\s\S]*?)\s\];/);
+  if (dlb){
+    Object.keys(doorPin).forEach(k => delete doorPin[k]);
+    dlb[1].replace(/id:"([^"]+)"[^}]*?pin:\{\s*x:(-?[\d.]+),\s*y:(-?[\d.]+)\s*\}/g,
+      (_, id, x, y) => { doorPin[id] = { x:+x, y:+y }; return ""; });
   }
 
   /* DOOR_SHOTS and its per-animatronic overrides. Without these a LOAD brought
@@ -1941,6 +3454,11 @@ document.getElementById("load").onclick = async () => {
     mapBuilt = false;
     if (S.mode2 === "map") buildMapEditor();
 
+    /* Put the uncalibrated squares back. The file only carries entries for
+       squares somebody has already framed, so without this every basement
+       node disappears from the list the moment you load. */
+    seedUncalibrated();
+
     // the file may still carry plain keys for a two-camera node; split them
     splitByCamera();
     buildList();
@@ -2000,17 +3518,74 @@ let mapBuilt = false;
 
 /* Width of the floorplan as the game draws it: #map is min(390px, 44vw), and
    #mapPlan fills it. Keep these in step if that rule changes. */
-const GAME_MAP_PX = 390;
+/* HOW WIDE THE MAP IS IN THE GAME, in pixels at its largest.
+
+   The editor's board is whatever size the window gives it, and every pin is
+   scaled by board width over this number — so a pin here is the same fraction
+   of the map as it will be in game, whatever size either happens to be.
+
+   It has to track #map's width in index.html. When the camera menu grew from
+   390 to 540 this stayed behind, which is why the buttons looked small: they
+   were being drawn at the right fraction of the WRONG map. */
+const GAME_MAP_PX = 540;
+
+/* The game's own pin metrics at that width, so the two agree exactly rather
+   than approximately. Kept beside the width they belong to. */
+const GAME_PIN = { minW:52, padY:9, padX:10, font:13 };
 
 function syncPinScale(){
   const w = board.clientWidth || 1;
   board.style.setProperty("--pinScale", (w / GAME_MAP_PX).toFixed(3));
 }
 
+/* THE MAP EDITOR, NOW TWO STOREYS.
+
+   mapFloor is a view, exactly as it is in the game. Flipping it redraws the
+   board with that floor's rooms, its camera pins, and — downstairs only — the
+   duct marks and the door pins, because ducts and doors do not exist upstairs.
+
+   Everything draggable writes straight back into the same tables the emitters
+   read, so there is no separate "apply" step and no way for the board and the
+   generated code to disagree. */
+let mapFloor = 1;
+
+function setMapFloor(f){
+  if (mapFloor === f) return;
+  mapFloor = f;
+  document.body.classList.toggle("lowerfloor", f === 2);
+  buildMapEditor();
+  dump();
+}
+
+/* One drag handler for every kind of pin. Takes a getter/setter pair rather
+   than an object so a door pin — which may not have a stored position yet and
+   has to materialise one on first drag — works through the same code as a
+   camera pin that always has one. */
+function dragPin(el, get, set){
+  el.addEventListener("pointerdown", e => {
+    e.preventDefault(); e.stopPropagation();
+    const r = board.getBoundingClientRect();
+    const move = ev => {
+      const x = Math.max(0, Math.min(100, (ev.clientX - r.left) / r.width  * 100));
+      const y = Math.max(0, Math.min(100, (ev.clientY - r.top)  / r.height * 100));
+      set(x, y);
+      el.style.left = x + "%"; el.style.top = y + "%";
+      dump();
+    };
+    const up = () => { removeEventListener("pointermove", move);
+                       removeEventListener("pointerup", up);
+                       el.classList.remove("drag"); };
+    el.classList.add("drag");
+    addEventListener("pointermove", move); addEventListener("pointerup", up);
+  });
+}
+
 function buildMapEditor(){
   board.innerHTML = "";
   syncPinScale();
-  rooms.forEach((r, i) => {
+  board.classList.toggle("lower", mapFloor === 2);
+
+  (mapFloor === 2 ? roomsB : rooms).forEach(r => {
     const d = document.createElement("div");
     d.className = "mRoom" + (r.hall ? " hall" : "") + (r.you ? " you" : "");
     d.style.left = r.x1 + "%"; d.style.top = r.y1 + "%";
@@ -2019,50 +3594,320 @@ function buildMapEditor(){
     b.contentEditable = "true"; b.spellcheck = false; b.textContent = r.name;
     b.addEventListener("input", () => { r.name = b.textContent.trim().toUpperCase(); dump(); });
     b.addEventListener("keydown", e => { e.stopPropagation(); if (e.key === "Enter"){ e.preventDefault(); b.blur(); } });
+
+    /* WHERE THE NAME SITS INSIDE ITS ROOM.
+
+       Centred is wrong the moment a room is an L, or has a camera pin through
+       the middle of it, or is a corridor whose name only fits along one end.
+       lx/ly are percentages of the ROOM rather than of the plan, so a label
+       stays put relative to its own walls even if the room is later moved or
+       resized. Only written out for rooms actually dragged. */
+    if (r.lx !== undefined) b.style.left = r.lx + "%";
+    if (r.ly !== undefined) b.style.top  = r.ly + "%";
+    /* CLICK TO TYPE, DRAG TO MOVE — decided by whether the pointer travels.
+
+       The first version called preventDefault() on pointerdown, which is what
+       you do to start a drag. It also destroys the click: the browser never
+       places a caret, so the name became impossible to edit and every attempt
+       moved it instead.
+
+       So nothing is prevented up front. The pointer has to travel DRAG_PX
+       before this decides a drag is happening, and only then does it take over
+       and blur the field. A click that does not move is left entirely alone
+       and does what a click on editable text normally does. */
+    const DRAG_PX = 4;
+    b.addEventListener("pointerdown", ev0 => {
+      if (ev0.button !== 0) return;
+      const box = d.getBoundingClientRect();
+      const x0 = ev0.clientX, y0 = ev0.clientY;
+      let dragging = false;
+
+      const move = ev => {
+        if (!dragging){
+          if (Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0) < DRAG_PX) return;
+          dragging = true;
+          b.classList.add("drag");
+          b.blur();                       // stop typing, start moving
+          ev.preventDefault();
+        }
+        r.lx = Math.max(0, Math.min(100, (ev.clientX - box.left) / box.width  * 100));
+        r.ly = Math.max(0, Math.min(100, (ev.clientY - box.top)  / box.height * 100));
+        b.style.left = r.lx.toFixed(1) + "%";
+        b.style.top  = r.ly.toFixed(1) + "%";
+        dump();
+      };
+      const up = () => {
+        removeEventListener("pointermove", move);
+        removeEventListener("pointerup", up);
+        b.classList.remove("drag");
+      };
+      addEventListener("pointermove", move);
+      addEventListener("pointerup", up);
+    });
     d.appendChild(b);
     board.appendChild(d);
   });
 
+  /* DUCT MARKS, draggable. See the note on dragPin below for why moving one
+     is safe: it changes the drawing, never the graph. */
+  if (mapFloor === 2){
+    ducts.forEach(v => {
+      const n = nodesXY[v.down]; if (!n) return;
+      const p = ductPin[v.id] || { x:n.x, y:n.y };
+      const el = document.createElement("div");
+      el.className = "mDuct" + (ductPin[v.id] ? " moved" : "");
+      el.textContent = "\u25B2";
+      el.title = v.id + "  " + (v.name || "") + "  \u2192 " + v.up +
+                 (ductPin[v.id] ? "   (moved)" : "   (on " + v.down + ")");
+      el.style.left = p.x + "%"; el.style.top = p.y + "%";
+      /* Moving the mark does NOT move the duct. The graph is untouched and he
+         still climbs from `down` — this only decides where the triangle is
+         drawn, because a square's coordinate is the middle of a room and a
+         shaft is usually in a corner. Right-click puts it back. */
+      dragPin(el, null, (x, y) => { ductPin[v.id] = { x, y }; el.classList.add("moved"); });
+      el.addEventListener("contextmenu", e => {
+        e.preventDefault(); delete ductPin[v.id]; buildMapEditor(); dump();
+      });
+      board.appendChild(el);
+    });
+
+    doorLinks.forEach(dl => {
+      const p = doorPinOf(dl);
+      const el = document.createElement("div");
+      el.className = "mDoor";
+      el.textContent = dl.id;
+      el.title = dl.name + "   " + dl.a + " \u2194 " + dl.b +
+                 (doorPin[dl.id] ? "   (moved)" : "   (auto: midpoint)");
+      el.style.left = p.x + "%"; el.style.top = p.y + "%";
+      if (doorPin[dl.id]) el.classList.add("moved");
+      dragPin(el, null, (x, y) => {
+        doorPin[dl.id] = { x, y };
+        el.classList.add("moved");
+        el.title = dl.name + "   " + dl.a + " \u2194 " + dl.b + "   (moved)";
+      });
+      /* Right-click puts a door back on its midpoint. Without this a single
+         stray drag permanently pins a door to a spot the layout no longer
+         justifies, and the only way back is editing the generated code. */
+      el.addEventListener("contextmenu", e => {
+        e.preventDefault();
+        delete doorPin[dl.id];
+        buildMapEditor(); dump();
+      });
+      board.appendChild(el);
+    });
+  }
+
   Object.entries(cams).forEach(([id, c]) => {
+    if (camFloor(id) !== mapFloor) return;
     const el = document.createElement("div");
     el.className = "mPin"; el.textContent = id;
     el.style.left = c.pin.x + "%"; el.style.top = c.pin.y + "%";
     el.title = c.name;
-    el.addEventListener("pointerdown", e => {
-      e.preventDefault(); e.stopPropagation();
-      const r = board.getBoundingClientRect();
-      const move = ev => {
-        c.pin.x = Math.max(0, Math.min(100, (ev.clientX - r.left) / r.width * 100));
-        c.pin.y = Math.max(0, Math.min(100, (ev.clientY - r.top) / r.height * 100));
-        el.style.left = c.pin.x + "%"; el.style.top = c.pin.y + "%";
-        dump();
-      };
-      const up = () => { removeEventListener("pointermove", move);
-                         removeEventListener("pointerup", up);
-                         el.classList.remove("drag"); };
-      el.classList.add("drag");
-      addEventListener("pointermove", move); addEventListener("pointerup", up);
-    });
+    dragPin(el, null, (x, y) => { c.pin.x = x; c.pin.y = y; });
     board.appendChild(el);
   });
+
+  const btn = document.getElementById("floorSwap");
+  if (btn) btn.textContent = mapFloor === 1 ? "FLOOR 1  UPPER" : "FLOOR 2  LOWER";
   mapBuilt = true;
 }
+
+document.getElementById("floorSwap").onclick =
+  () => setMapFloor(mapFloor === 1 ? 2 : 1);
 
 function setMode(m){
   S.mode2 = m;
   document.body.classList.toggle("mapmode",  m === "map");
   document.body.classList.toggle("tunemode", m === "tuning");
-  [["tab-map","map"],["tab-sprites","sprites"],["tab-tuning","tuning"]].forEach(([id,k]) =>
-    document.getElementById(id).style.color = m === k ? "var(--phos)" : "var(--dim)");
+  document.body.classList.toggle("artmode",  m === "art");
+  [["tab-map","map"],["tab-sprites","sprites"],["tab-tuning","tuning"],["tab-art","art"]]
+    .forEach(([id,k]) => document.getElementById(id).style.color =
+      m === k ? "var(--phos)" : "var(--dim)");
   if (m === "map" && !mapBuilt) buildMapEditor();
   else if (m === "map") syncPinScale();
   else if (m === "tuning") buildTuneEditor();
+  else if (m === "art") buildArtEditor();
   dump();
 }
 addEventListener("resize", () => { if (S.mode2 === "map") syncPinScale(); });
 document.getElementById("tab-map").onclick     = () => setMode("map");
 document.getElementById("tab-sprites").onclick = () => setMode("sprites");
 document.getElementById("tab-tuning").onclick  = () => setMode("tuning");
+document.getElementById("tab-art").onclick     = () => setMode("art");
+
+/* ===========================================================================
+   CAMERA ART
+
+   newArt holds the pictures you have chosen this session, keyed by camera id,
+   each one already a data URI. Nothing touches the file until you download.
+   =========================================================================== */
+const newArt = {};
+
+
+
+/* WHICH CAMERAS ALREADY HAVE A PHOTOGRAPH, read from the file you loaded.
+
+   Not from `cams[].art`. The DATA block in this tool carries the on-disk path
+   for every camera — that is what makes the preview pane able to name them —
+   so asking it would report all twenty-five as missing, including the thirteen
+   that have had art since the first build. The authoritative answer is in
+   index.html, where a camera with a picture carries a data URI inline.
+
+   Empty until a file is loaded, and the pane says so rather than lying. */
+const artInFile = {};
+let artScanned = false;
+
+/* HOW WIDE EACH FEED PANS, read from the file rather than assumed.
+
+   The preview positions a sprite inside a frame `pan` percent wide, and so
+   does the game. If the two disagree by so much as a few percent every figure
+   lands somewhere else — which is exactly what happened when the lower cameras
+   shipped with no pan block at all: the game fell back to CONFIG.camPan (128)
+   and this tool defaulted to 102, so everything framed downstairs was wrong by
+   a quarter of a frame.
+
+   Reading it out of the file removes the guess entirely. */
+function scanPan(text){
+  Object.keys(cams).forEach(id => {
+    const at = text.search(new RegExp("(^|[{,\\s])" + id + "\\s*:\\s*\\{"));
+    if (at < 0) return;
+    const stop = text.indexOf("art:", at);
+    const seg  = text.slice(at, stop > at ? stop : at + 400);
+    const m = /pan:\{\s*width:\s*([\d.]+)/.exec(seg);
+    if (m) cams[id].pan = parseFloat(m[1]);
+  });
+}
+
+function scanArt(text){
+  Object.keys(artInFile).forEach(k => delete artInFile[k]);
+  Object.keys(cams).forEach(id => {
+    const at = text.search(new RegExp("(^|[{,\\s])" + id + "\\s*:\\s*\\{"));
+    if (at < 0) return;
+    const key = text.indexOf("art:", at);
+    if (key < 0) return;
+    const q = text.indexOf('"', key);
+    if (q < 0) return;
+    const end = text.indexOf('"', q + 1);
+    if (end < 0) return;
+    const uri = text.slice(q + 1, end);
+    if (!/^data:/.test(uri)) return;
+
+    artInFile[id] = uri;
+    /* AND HAND IT TO THE REST OF THE TOOL.
+
+       This is the bit that was missing. Knowing a camera HAS art is only half
+       the job — the DATA block this tool ships with carries the on-disk PATH
+       for every camera, not the picture, so both the art thumbnails and the
+       backdrop behind the sprite editor were trying to load
+       "images/cam_01.jpg" and getting nothing.
+
+       Pointing cams[id].art at the picture that is actually in the file fixes
+       both at once, which is what makes it possible to frame a sprite against
+       a photograph you imported through this tool ten minutes earlier. */
+    cams[id].art = uri;
+  });
+  artScanned = true;
+}
+
+const hasArt = id => !!artInFile[id];
+
+function readAsDataURL(file){
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload  = () => res(r.result);
+    r.onerror = () => rej(new Error("could not read " + file.name));
+    r.readAsDataURL(file);
+  });
+}
+
+/* Photographs come off a camera at three or four thousand pixels wide and the
+   feed is under a thousand. Shipping the original would put twenty megabytes
+   in the file for detail no one can see, so each one is drawn through a canvas
+   at a sane width and re-encoded as JPEG on the way in. */
+async function shrink(dataURL, maxW, quality){
+  const img = await new Promise((res, rej) => {
+    const i = new Image();
+    i.onload = () => res(i); i.onerror = () => rej(new Error("not an image"));
+    i.src = dataURL;
+  });
+  if (img.width <= maxW) return dataURL;
+  const c = document.createElement("canvas");
+  c.width = maxW;
+  c.height = Math.round(img.height * maxW / img.width);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", quality);
+}
+
+const kb = s => (s.length * 0.75 / 1024).toFixed(0) + " KB";
+
+function buildArtEditor(){
+  const grid = document.getElementById("artGrid");
+  const filter = document.getElementById("artFilter").value;
+  grid.innerHTML = "";
+
+  const ids = Object.keys(cams).filter(id => {
+    if (filter === "missing") return !hasArt(id) && !newArt[id];
+    if (filter === "new")     return !!newArt[id];
+    return true;
+  });
+
+  ids.forEach(id => {
+    const c = cams[id];
+    const card = document.createElement("div");
+    card.className = "artCard" + (newArt[id] ? " changed" : hasArt(id) ? "" : " missing");
+
+    const shot = newArt[id] || (hasArt(id) ? c.art : null);
+    card.innerHTML =
+      '<div class="artThumb">' +
+        (shot ? '<img src="' + shot + '">'
+              : '<span class="tiny">NO SIGNAL<br>' + c.art + '</span>') +
+      '</div>' +
+      '<div class="artMeta"><b>' + id + '</b> ' + c.name +
+        '<span class="tiny">floor ' + (c.floor || 1) +
+        ' \u00b7 pan ' + c.pan +
+        (newArt[id] ? ' \u00b7 <em>' + kb(newArt[id]) + ' staged</em>' : '') +
+      '</span></div>' +
+      '<div class="artBtns">' +
+        '<label class="act">CHOOSE\u2026<input type="file" accept="image/*" hidden></label>' +
+        (newArt[id] ? '<button class="act artUndo">UNDO</button>' : '') +
+      '</div>';
+
+    const input = card.querySelector('input[type=file]');
+    input.addEventListener("change", async e => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      try {
+        const raw = await readAsDataURL(f);
+        newArt[id] = await shrink(raw, ART_MAX_W, ART_QUALITY);
+        buildArtEditor(); dump();
+      } catch (err){ alert(err.message); }
+    });
+    const undo = card.querySelector(".artUndo");
+    if (undo) undo.addEventListener("click", () => { delete newArt[id]; buildArtEditor(); dump(); });
+
+    grid.appendChild(card);
+  });
+
+  const staged = Object.keys(newArt).length;
+  const missing = Object.keys(cams).filter(i => !hasArt(i) && !newArt[i]).length;
+  document.getElementById("artCount").textContent = artScanned
+    ? staged + " staged \u00b7 " + missing + " still missing \u00b7 " +
+      (staged ? kb(Object.values(newArt).join("")) + " to add" : "nothing to add")
+    : "load index.html to see which cameras already have art";
+}
+
+/* 1280 wide at quality 0.82 is roughly 150-250 KB a frame, which is the same
+   order as the thirteen already in the file. Raise these if the feeds look
+   soft; the only cost is the size of index.html. */
+const ART_MAX_W = 1280, ART_QUALITY = 0.82;
+
+document.getElementById("artFilter").onchange = buildArtEditor;
+document.getElementById("artClear").onclick = () => {
+  if (!Object.keys(newArt).length) return;
+  if (!confirm("Discard every picture you have chosen this session?")) return;
+  Object.keys(newArt).forEach(k => delete newArt[k]);
+  buildArtEditor(); dump();
+};
 
 /* ===========================================================================
    TUNING — every number the game runs, edited here and written back
@@ -2091,7 +3936,9 @@ const TUNE_BLOCKS = [
   { name:"NIGHTS", header:"const NIGHTS = [", open:"[", close:"]", rows:true,
     note:"One row per night. moveMs is the base move interval, breachMs your "
        + "reaction window once something is at a door, enterMs how long they "
-       + "loiter outside, failEveryMs how often a fault is rolled for." },
+       + "loiter outside. Faults are NOT set here any more — they are no longer "
+       + "rolled against a clock at all, and the numbers that govern them now "
+       + "live in the FAULTS block." },
   { name:"EUGENE", header:"const EUGENE = {", open:"{", close:"}",
     note:"His sound-led rules. These control how long a lure redirects him, "
        + "how long his movement flicker lasts, his extra entry delay, and the "
@@ -2102,13 +3949,40 @@ const TUNE_BLOCKS = [
        + "threat at all." },
   { name:"JEFFREY", header:"const JEFFREY = {", open:"{", close:"}",
     note:"The one on the feeds. showMs is how long you have to change camera "
-       + "once you have opened one he is waiting in." },
+       + "once you have opened one he is waiting in. He now takes the camera "
+       + "system AND the ventilation on every visit, so there is no longer a "
+       + "night threshold to set for a second fault." },
   { name:"FATIGUE", header:"const FATIGUE = {", open:"{", close:"}",
     note:"How fast watching stops working, and how fast it comes back." },
   { name:"HALLUCINATION", header:"const HALLUCINATION = {", open:"{", close:"}",
     note:"Figures that are not there. A gap of 0 means never." },
   { name:"RAMP", header:"const RAMP = {", open:"{", close:"}",
     note:"Applied per in-game hour, so 5 AM is harder than 12 AM on every night." },
+
+  { name:"GORDON", header:"const GORDON = {", open:"{", close:"}",
+    note:"The third body, and the only one nothing you own can influence. He "
+       + "starts on the floor below, walks to a duct, climbs it, and then walks "
+       + "to you — deaf to audio cues and indifferent to being watched. Arrays "
+       + "are per night, 1 to 7. moveMs is the number that decides how much of "
+       + "the night he costs you; blockPenalty is the entire return on closing "
+       + "a door, so it is the first thing to reach for if the door array feels "
+       + "weak or overpowering." },
+
+  { name:"POWER", header:"const POWER = {", open:"{", close:"}",
+    note:"The bar. Drains are PERCENT PER SECOND, so read them against the "
+       + "length of a night: six hours at the shipped 45-second hour is 270 "
+       + "seconds, and a drain of 0.20 held all night is 54% of the bar. "
+       + "Sitting in the dark with nothing raised costs nothing — power is a "
+       + "tax on acting, not on existing. nightMult scales every drain together "
+       + "and is the difficulty curve; it should never go DOWN as the night "
+       + "number goes up." },
+
+  { name:"FAULTS", header:"const FAULTS = {", open:"{", close:"}",
+    note:"Nothing breaks on a timer. Every system breaks because of the thing "
+       + "you used it for, and the odds RISE with each use that gets away with "
+       + "it, then drop back to base the moment one does not. Each group has "
+       + "base (the chance on the first use after a fault), step (added per use "
+       + "since) and max (the ceiling). Rows are per night, 1 to 7." },
 
   /* Top-level `const NAME = value;` declarations. They sit outside every
      object in the file, so the block scanner above could never see them —
@@ -2156,6 +4030,57 @@ const TUNE_BLOCKS = [
    every field a useful explanation; unfamiliar future fields still receive a
    clear fallback rather than appearing unexplained. */
 const TUNE_HELP = {
+
+  /* ---- GORDON --------------------------------------------------------- */
+  "GORDON.startNight":"First night he is in the building at all. Before this he does not spawn and the door array has nothing to do.",
+  "GORDON.startNodes":"Basement squares he can wake up on, picked at random. What matters about each is the TOTAL journey it implies - steps to the duct he commits to, plus rooms from that duct's exit to your door. The shipped four run 7 to 10 steps; b17 is only 5 and would have him arriving before the night has started.",
+  "GORDON.moveMs":"Milliseconds between his steps, per night. He is slow on purpose - this is the single number that decides how much of the night he costs you.",
+  "GORDON.upMult":"Multiplies moveMs once he is UPSTAIRS. Below 1 he speeds up after the climb, which is what turns the duct sound into something you dread rather than something you note.",
+  "GORDON.blockPenalty":"Extra multiples of moveMs after he walks into a closed door. This is the ENTIRE return on closing one, so it is the first number to change if doors feel weak or overpowering.",
+  "GORDON.enterMs":"How long he loiters on the floor below before his first step, per night. Your grace period, and the difference between a problem later and a problem now.",
+  "GORDON.climbInMs":"How long he spends climbing INTO a duct, on the lower floor and visible on that camera.",
+  "GORDON.inDuctMs":"How long he is inside the duct - on neither floor, on no camera, and unreachable. The only moment all night he cannot be found.",
+  "GORDON.climbOutMs":"How long he spends arriving on the upper floor, visible on whatever covers that room.",
+  "GORDON.doorMs":"How long he stands in your doorway before it is over. There is no escape roll and no cue that reaches him: this is the length of the last thing that happens to you.",
+  "GORDON.camBurnMs":"How long an UPPER-floor feed survives having him in it before it tears itself apart for the rest of the night. Lower-floor feeds are never burned, or the door game would be unplayable.",
+  "GORDON.approach":"Kept at 1.0. He does not wander and does not idle - a Gordon that only ever closes distance is a clock, and a wandering one would just be a slower Eugene.",
+  "GORDON.chirp":"Which sensor chirp names him. His is a low falling triple, against Eugene's low falling double and Sloppy's high rising triple.",
+  "GORDON.name":"Display name, used on the loss screen and in the alert strip.",
+  "GORDON.id":"Internal id. It keys his sprite, his SHOTS_UNIT overrides and his entry in the sprite tab, so changing it orphans all three.",
+
+  /* ---- POWER ---------------------------------------------------------- */
+  "POWER.capacity":"Size of the bar. Everything else is a percentage of this, so changing it rescales the whole economy rather than making the night longer.",
+  "POWER.drain.lights":"Percent per second with the office lit. Your defence against Eugene - and the cheapest of the four, because cutting the lights is already the correct play against him.",
+  "POWER.drain.monitor":"Percent per second with the monitor raised. Your defence against Sloppy, whose commit meter fills whenever she is unwatched, so this is the drain you have least freedom to avoid.",
+  "POWER.drain.door":"Percent per second with one door closed. Your only defence against Gordon, and the most expensive thing in the game: held all night on night 4 it is most of the bar.",
+  "POWER.drain.panel":"Percent per second with the maintenance panel open. Zero on purpose - the panel is already paid for by pinning you there during a reboot, and charging twice would make reading your own systems a punishable act.",
+  "POWER.drain.lure":"Percent per PRESS of the audio cue, not per second. Charging by the second would only tax the relay's cooldown, which you do not control.",
+  "POWER.nightMult":"Scales every drain together, per night. This is the difficulty curve. It should never decrease as the night number rises: a knob that goes down as the game gets harder reads as a typo and invites a fix that reshapes everything.",
+  "POWER.jingleMs":"How long the music box plays after the power dies, before the waiting begins. The shipped tune is exactly this long, so the silence afterwards is the thing you are actually listening to.",
+  "POWER.graceMinMs":"Shortest wait after the jingle before he moves. Rolled once per outage.",
+  "POWER.graceMaxMs":"Longest wait after the jingle. The clock keeps running throughout, so a wide gap here is what makes a late outage survivable and an early one fatal.",
+  "POWER.warnAt":"Percentage at which the readout goes critical and the second warning tick plays.",
+
+  /* ---- FAULTS --------------------------------------------------------- */
+  "FAULTS.audio.base":"Chance the relay breaks on the FIRST cue after a fault, per night. Rolled after the cue is placed, so a relay that dies still did the job you pressed it for.",
+  "FAULTS.audio.step":"Added to the relay's chance for every cue since the last fault. The steepest ramp of the four: leaning on the relay is supposed to cost you the relay.",
+  "FAULTS.audio.max":"Ceiling on the relay's per-cue chance, so a long clean run never becomes a certainty.",
+  "FAULTS.camEugene.base":"Chance the camera array breaks on the first flicker caused by EUGENE MOVING, per night. The bigger of the array's two sources - a whole-array stutter caused by something walking around the building.",
+  "FAULTS.camEugene.step":"Added per flicker since the array last faulted. Shared with camFeed: both wear out one array, so a night of Eugene flickers leaves the failing feeds primed and the other way round.",
+  "FAULTS.camEugene.max":"Ceiling on the per-flicker chance from Eugene's movement.",
+  "FAULTS.camFeed.base":"Chance the array breaks on one dropout of an UNSTABLE feed. An order of magnitude smaller than camEugene because a dropout starts roughly twice a second while you hold 3A or 8A - at Eugene's numbers, three seconds on a failing feed would be a coin flip.",
+  "FAULTS.camFeed.step":"Added per dropout since the array last faulted. Same counter as camEugene.",
+  "FAULTS.camFeed.max":"Ceiling on the per-dropout chance from a failing feed.",
+  "FAULTS.ventDark.base":"Chance the fans break, per SECOND with the lights off, on the first second past the grace. This is the answer to sitting in the dark all night: you still can, it now costs you the fans, and the fans cost you the air.",
+  "FAULTS.ventDark.step":"Added for each further second of unbroken darkness. Darkness compounds twice - this ramp, and the shared wear counter rising alongside it.",
+  "FAULTS.ventDark.max":"Ceiling on the per-second chance while dark.",
+  "FAULTS.ventDark.graceMs":"How long the lights can be off before the ramp bites. Set a little above the longest breachMs in NIGHTS, so answering a door and relighting is effectively free - cutting the lights because something is AT your door is the correct play and must never be the thing that kills you.",
+  "FAULTS.ventDark.graceScale":"Multiplies the chance during the grace. At 0.12 a second inside the grace is worth about a twelfth of one outside it.",
+  "FAULTS.door.base":"Chance the door array jams when Gordon walks into a closed door, per night. This is the ONLY way it can break, so a door is never taken off you for reasons you had no hand in.",
+  "FAULTS.door.step":"Added per block since the array last jammed. Set to 0 for a flat chance per block.",
+  "FAULTS.door.max":"Ceiling on the per-block jam chance.",
+  "FAULTS.graceMs":"Protected time after any system restores, during which a new fault cannot land on it. Wear still accrues - it just cannot fire inside this window, so an array dying one second after an eight-second reboot is not a thing that can happen.",
+
   hourMs:"Real time for one in-game hour. Lower values make the entire night pass faster.",
   officePan:"How far the office panorama can shift when looking around.",
   "camPan.width":"Width of a camera panorama relative to the visible monitor; higher means more picture exists off-screen.",
@@ -2189,8 +4114,6 @@ const TUNE_HELP = {
   darkCamMs:"How long camera feeds remain powered by residual power after the mains are cut.",
   ventAlarmMs:"Initial interval between ventilation warnings; warnings tighten as air runs out.",
   warningLightCycleMs:"Length of one office-warning-light fade cycle; lower is a faster pulse.",
-  jeffreyWarningLightMs:"Length of the office-light pulse following a Jeffrey scare.",
-  faultGraceMs:"Protected time after a system restores during which a new fault cannot immediately hit it.",
   passBySteps:"How many rooms an animatronic continues past the office after a successful pass-by.",
   walkByMs:"How long the visible doorway crossing animation lasts.",
   powerRestoreMs:"Breaker warm-up time before power returns.",
@@ -2776,18 +4699,52 @@ function applyTuning(text){
   return out.join("");
 }
 
+/* The lower plan. Emitted as its own literal, mirroring how the game keeps it
+   separate from ROOMS — which is not cosmetic: this tool rewrites the ROOMS
+   block by regex, and folding the basement into it would mean the regex either
+   misses the second half or eats it. */
+function blockRoomsB(){
+  const rows = roomsB.map(r => {
+    const p = [`x1:${round(r.x1)}`, `y1:${round(r.y1)}`, `x2:${round(r.x2)}`, `y2:${round(r.y2)}`,
+               `name:"${r.name}"`];
+    if (r.hall) p.push("hall:true");
+    if (r.you)  p.push("you:true");
+    if (r.lx !== undefined) p.push(`lx:${round(r.lx)}`);
+    if (r.ly !== undefined) p.push(`ly:${round(r.ly)}`);
+    return "  { " + p.join(", ") + " }";
+  });
+  return "const ROOMS_B = [\n" + rows.join(",\n") + "\n];";
+}
+
+/* DOOR_LINKS, with a pin: only on the doors that have actually been dragged.
+   A door left where the tool put it keeps deriving its position from the two
+   squares it joins, so re-cutting the basement moves it automatically instead
+   of stranding it at a coordinate that used to make sense. */
+function blockDoorLinks(){
+  const rows = doorLinks.map(d => {
+    const p = [`id:"${d.id}"`, `name:"${d.name}"`, `a:"${d.a}"`, `b:"${d.b}"`];
+    const pin = doorPin[d.id];
+    if (pin) p.push(`pin:{x:${round(pin.x)},y:${round(pin.y)}}`);
+    return "  { " + p.join(", ") + " }";
+  });
+  return "const DOOR_LINKS = [\n" + rows.join(",\n") + "\n];";
+}
+
 function blockRooms(){
   const rows = rooms.map(r => {
     const p = [`x1:${round(r.x1)}`, `y1:${round(r.y1)}`, `x2:${round(r.x2)}`, `y2:${round(r.y2)}`,
                `name:"${r.name}"`];
     if (r.hall) p.push("hall:true");
     if (r.you)  p.push("you:true");
+    if (r.lx !== undefined) p.push(`lx:${round(r.lx)}`);
+    if (r.ly !== undefined) p.push(`ly:${round(r.ly)}`);
     return "  { " + p.join(", ") + " }";
   });
   return "const ROOMS = [\n" + rows.join(",\n") + "\n];";
 }
-function blockPins(){
+function blockPins(floor){
   return Object.entries(cams)
+    .filter(([id]) => !floor || camFloor(id) === floor)
     .map(([id, c]) => "  " + id + "  pin:{x:" + round(c.pin.x) +
                       ",y:" + round(c.pin.y) + "}")
     .join("\n");
