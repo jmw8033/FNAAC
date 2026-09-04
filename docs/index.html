@@ -386,7 +386,9 @@ body.camdown #jeffreyArt, body.transit #jeffreyArt{opacity:0}
 
 /* camera system down: nothing but snow */
 #camDead{position:absolute; inset:0; display:none; align-items:center; justify-content:center;
-  background:#050705; z-index:2; font-size:12px; letter-spacing:.22em; color:var(--alarm)}
+  background:#050705; z-index:2; font-size:12px; letter-spacing:.22em; color:var(--alarm);
+  text-shadow:0 0 12px rgba(255,95,82,.35)}
+#camDead::before{content:"CAMERA SYSTEM OFFLINE"; display:block; text-align:center;}
 body.camdown #camDead{display:flex}
 body.camdown #camBox{opacity:.06}
 body.camdown #static{opacity:.5}
@@ -397,6 +399,7 @@ body.camdown #static{opacity:.5}
 
 #sensorBtn{
   position:absolute; left:22px; bottom:100px; z-index:5; pointer-events:auto;
+  width:250px; min-width:250px; max-width:250px;
   padding:12px 18px; font-size:11px; letter-spacing:.18em; cursor:pointer;
   color:#8fe0b4; background:rgba(6,10,7,.94); border:1px solid #46614f;
 }
@@ -404,14 +407,36 @@ body.camdown #static{opacity:.5}
 #sensorBtn:disabled{opacity:.32; cursor:not-allowed}
 #sensorBtn.engaged{color:var(--shell); background:var(--amber); border-color:var(--amber)}
 
+/* Faults and sensor events are shown by the interface itself rather than by a
+   notification stack in the corner. */
+#alerts{display:none !important}
+
 #audioBtn{
   position:absolute; left:22px; bottom:58px; z-index:5; pointer-events:auto;
+  width:250px; min-width:250px; max-width:250px;
   padding:12px 18px; font-size:11px; letter-spacing:.18em; cursor:pointer;
   color:#8fe0b4; background:rgba(6,10,7,.94); border:1px solid #46614f;
 }
 #audioBtn:hover:not(:disabled){color:var(--phos); border-color:var(--phos-dim)}
 #audioBtn:disabled{opacity:.32; cursor:not-allowed}
+#audioBtn.fault{opacity:1; color:#ffaaa3; background:rgba(70,10,8,.92); border-color:var(--alarm); box-shadow:0 0 0 1px rgba(255,95,82,.18) inset,0 0 10px rgba(255,95,82,.18)}
 #audioBtn.firing{color:var(--shell); background:var(--amber); border-color:var(--amber)}
+
+
+/* ALL-20 HALLUCINATIONS --------------------------------------------------- */
+.hallucLurker{opacity:0 !important;pointer-events:none;transition:none;}
+.doorway.halluc-present .hallucLurker{opacity:.92 !important;}
+.hallucLurker.halluc-fade{animation:hallucDoorFade var(--hallucDoorMs,2800ms) ease-in-out forwards;}
+@keyframes hallucDoorFade{0%{opacity:.02}10%{opacity:.92}55%{opacity:.92}100%{opacity:0}}
+body.all20-office-flicker #officeArt img{animation:all20OfficeLightFlicker .78s steps(1,end) both;}
+body.all20-office-flicker #darkVeil{animation:all20VeilFlicker .78s steps(1,end) both;}
+body.all20-office-flicker #warningVeil{opacity:0}
+@keyframes all20OfficeLightFlicker{0%,100%{filter:var(--grade-office)}12%{filter:brightness(.30) contrast(1.35) saturate(.16) hue-rotate(-14deg)}23%{filter:var(--grade-office)}39%{filter:brightness(.30) contrast(1.35) saturate(.16) hue-rotate(-14deg)}54%{filter:brightness(.42) contrast(1.24) saturate(.22) hue-rotate(-10deg)}67%{filter:brightness(.30) contrast(1.35) saturate(.16) hue-rotate(-14deg)}82%{filter:var(--grade-office)}}
+@keyframes all20VeilFlicker{0%,100%{opacity:0}12%{opacity:1}23%{opacity:0}39%{opacity:1}54%{opacity:.72}67%{opacity:1}82%{opacity:0}}
+#titleScreen.all20-preNight #preNightLabel,#titleScreen.all20-preNight #preNightNight,#titleScreen.all20-preNight #preNightTime{color:#ff5f52;text-shadow:2px 0 0 rgba(255,95,82,.55),-2px 0 0 rgba(255,180,170,.25),0 0 28px rgba(255,70,55,.35)}
+#titleScreen.all20-preNight #preNightNight,#titleScreen.all20-preNight #preNightLabel{animation:all20StartFlicker .34s steps(2,end) infinite}
+#titleScreen.all20-preNight #preNightTime{animation:all20StartFlicker .29s steps(2,end) infinite reverse}
+@keyframes all20StartFlicker{0%,100%{opacity:1;filter:none}18%{opacity:.30}24%{opacity:1}41%{opacity:.62}47%{opacity:1}72%{opacity:.24}77%{opacity:1}}
 
 /* ---- the monitor's own controls ------------------------------------------
    These sit OUTSIDE #monitor, in their own layer above the CRT, because the
@@ -505,6 +530,16 @@ body.camsup #monUI > *{pointer-events:auto}
 #map .doorPin i{width:17px}
 #map .ductPin{font-size:14px}
 #mapPlan .room i{font-size:10px}
+/* Door-array failure is a whole-system condition: every lower-floor door control turns red together. */
+#mapPlan.lower .doorPin.arraydown{
+  border-color:var(--alarm); background:rgba(70,10,8,.92);
+  box-shadow:0 0 10px rgba(255,95,82,.34), inset 0 0 0 1px rgba(255,140,130,.12);
+  cursor:not-allowed;
+}
+#mapPlan.lower .doorPin.arraydown i{
+  border-color:var(--alarm); background:var(--alarm); height:8px;
+}
+
 #mapPlan::after{content:""; position:absolute; inset:0; pointer-events:none;
   background:linear-gradient(148deg, rgba(255,255,255,.05) 0%,
     transparent 34%, transparent 66%, rgba(255,255,255,.025) 100%)}
@@ -639,9 +674,7 @@ body.camburn #camFeed{animation:camTear .19s steps(2) infinite}
   100%{filter:brightness(1.2)  contrast(.85) saturate(.5); transform:translateX(2px)}
 }
 body.feeddead #camFeed{opacity:0}
-body.feeddead #camBox::after{content:"FEED LOST"; position:absolute; inset:0;
-  display:flex; align-items:center; justify-content:center;
-  font-size:12px; letter-spacing:.34em; color:#6a4a46; background:#050505}
+body.feeddead #camBox::after{content:""; position:absolute; inset:0; display:block; background:#050505}
 
 /* ---- the outage --------------------------------------------------------- */
 /* Darker than a power cut, because it is not one — there is no residual line
@@ -859,9 +892,52 @@ body.nearRight #panel::before{opacity:1}
   font-variant-numeric:tabular-nums}
 /* The air has no gauge. You are told it is failing by a sound, and you either
    recognise it or you do not. */
-#alerts{position:absolute; top:78px; left:26px; font-size:10px; letter-spacing:.14em; line-height:2.2}
-#alerts div{color:var(--alarm)}
-#alerts div.warn{color:var(--amber)}
+/* Alerts remain in the DOM as an internal state bus, but are never shown to the player. */
+#alerts{display:none !important}
+#audioBtn.firing{color:var(--shell); background:var(--amber); border-color:var(--amber)}
+/* Both monitor utility controls keep the same footprint even when their labels change. */
+#audioBtn, #sensorBtn{
+  width:250px; min-width:250px; max-width:250px; white-space:nowrap;
+}
+#pickTitle .customPick, #pickLose .customPick{width:110px; min-width:110px; white-space:nowrap}
+/* Audio failure is communicated by the control itself, not a text alert. */
+#audioBtn.audio-error{
+  color:#ffd7d2; border-color:var(--alarm);
+  background:linear-gradient(180deg,rgba(150,24,18,.88),rgba(72,12,10,.94));
+  box-shadow:inset 0 1px 0 rgba(255,180,170,.12),0 0 0 1px rgba(255,95,82,.12);
+}
+#audioBtn.audio-error:hover:not(:disabled){
+  color:#fff3f1; border-color:#ff8b80;
+  background:linear-gradient(180deg,rgba(180,31,23,.94),rgba(88,13,10,.96));
+}
+
+/* A motion hit briefly makes the matching camera pin flicker. */
+@keyframes sensorRoomFlicker{
+  0%,100%{opacity:1; filter:none}
+  10%{opacity:.18; filter:brightness(.55)}
+  22%{opacity:1; filter:brightness(1.5)}
+  36%{opacity:.25; filter:brightness(.65)}
+  52%{opacity:1; filter:brightness(1.8)}
+  68%{opacity:.35; filter:brightness(.7)}
+  84%{opacity:1; filter:brightness(1.35)}
+}
+.camPin.motion-hit{animation:sensorRoomFlicker 1s steps(2,end) both; z-index:8}
+
+/* Camera hallucinations use the same calibrated sprite placement as a real body,
+   but resolve and fade out without becoming a gameplay object. */
+.subject.hallucination{animation:hallucinationFade var(--hallucHoldMs,2500ms) ease-in-out both;pointer-events:none;}
+@keyframes hallucinationFade{0%{opacity:0}12%{opacity:.90}58%{opacity:.90}100%{opacity:0}}
+
+/* ---- the monitor's own controls ------------------------------------------
+   These sit OUTSIDE #monitor, in their own layer above the CRT, because the
+   vignette is a grade for the footage and not for the interface. The monitor
+   is a stacking context of its own, so nothing inside it can ever rise above
+   the CRT — the controls have to live out here to be lit evenly.
+
+   Geometry is unchanged: #monUI covers the same rectangle #monitor does, so
+   every left/right/bottom offset means what it always meant. It carries the
+   monitor's slide so they still arrive together, and nothing in it is
+   clickable unless the monitor is actually up. */
 
 /* ---- controls ---------------------------------------------------------- */
 .dock{position:absolute; bottom:0; z-index:45; pointer-events:auto;
@@ -929,6 +1005,12 @@ body.camsup #powerBtn{opacity:0; pointer-events:none}
   100%{opacity:0}
 }
 #titleEyes.flash{animation:eyeFlash .24s steps(2) both}
+/* All-20 Gordon is not orange. His eyes inherit the same hostile red used by the
+   Custom Night handoff, so the startup screen immediately reads as the special mode. */
+#titleScreen.all20-preNight #titleEyes i{
+  background:radial-gradient(circle at 40% 38%,#ffe8e5 0 18%,#ff776e 38%,#e32619 72%,transparent 74%);
+  box-shadow:0 0 7px rgba(255,95,82,.98), 0 0 20px rgba(255,45,30,.72);
+}
 @keyframes faceDrift{
   0%   {transform:translate(0,0)      scale(1.00)}
   33%  {transform:translate(-1.2%,.6%) scale(1.03)}
@@ -1027,6 +1109,60 @@ body.camsup #powerBtn{opacity:0; pointer-events:none}
 @keyframes startPulse{0%,100%{opacity:.25; transform:scale(1)}
   50%{opacity:.7; transform:scale(1.02)}}
 
+/* ---- custom night -------------------------------------------------------- */
+.customScreen{
+  background:radial-gradient(circle at 50% 16%,rgba(93,182,135,.08),transparent 42%),linear-gradient(180deg,#020403 0%,#050806 100%);
+  color:#e6f6ec; overflow:hidden;
+}
+.customFrame{
+  position:relative; width:min(1040px,94vw); height:min(760px,92vh);
+  display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+  padding:30px 34px 74px;
+  background:linear-gradient(180deg,rgba(18,29,24,.97),rgba(5,10,8,.985));
+  border:1px solid #355447;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.045),inset 0 0 0 1px rgba(0,0,0,.35),0 18px 70px rgba(0,0,0,.70);
+}
+.customFrame::before{content:"";position:absolute;inset:8px;border:1px solid rgba(125,250,176,.07);pointer-events:none}
+.customTitle{font-size:18px;letter-spacing:.34em;color:#d9f8e4;text-shadow:0 0 16px rgba(125,250,176,.10);margin-bottom:8px}
+.customHint{font-size:8px;letter-spacing:.22em;color:#779b89;margin-bottom:24px}
+.customAnimatics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;width:100%;align-items:stretch}
+.customCard{min-width:0;min-height:0;overflow:hidden;text-align:center;padding:14px 12px 15px;background:linear-gradient(180deg,rgba(17,27,23,.94),rgba(8,14,11,.96));border:1px solid #294238;box-shadow:inset 0 1px 0 rgba(255,255,255,.028),0 5px 18px rgba(0,0,0,.24);transition:border-color .14s,background .14s,transform .14s}
+.customCard:hover{border-color:#46695a;transform:translateY(-1px)}
+.customCard.off{background:linear-gradient(180deg,rgba(12,19,16,.90),rgba(6,10,8,.96))}
+.customCard.off .customArt{filter:grayscale(.95) brightness(.48) contrast(1.05)}
+.customName{font-size:11px;letter-spacing:.20em;color:#d6e8dc;margin-bottom:11px}
+.customArtFrame{width:100%;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;margin:0 auto 13px;background:radial-gradient(circle at 50% 42%,rgba(125,250,176,.055),rgba(0,0,0,.18) 68%);border:1px solid #253a31;box-shadow:inset 0 0 24px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.035);overflow:hidden}
+.customArt{display:block;width:92%;height:92%;object-fit:contain;filter:contrast(1.04) brightness(.95);image-rendering:auto;transition:filter .14s,transform .14s}
+.customCard:hover .customArt{transform:scale(1.015)}
+.customAILabel{display:flex;justify-content:space-between;align-items:center;font-size:8px;letter-spacing:.16em;color:#7f9c8c;margin-bottom:7px}
+.customAILabel .customLevelState{color:#648272;font-size:7px;letter-spacing:.14em}
+.customCard:not(.off) .customLevelState{color:#98d7b4}
+.customControl{display:grid;grid-template-columns:28px minmax(0,1fr) 28px;align-items:center;gap:6px;padding:0 1px}
+.customValue{display:flex;align-items:center;justify-content:center;min-width:0;height:38px;font-size:29px;line-height:1;font-variant-numeric:tabular-nums;color:#effff6;background:rgba(3,8,6,.72);border-top:1px solid rgba(255,255,255,.035);border-bottom:1px solid rgba(255,255,255,.035);text-shadow:0 0 11px rgba(100,255,170,.18)}
+.customStep{width:28px;height:28px;padding:0;margin:0;border:1px solid #30473c;border-radius:2px;cursor:pointer;background:linear-gradient(180deg,#26342d,#18231e);color:#cfe4d6;font:18px/1 Georgia,serif;box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 2px 0 #0a0f0c}
+.customStep:hover:not(:disabled){border-color:#638a74;color:#effff6;background:linear-gradient(180deg,#30463b,#1d2a24)}
+.customStep:active:not(:disabled){transform:translateY(1px);box-shadow:inset 0 2px 4px rgba(0,0,0,.55)}
+.customStep:disabled{opacity:.22;cursor:not-allowed}
+.customLevelTrack{height:4px;margin-top:11px;background:#101814;border:1px solid #22352d;overflow:hidden}
+.customLevelFill{display:block;width:0;height:100%;background:linear-gradient(90deg,#4aa879,#9be9c0);box-shadow:0 0 8px rgba(125,250,176,.25);transition:width .12s ease-out}
+.customBottom{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;margin-top:18px;width:100%}
+.customPresetRow{display:flex;align-items:center;justify-content:center;gap:9px;width:100%}
+.customReadyRow{display:flex;align-items:center;justify-content:center;width:100%}
+.customPreset{min-width:96px;height:34px;font:inherit;font-size:8px;letter-spacing:.15em;padding:0 12px;cursor:pointer;color:#8fb4a0;background:#0c1410;border:1px solid #30483d}
+.customPreset:hover{color:#d5f5e2;border-color:#648a76;background:#122019}
+.customReady{min-width:150px;height:42px;font:inherit;font-size:10px;letter-spacing:.22em;padding:0 18px;cursor:pointer;color:#08100c;background:linear-gradient(180deg,#b8f9d3,#78d9aa);border:1px solid #b8f9d3;box-shadow:0 0 16px rgba(120,255,180,.10),inset 0 1px 0 rgba(255,255,255,.42)}
+.customReady:hover{background:linear-gradient(180deg,#d5ffe4,#9ae7bf)}
+.customBack{position:absolute;left:20px;bottom:18px;min-width:82px;height:34px;font:inherit;font-size:8px;letter-spacing:.16em;color:#89a897;background:#0a110d;border:1px solid #30463c;cursor:pointer}
+.customBack:hover{color:#d2f1de;border-color:#5c7c6b;background:#111b16}
+.customTotal{position:absolute;right:20px;bottom:19px;font-size:9px;letter-spacing:.13em;color:#a4baad}
+.customTier{position:absolute;right:20px;bottom:36px;font-size:7px;letter-spacing:.14em;color:#628171}
+@media (max-width:760px){
+  .customFrame{height:96vh;padding:20px 12px 70px}.customTitle{font-size:15px}
+  .customAnimatics{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;overflow:auto;padding:1px 1px 4px}
+  .customCard{padding:11px 9px 12px}.customArtFrame{margin-bottom:9px}.customName{font-size:9px;margin-bottom:8px}
+  .customBottom{margin-top:11px}.customPresetRow{gap:7px}.customTotal{right:12px;bottom:14px}.customTier{right:12px;bottom:29px}.customBack{left:12px;bottom:13px}
+}
+
 .screen{position:absolute; inset:0; z-index:70; display:none; flex-direction:column;
   align-items:center; justify-content:center; background:var(--shell);
   text-align:center; overflow-y:auto; -webkit-overflow-scrolling:touch;
@@ -1087,6 +1223,35 @@ body.camsup #powerBtn{opacity:0; pointer-events:none}
   cursor:pointer; color:var(--shell); background:var(--phos); border:none}
 .keys{font-size:clamp(7px,min(1.15vh,9px),9px); letter-spacing:.13em;
   color:var(--phos-dim); line-height:1.9}
+
+/* DEATH INTERFERENCE — a short burst of dead-channel noise between the scare and
+   the title. It shares the title screen's shell, but the signal is much more
+   unstable: this should feel like the monitor losing the last frame of you. */
+#deathScreen{z-index:88; background:#040605; overflow:hidden; opacity:0;}
+#deathScreen.show{display:flex; opacity:1;}
+#deathStatic{position:absolute; inset:-16%; pointer-events:none;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.72) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.28) 0 1px, transparent 1px 4px),
+    radial-gradient(ellipse at 50% 45%, rgba(120,255,190,.08), rgba(0,0,0,.72) 72%);
+  mix-blend-mode:screen; opacity:.72;
+  animation:deathStaticA .075s steps(3) infinite, deathStaticB .22s steps(2) infinite;}
+#deathStatic::before{content:""; position:absolute; inset:-8%;
+  background:repeating-linear-gradient(0deg, transparent 0 7px, rgba(210,255,230,.16) 8px 9px, transparent 10px 15px);
+  opacity:.65; animation:deathLines .14s steps(2) infinite;}
+#deathStatic::after{content:""; position:absolute; left:-5%; right:-5%; top:35%; height:22%;
+  background:linear-gradient(180deg, transparent, rgba(205,255,225,.18), transparent);
+  opacity:.55; animation:deathBand .32s steps(3) infinite;}
+@keyframes deathStaticA{0%{transform:translate(0,0) scale(1)}33%{transform:translate(-1.4%,-.8%) scale(1.015)}66%{transform:translate(1.2%,1.1%) scale(1.01)}100%{transform:translate(-.6%,.3%) scale(1)}}
+@keyframes deathStaticB{0%{filter:contrast(1)}50%{filter:contrast(1.55) brightness(1.18)}100%{filter:contrast(.82) brightness(.92)}}
+@keyframes deathLines{from{transform:translateY(-7%)}to{transform:translateY(8%)}}
+@keyframes deathBand{0%{transform:translateY(-130%); opacity:.12}50%{opacity:.7}100%{transform:translateY(240%); opacity:.05}}
+#deathVig{position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(ellipse at center, transparent 18%, rgba(0,0,0,.32) 58%, rgba(0,0,0,.92) 100%);
+  mix-blend-mode:multiply;}
+@media (prefers-reduced-motion: reduce){
+  #deathStatic,#deathStatic::before,#deathStatic::after{animation:none;}
+}
 
 #scare{z-index:90; background:#000; padding:0; gap:0; overflow:hidden}
 /* THE FACE IS THE PICTURE. EVERYTHING HERE PROTECTS THE TOP OF IT.
@@ -1184,7 +1349,11 @@ body.touch #panel{width:min(340px,76vw); padding:20px 16px}
 body.touch #pullTab{opacity:.5}
 body.touch.camsup #pullTab{opacity:0}
 body.touch .dock{width:132px; font-size:11px; padding:16px 0 22px}
-body.touch #audioBtn, body.touch #sensorBtn{padding:15px 20px; font-size:12px}
+body.touch #audioBtn, body.touch #sensorBtn{padding:15px 20px; font-size:12px; width:250px; min-width:250px; max-width:250px}
+body.touch #audioBtn, body.touch #sensorBtn{left:106px}
+body.touch .customPanel{padding:12px 10px 10px}
+body.touch .customRow{grid-template-columns:minmax(76px,1fr) 34px 54px 34px; gap:5px}
+body.touch .customStep{width:28px}
 body.touch .camPin{min-width:52px; padding:10px 8px; font-size:12px}
 body.touch .rebootBtn{padding:16px; font-size:12px}
 /* A door pin is the only control in the game you may have to hit while
@@ -1221,8 +1390,8 @@ input, textarea, [contenteditable]{ -webkit-user-select:text; user-select:text; 
   <div id="officeView">
     <div id="officeScene">
       <div id="officeArt"></div>
-      <div class="doorway left"  id="doorLeft"><img class="lurker" alt=""></div>
-      <div class="doorway right" id="doorRight"><img class="lurker" alt=""></div>
+      <div class="doorway left"  id="doorLeft"><img class="lurker" alt=""><img class="lurker hallucLurker" alt=""></div>
+      <div class="doorway right" id="doorRight"><img class="lurker" alt=""><img class="lurker hallucLurker" alt=""></div>
       <div id="darkVeil"></div>
       <div id="warningVeil"></div>
   <div id="pullTab"><span>▲</span></div>
@@ -1235,7 +1404,7 @@ input, textarea, [contenteditable]{ -webkit-user-select:text; user-select:text; 
     </div></div>
     <div id="static"></div>
     <img id="jeffreyArt" alt="">
-    <div id="camDead">CAMERA SYSTEM OFFLINE</div>
+    <div id="camDead"></div>
   </div>
 
   <!-- The monitor's controls, lifted out of the monitor so the CRT vignette
@@ -1311,15 +1480,35 @@ input, textarea, [contenteditable]{ -webkit-user-select:text; user-select:text; 
       <button id="btnStart">CLOCK IN</button>
       <div class="stars" id="starsTitle"></div>
     </div>
-    <div id="titleVersion" aria-label="Game version">V 2.0.5</div>
+    <div id="titleVersion" aria-label="Game version">V 2.1.4</div>
     <div id="preNightContent" aria-live="polite" aria-atomic="true">
-      <div id="preNightLabel">SHIFT COMMENCING</div>
+      <div id="preNightLabel"></div>
       <div id="preNightNight">NIGHT 1</div>
       <div id="preNightRule"></div>
       <div id="preNightTime">12 AM</div>
-      <div id="preNightHint">REPORT TO SECURITY</div>
+      <div id="preNightHint"></div>
     </div>
     <div id="titleTear"></div>
+  </div>
+
+  <div class="screen customScreen" id="customScreen">
+    <div class="customFrame">
+      <div class="customTitle">CUSTOM NIGHT</div>
+      <div class="customHint">SET EACH THREAT FROM 0 TO 20 &nbsp;·&nbsp; 0 = OFF</div>
+      <div id="customAnimatics" class="customAnimatics"></div>
+      <div class="customBottom">
+        <div class="customPresetRow">
+          <button class="customPreset" id="customAll0" type="button">ALL 0</button>
+          <button class="customPreset" id="customAll20" type="button">ALL 20</button>
+        </div>
+        <div class="customReadyRow">
+          <button class="customReady" id="customReady" type="button">READY</button>
+        </div>
+      </div>
+      <button class="customBack" id="customBack" type="button">BACK</button>
+      <div class="customTier" id="customTier">BUILDING DIFFICULTY  ·  NIGHT 1</div>
+      <div class="customTotal" id="customTotal">TOTAL A.I. 0 / 80</div>
+    </div>
   </div>
 
   <div class="screen" id="loseScreen">
@@ -1328,6 +1517,11 @@ input, textarea, [contenteditable]{ -webkit-user-select:text; user-select:text; 
     <div class="nights" id="pickLose"></div>
     <button id="btnRetry">CLOCK IN</button>
     <div class="stars" id="starsLose"></div>
+  </div>
+
+  <div class="screen" id="deathScreen" aria-hidden="true">
+    <div id="deathStatic"></div>
+    <div id="deathVig"></div>
   </div>
 
   <div class="screen" id="winScreen">
@@ -1365,11 +1559,11 @@ input, textarea, [contenteditable]{ -webkit-user-select:text; user-select:text; 
     const completed = Number.parseInt(localStorage.getItem("fnaac-completed-night"), 10);
     const unlocked = Number.parseInt(localStorage.getItem("fnaac-unlocked-night"), 10);
     boot.unlockedNight = Number.isInteger(completed)
-      ? Math.min(7, Math.max(1, completed + 1))
+      ? Math.min(8, Math.max(1, completed + 1))
       : Number.isInteger(unlocked)
-        ? Math.min(7, Math.max(1, unlocked))
+        ? Math.min(8, Math.max(1, unlocked))
         : 1;
-    boot.night = boot.unlockedNight;
+    boot.night = boot.unlockedNight >= 8 ? 7 : boot.unlockedNight;
   } catch (_) {
     boot.unlockedNight = 1;
   }
@@ -1389,20 +1583,22 @@ input, textarea, [contenteditable]{ -webkit-user-select:text; user-select:text; 
     label.textContent = "NIGHT";
     picker.appendChild(label);
 
-    for (let n = 1; n <= 7; n++) {
-      if (n > 5 && n > boot.unlockedNight) continue;
+    for (let n = 1; n <= 8; n++) {
+      if (n > boot.unlockedNight) continue;
       const b = document.createElement("button");
       b.type = "button";
-      b.textContent = n;
+      b.textContent = n === 8 ? "CUSTOM" : n;
       b.dataset.night = n;
+      b.classList.toggle("customPick", n === 8);
       b.disabled = n > boot.unlockedNight;
       if (n === boot.night) b.classList.add("on");
       b.addEventListener("click", e => {
         e.stopPropagation();
         if (b.disabled || boot.ready) return;
+        if (n === 8){ boot.openCustomRequested = true; return; }
         boot.night = n;
         picker.querySelectorAll("button").forEach(x =>
-          x.classList.toggle("on", +x.dataset.night === boot.night)
+          x.classList.toggle("on", +x.dataset.night !== 8 && +x.dataset.night === boot.night)
         );
       });
       picker.appendChild(b);
@@ -1460,6 +1656,8 @@ input, textarea, [contenteditable]{ -webkit-user-select:text; user-select:text; 
   requestAnimationFrame(() => requestAnimationFrame(loadGame));
 })();
 </script>
+
+
 
 </body>
 </html>
