@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NIGHT SHIFT — sprite calibration</title>
+<title>NIGHT SHIFT — sprite calibration 2.2.0</title>
 <style>
 :root{--phos:#7dfab0;--dim:#2f6b4c;--amber:#ffb547;--alarm:#ff4a3d;--shell:#0a0d0b;--hair:#1e2a22}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -165,11 +165,57 @@ body.tunemode #hint{display:none}
 .mPin.drag{cursor:grabbing}
 
 
+/* ---- REWARDS / SECRET NIGHT ------------------------------------------ */
+#extrasEdit{position:absolute;inset:0;display:none;overflow:auto;padding:18px;gap:18px;
+  grid-template-columns:minmax(520px,1fr) 320px;align-items:start;background:#070a08}
+body.extrasmode #extrasEdit{display:grid}
+body.extrasmode #screen{display:none}
+body.extrasmode #hint{display:none}
+#deskCalWrap{display:flex;flex-direction:column;gap:9px;min-width:0}
+#deskBoard{position:relative;width:100%;aspect-ratio:3064/1015;background:#000 center/100% 100% no-repeat;
+  border:1px solid var(--hair);overflow:hidden;box-shadow:0 0 26px rgba(0,0,0,.45)}
+.rewardCal{position:absolute;bottom:0;transform-origin:bottom center;cursor:grab;user-select:none}
+.rewardCal.drag{cursor:grabbing}
+.rewardCal img{display:block;width:100%;height:auto;pointer-events:none;filter:brightness(.8) contrast(1.08)}
+.rewardCal .fallback{display:none;min-width:54px;padding:8px 7px;border:1px dashed var(--amber);
+  background:rgba(15,12,6,.82);color:var(--amber);font-size:9px;letter-spacing:.12em;text-align:center}
+.rewardCal.missing img{display:none}.rewardCal.missing .fallback{display:block}
+#extrasSide{border:1px solid var(--hair);padding:14px;background:#0a0e0b}
+#extrasSide h3{font-size:10px;letter-spacing:.22em;font-weight:400;color:var(--phos);margin:2px 0 8px}
+#extrasSide p{font-size:9px;line-height:1.7;color:var(--dim);margin-bottom:12px}
+#extrasSide .xrow{display:grid;grid-template-columns:1fr 74px;align-items:center;gap:8px;margin:6px 0;
+  font-size:9px;letter-spacing:.08em;color:#8fe0b4}
+#extrasSide input{font:inherit;font-size:10px;background:#0c110e;color:var(--phos);border:1px solid var(--hair);padding:5px}
+#extrasSide .comboGrid{display:grid;grid-template-columns:1fr 1fr;gap:7px 10px;margin-bottom:14px}
+#extrasSide .comboGrid label{font-size:9px;color:#8fe0b4;display:flex;flex-direction:column;gap:4px}
+#extrasSide .intervals{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+#extrasSide .cloneCfg{border-top:1px solid var(--hair);padding-top:8px;margin-top:8px}
+#extrasSide .cloneCfg b{display:block;font-size:9px;letter-spacing:.14em;color:var(--amber);font-weight:400;margin-bottom:5px}
+#extrasSide .cloneCfg .wide{display:grid;grid-template-columns:1fr;gap:4px;margin-bottom:5px}
+#extrasSide .cloneCfg .nums{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+#extrasSide .cloneCfg input[type=color]{width:100%;height:28px;padding:2px}
+#extrasLegend{font-size:9px;line-height:1.7;color:var(--dim)}
+#extrasLegend b{color:var(--amber);font-weight:400}
+
+/* ---- DRAW ORDER ------------------------------------------------------- */
+#drawEdit{position:absolute;inset:0;display:none;overflow:auto;padding:18px;background:#070a08}
+body.drawmode #drawEdit{display:block}
+body.drawmode #screen{display:none}
+body.drawmode #hint{display:none}
+#drawOrderGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:10px}
+.drawOrderRow{border:1px solid var(--hair);background:#0a0e0b;padding:10px}
+.drawOrderRow b{display:block;color:var(--phos);font-size:10px;letter-spacing:.18em;font-weight:400;margin-bottom:4px}
+.drawOrderRow small{display:block;color:var(--dim);font-size:8px;line-height:1.5;margin-bottom:7px}
+.drawOrderRow input{width:100%;box-sizing:border-box;font:inherit;font-size:10px;background:#0c110e;
+  color:#b8f0d0;border:1px solid var(--hair);padding:7px}
+#drawIntro{font-size:10px;line-height:1.7;color:var(--dim);margin:0 0 14px}
+#drawIntro b{color:var(--amber);font-weight:400}
+
 /* ---- CAMERA ART -------------------------------------------------------- */
 /* Shares the first grid row with #wrap rather than covering the viewport.
 
    The first version used position:absolute; inset:0, which laid it over the
-   ENTIRE page — including the toolbar with the tabs and DOWNLOAD PATCHED on
+   ENTIRE page — including the toolbar with the tabs and DOWNLOAD PATCHED GAME FILE on
    it. Opening CAMERA ART trapped you in it with no way back and no way to
    save, which is about as bad as an interface bug gets. It is in the flow
    now, so the toolbar is always there. */
@@ -197,11 +243,6 @@ body.artmode #wrap{display:none}
 .artMeta b{color:var(--phos); margin-right:5px}
 .artMeta .tiny{display:block; color:var(--dim); margin-top:3px}
 .artMeta em{color:var(--amber); font-style:normal}
-.artDark{display:flex; align-items:center; gap:9px; padding:0 11px 9px}
-.artDark label{font-size:10px; letter-spacing:.16em; color:var(--dim)}
-.artDark select{flex:1; font:inherit; font-size:11px; color:var(--amber);
-  background:rgba(8,14,10,.8); border:1px solid rgba(255,199,102,.30);
-  padding:4px 6px}
 .artBtns{display:flex; gap:8px; padding:0 11px 11px}
 .artBtns .act{flex:1; text-align:center; cursor:pointer}
 #artGrid .artUndo{flex:0 0 auto}
@@ -222,9 +263,9 @@ button.act:hover{color:var(--phos);border-color:var(--dim)}
 </style></head><body>
 
 <div id="side">
-  <h1>CALIBRATION</h1>
+  <h1>CALIBRATION <span style="font-size:8px;color:var(--dim)">2.2.0</span></h1>
   <div class="sub">Drag the figure onto the floor.<br>Wheel resizes. Every value is a
-  percentage of the full panorama, so it stays put while the camera pans.</div>
+  percentage of the full panorama, so it stays put while the camera pans.<br><span style="color:var(--dim)">Purple/red Gordon variants share the same calibrated placements as base Gordon.</span></div>
   <div id="list"></div>
 </div>
 
@@ -238,12 +279,41 @@ button.act:hover{color:var(--phos);border-color:var(--dim)}
         put it back on the midpoint of the two squares it joins. Duct marks are
         fixed to their basement square and cannot be moved from here.</p>
     </div>
+    <div id="extrasEdit">
+      <div id="deskCalWrap">
+        <div id="deskBoard"></div>
+        <p id="extrasLegend"><b>DESK ITEMS</b> drag to move · wheel to resize · shift+wheel to rotate.
+          Missing PNGs are shown as labelled calibration boxes. Positions are percentages of office.jpg.</p>
+      </div>
+      <div id="extrasSide">
+        <h3>SECRET CUSTOM NIGHT</h3>
+        <p>The exact four A.I. values below activate the hidden Midnight Shift. The challenge itself replaces the roster with three Sloppys; these values are only the easter-egg key.</p>
+        <div class="comboGrid" id="secretCombo"></div>
+        <h3>MIDNIGHT SLOPPY ART / START SCREEN</h3>
+        <p>Each clone uses a separate PNG and eye color. The numeric trio fields are LEFT, TOP, WIDTH, EYE Y, EYE L, EYE R percentages.</p>
+        <div id="secretCloneConfig"></div>
+        <h3>BUILD METADATA</h3>
+        <p>These are release labels, not automatic counters. Leave LAST UPDATED blank to hide it on the title screen.</p>
+        <div class="xrow"><span>Displayed version</span><input id="buildVersion" type="text" spellcheck="false"></div>
+        <div class="xrow"><span>Last updated</span><input id="buildUpdated" type="text" spellcheck="false" placeholder="optional"></div>
+        <h3>THREE-SLOPPY TUNING</h3>
+        <div class="xrow"><span>Environment tier (1-7)</span><input id="secretTier" type="number" min="1" max="7" step="1"></div>
+        <div class="xrow"><span>Watch requirement (ms)</span><input id="secretWatch" type="number" min="500" step="100"></div>
+        <div class="xrow"><span>Door time (ms)</span><input id="secretDoor" type="number" min="500" step="100"></div>
+        <p style="margin-top:12px">Movement opportunity interval by hour:</p>
+        <div class="intervals" id="secretIntervals"></div>
+      </div>
+    </div>
+    <div id="drawEdit">
+      <p id="drawIntro"><b>FAR → NEAR.</b> Every camera has its own painter order. A position later in the list draws over positions earlier in the list. Real animatronics and camera hallucinations use the same order. Separate node ids with commas.</p>
+      <div id="drawOrderGrid"></div>
+    </div>
     <div id="screen">
       <div id="frame">
         <div id="guides"></div>
       </div>
     </div>
-    <!-- every number the game runs, read out of index.html and written back -->
+    <!-- every number the game runs, read out of the current game.js and written back -->
     <div id="tuneEdit"></div>
     <div id="hint">
     <b>drag anywhere</b> move &nbsp; <b>wheel</b> size &nbsp; <b>shift+wheel</b> fine<br>
@@ -255,17 +325,19 @@ button.act:hover{color:var(--phos);border-color:var(--dim)}
     <b>G</b> guides &nbsp; <b>Tab</b> other sprite &nbsp; <b>U</b> split/fold<br>
     <b>0</b> recentre &nbsp; <b>H</b> hide this box<br>
     <b>TUNING tab</b> every number in CONFIG, NIGHTS, SLOPPY, JEFFREY and the
-    pair themselves — LOAD first, then WRITE writes back only what you changed<br>
+    pair themselves — LOAD from the current game.js first, then WRITE writes back only what you changed<br>
       <span style="color:var(--dim)">push it below the frame for a face at the lens</span>
     </div>
   </div>
 
   <div id="bar">
-    <button class="act" id="download">DOWNLOAD PATCHED</button>
+    <button class="act" id="download">DOWNLOAD PATCHED GAME FILE</button>
     <button class="act" id="tab-sprites">SPRITES</button>
     <button class="act" id="tab-map">MAP</button>
     <button class="act" id="tab-tuning">TUNING</button>
     <button class="act" id="tab-art">CAMERA ART</button>
+    <button class="act" id="tab-extras">REWARDS / SECRET</button>
+    <button class="act" id="tab-draw">DRAW ORDER</button>
     <span id="read"></span>
     <label class="tiny">VIEW
       <select id="mode">
@@ -287,8 +359,8 @@ button.act:hover{color:var(--phos);border-color:var(--dim)}
     </label>
     <button class="act" id="who">EDITING: SHARED</button>
     <button class="act" id="per">SWITCH TO PER-ANIMATRONIC</button>
-    <button class="act" id="load">LOAD FROM index.html</button>
-    <button class="act" id="patch">WRITE ALL INTO index.html</button>
+    <button class="act" id="load">LOAD GAME.JS / INDEX.HTML</button>
+    <button class="act" id="patch">WRITE ALL INTO GAME.JS</button>
     <button class="act" id="copy">COPY BLOCKS</button>
     <button class="act" id="reset">RESET THIS NODE</button>
     <button class="act" id="fold">HIDE CODE</button>
@@ -311,7 +383,7 @@ button.act:hover{color:var(--phos);border-color:var(--dim)}
     Shoot them at the aspect the feed uses and they will letterbox themselves.
     A camera with a wide <b>pan</b> value is swept horizontally by the game, so
     give those a wider photograph than the frame. Changes live here until you
-    press DOWNLOAD PATCHED.
+    press DOWNLOAD PATCHED GAME FILE.
   </p>
   <div id="artGrid"></div>
 
@@ -327,7 +399,7 @@ button.act:hover{color:var(--phos);border-color:var(--dim)}
      the right object — possible, miserable, and easy to get wrong in a way
      that breaks the whole file.
 
-     This does it for you. Pick a camera, choose a JPEG, and DOWNLOAD PATCHED
+     This does it for you. Pick a camera, choose a JPEG, and DOWNLOAD PATCHED GAME FILE
      writes it into the file the same way the existing thirteen are written.
      Nothing is uploaded anywhere: FileReader runs in your browser and the
      result goes straight into the text you download.
@@ -352,52 +424,58 @@ const DATA = {
  "cams": {
   "C01": {
    "name": "1A  NORTH-WEST ROOM",
-   "art": "images/cam_01.jpg",
-   "sees": [
-    "n01"
-   ],
-   "peek": [],
-   "pan": 102.0,
-   "unstable": false,
-   "floor": 1,
    "pin": {
     "x": 36.4,
     "y": 7.7
+   },
+   "sees": [
+    "n01"
+   ],
+   "art": "images/cameras/C01.jpg",
+   "pan": {
+    "width": 102,
+    "period": 34000,
+    "phase": 0
    }
   },
   "C02": {
    "name": "1B  NORTH ROOM",
-   "art": "images/cam_02.jpg",
-   "sees": [
-    "n02"
-   ],
-   "peek": [],
-   "pan": 102.0,
-   "unstable": false,
-   "floor": 1,
    "pin": {
     "x": 59.9,
     "y": 7.8
+   },
+   "sees": [
+    "n02"
+   ],
+   "art": "images/cameras/C02.jpg",
+   "pan": {
+    "width": 102,
+    "period": 29000,
+    "phase": 1.7
    }
   },
   "C03": {
    "name": "1C  NORTH-EAST ROOM",
-   "art": "images/cam_03.jpg",
+   "pin": {
+    "x": 80.6,
+    "y": 8
+   },
    "sees": [
     "n03"
    ],
-   "peek": [],
-   "pan": 131.0,
-   "unstable": false,
-   "floor": 1,
-   "pin": {
-    "x": 80.6,
-    "y": 8.0
+   "art": "images/cameras/C03.jpg",
+   "pan": {
+    "width": 131,
+    "period": 37000,
+    "phase": 3.1
    }
   },
   "C04": {
    "name": "2A  NORTH HALL",
-   "art": "images/cam_04.jpg",
+   "pin": {
+    "x": 81.8,
+    "y": 15.7
+   },
    "sees": [
     "gW",
     "n04",
@@ -406,48 +484,51 @@ const DATA = {
     "n21",
     "n22"
    ],
-   "peek": [],
-   "pan": 102.0,
-   "unstable": false,
-   "floor": 1,
-   "pin": {
-    "x": 81.8,
-    "y": 15.7
+   "art": "images/cameras/C04.jpg",
+   "pan": {
+    "width": 102,
+    "period": 44000,
+    "phase": 0.8
    }
   },
   "C05": {
    "name": "2B  CENTER ROOM",
-   "art": "images/cam_05.jpg",
-   "sees": [
-    "n07"
-   ],
-   "peek": [],
-   "pan": 132.0,
-   "unstable": false,
-   "floor": 1,
    "pin": {
     "x": 54.6,
     "y": 31.5
+   },
+   "sees": [
+    "n07"
+   ],
+   "art": "images/cameras/C05.jpg",
+   "pan": {
+    "width": 132,
+    "period": 31000,
+    "phase": 2.2
    }
   },
   "C06": {
    "name": "2C  EAST CLOSET",
-   "art": "images/cam_06.jpg",
-   "sees": [
-    "n08"
-   ],
-   "peek": [],
-   "pan": 102.0,
-   "unstable": false,
-   "floor": 1,
    "pin": {
     "x": 83.1,
     "y": 27.4
+   },
+   "sees": [
+    "n08"
+   ],
+   "art": "images/cameras/C06.jpg",
+   "pan": {
+    "width": 102,
+    "period": 26000,
+    "phase": 4.4
    }
   },
   "C07": {
    "name": "3A  OFFICE HALL",
-   "art": "images/cam_07.jpg",
+   "pin": {
+    "x": 50.1,
+    "y": 43.2
+   },
    "sees": [
     "n11",
     "nDL",
@@ -456,116 +537,132 @@ const DATA = {
     "n18",
     "n26"
    ],
-   "peek": [],
-   "pan": 102.0,
    "unstable": true,
-   "floor": 1,
-   "pin": {
-    "x": 50.1,
-    "y": 43.2
+   "art": "images/cameras/C07.jpg",
+   "pan": {
+    "width": 102,
+    "period": 39000,
+    "phase": 5
    }
   },
   "C08": {
    "name": "3B  NORTH OFFICE",
-   "art": "images/cam_08.jpg",
+   "pin": {
+    "x": 39.1,
+    "y": 46.2
+   },
    "sees": [
     "n10"
    ],
    "peek": [
     "nDL"
    ],
-   "pan": 162.0,
-   "unstable": false,
-   "floor": 1,
-   "pin": {
-    "x": 39.1,
-    "y": 46.2
+   "art": "images/cameras/C08.jpg",
+   "pan": {
+    "width": 162,
+    "period": 28000,
+    "phase": 1.1
    }
   },
   "C09": {
    "name": "4A  EAST WING",
-   "art": "images/cam_09.jpg",
+   "pin": {
+    "x": 63.9,
+    "y": 53.7
+   },
    "sees": [
     "n12",
     "n13"
    ],
-   "peek": [],
-   "pan": 149.0,
-   "unstable": false,
-   "floor": 1,
-   "pin": {
-    "x": 63.9,
-    "y": 53.7
+   "art": "images/cameras/C09.jpg",
+   "pan": {
+    "width": 149,
+    "period": 41000,
+    "phase": 2.9
    }
   },
   "C10": {
    "name": "4B  EAST STORE",
-   "art": "images/cam_10.jpg",
-   "sees": [
-    "n15"
-   ],
-   "peek": [],
-   "pan": 122.0,
-   "unstable": false,
-   "floor": 1,
    "pin": {
     "x": 63.7,
     "y": 65.6
+   },
+   "sees": [
+    "n15"
+   ],
+   "art": "images/cameras/C10.jpg",
+   "pan": {
+    "width": 122,
+    "period": 33000,
+    "phase": 0.4
    }
   },
   "C11": {
    "name": "4C  EAST DOCK",
-   "art": "images/cam_11.jpg",
-   "sees": [
-    "n17"
-   ],
-   "peek": [],
-   "pan": 125.0,
-   "unstable": false,
-   "floor": 1,
    "pin": {
     "x": 63.9,
     "y": 78.5
+   },
+   "sees": [
+    "n17"
+   ],
+   "art": "images/cameras/C11.jpg",
+   "pan": {
+    "width": 125,
+    "period": 30000,
+    "phase": 3.6
    }
   },
   "C12": {
    "name": "5A  SOUTH OFFICE",
-   "art": "images/cam_12.jpg",
+   "pin": {
+    "x": 39.1,
+    "y": 78.3
+   },
    "sees": [
     "n16"
    ],
    "peek": [
     "nDR"
    ],
-   "pan": 137.0,
-   "unstable": false,
-   "floor": 1,
-   "pin": {
-    "x": 39.1,
-    "y": 78.3
+   "art": "images/cameras/C12.jpg",
+   "pan": {
+    "width": 137,
+    "period": 27000,
+    "phase": 5.4
    }
   },
   "C14": {
    "name": "7A  ENGINEERING",
-   "art": "images/cam_13.jpg",
+   "pin": {
+    "x": 49.7,
+    "y": 86
+   },
+   "pan": {
+    "width": 124,
+    "period": 39000,
+    "phase": 0
+   },
    "sees": [
     "b02",
     "n25",
     "n18",
     "n19"
    ],
-   "peek": [],
-   "pan": 124.0,
-   "unstable": false,
-   "floor": 1,
-   "pin": {
-    "x": 49.7,
-    "y": 86.0
-   }
+   "art": "images/cameras/C14.jpg"
   },
   "C15": {
    "name": "7B  NORTH HALL",
-   "art": "images/cam_14.jpg",
+   "floor": 2,
+   "pin": {
+    "x": 30.6,
+    "y": 60.7
+   },
+   "pan": {
+    "width": 118,
+    "period": 35000,
+    "phase": 1.4
+   },
    "sees": [
     "b03",
     "b04"
@@ -573,81 +670,89 @@ const DATA = {
    "peek": [
     "b05"
    ],
-   "pan": 118.0,
-   "unstable": false,
-   "floor": 2,
-   "pin": {
-    "x": 92.5,
-    "y": 87.8
-   }
+   "art": "images/cameras/C15.jpg"
   },
   "C16": {
    "name": "7C  ENG OFFICE EAST",
-   "art": "images/cam_15.jpg",
+   "floor": 2,
+   "pin": {
+    "x": 47.3,
+    "y": 82.7
+   },
+   "pan": {
+    "width": 126,
+    "period": 41000,
+    "phase": 2.7
+   },
    "sees": [
     "b06",
     "b07"
    ],
-   "peek": [],
-   "pan": 126.0,
-   "unstable": false,
-   "floor": 2,
-   "pin": {
-    "x": 60.0,
-    "y": 75.0
-   }
+   "art": "images/cameras/C16.jpg"
   },
   "C25": {
    "name": "7E  ENG OFFICE WEST",
-   "art": "images/cam_16.jpg",
+   "floor": 2,
+   "pin": {
+    "x": 75.3,
+    "y": 71
+   },
+   "pan": {
+    "width": 102
+   },
    "sees": [
     "b08"
    ],
    "peek": [
     "b07"
    ],
-   "pan": 102.0,
-   "unstable": false,
-   "floor": 2,
-   "pin": {
-    "x": 76.7,
-    "y": 55.0
-   }
+   "art": "images/cameras/C25.jpg"
   },
   "C17": {
    "name": "7D  OFFICE A",
-   "art": "images/cam_17.jpg",
+   "floor": 2,
+   "pin": {
+    "x": 53.5,
+    "y": 66.2
+   },
+   "pan": {
+    "width": 102
+   },
    "sees": [
     "b09"
    ],
-   "peek": [],
-   "pan": 102.0,
-   "unstable": false,
-   "floor": 2,
-   "pin": {
-    "x": 48.3,
-    "y": 53.9
-   }
+   "art": "images/cameras/C17.jpg"
   },
   "C18": {
    "name": "8A  VAULT",
-   "art": "images/cam_18.jpg",
+   "floor": 2,
+   "pin": {
+    "x": 91.5,
+    "y": 58.1
+   },
+   "pan": {
+    "width": 108,
+    "period": 37000,
+    "phase": 4.1
+   },
    "sees": [
     "b12",
     "b13"
    ],
-   "peek": [],
-   "pan": 108.0,
-   "unstable": false,
-   "floor": 2,
-   "pin": {
-    "x": 96.0,
-    "y": 41.1
-   }
+   "art": "images/cameras/C18.jpg"
   },
   "C19": {
    "name": "8B  PAYROLL",
-   "art": "images/cam_19.jpg",
+   "floor": 2,
+   "pin": {
+    "x": 32.3,
+    "y": 36.9
+   },
+   "pan": {
+    "width": 130,
+    "period": 43000,
+    "phase": 5.3
+   },
    "sees": [
     "b16",
     "b17",
@@ -657,97 +762,101 @@ const DATA = {
     "b10",
     "b11"
    ],
-   "pan": 130.0,
-   "unstable": false,
-   "floor": 2,
-   "pin": {
-    "x": 65.0,
-    "y": 27.8
-   }
+   "art": "images/cameras/C19.jpg"
   },
   "C20": {
    "name": "8C  NORTH OFFICE",
-   "art": "images/cam_20.jpg",
+   "floor": 2,
+   "pin": {
+    "x": 8.2,
+    "y": 45.4
+   },
+   "pan": {
+    "width": 102
+   },
    "sees": [
     "b19"
    ],
-   "peek": [],
-   "pan": 102.0,
-   "unstable": false,
-   "floor": 2,
-   "pin": {
-    "x": 13.3,
-    "y": 38.0
-   }
+   "art": "images/cameras/C20.jpg"
   },
   "C21": {
    "name": "9A  WASHROOM ROW",
-   "art": "images/cam_21.jpg",
+   "floor": 2,
+   "pin": {
+    "x": 56.5,
+    "y": 28.6
+   },
+   "pan": {
+    "width": 120,
+    "period": 36000,
+    "phase": 0.7
+   },
    "sees": [
     "b20",
     "b21",
     "b22"
    ],
-   "peek": [],
-   "pan": 120.0,
-   "unstable": false,
-   "floor": 2,
-   "pin": {
-    "x": 57.7,
-    "y": 18.7
-   }
+   "art": "images/cameras/C21.jpg"
   },
   "C22": {
    "name": "9B  CENTRE CORRIDOR",
-   "art": "images/cam_22.jpg",
+   "floor": 2,
+   "pin": {
+    "x": 48.8,
+    "y": 17.8
+   },
+   "pan": {
+    "width": 122,
+    "period": 40000,
+    "phase": 2.1
+   },
+   "unstable": true,
    "sees": [
     "b23",
     "b24",
     "b15"
    ],
-   "peek": [],
-   "pan": 122.0,
-   "unstable": true,
-   "floor": 2,
-   "pin": {
-    "x": 48.3,
-    "y": 15.2
-   }
+   "art": "images/cameras/C22.jpg"
   },
   "C23": {
    "name": "9C  SALES FLOOR",
-   "art": "images/cam_23.jpg",
+   "floor": 2,
+   "pin": {
+    "x": 91.8,
+    "y": 13.1
+   },
+   "pan": {
+    "width": 126,
+    "period": 38000,
+    "phase": 3.4
+   },
    "sees": [
     "b25",
     "b26",
     "b27",
     "b23"
    ],
-   "peek": [],
-   "pan": 126.0,
-   "unstable": false,
-   "floor": 2,
-   "pin": {
-    "x": 83.3,
-    "y": 10.6
-   }
+   "art": "images/cameras/C23.jpg"
   },
   "C24": {
    "name": "9D  ATRIUM",
-   "art": "images/cam_24.jpg",
+   "floor": 2,
+   "pin": {
+    "x": 8,
+    "y": 26.5
+   },
+   "pan": {
+    "width": 114,
+    "period": 34000,
+    "phase": 4.8
+   },
    "sees": [
     "b28",
     "b29",
-    "b30"
+    "b30",
+    "b31"
    ],
-   "peek": [],
-   "pan": 114.0,
-   "unstable": false,
-   "floor": 2,
-   "pin": {
-    "x": 8.3,
-    "y": 21.7
-   }
+   "art": "images/cameras/C24.jpg"
   }
  },
  "shots": {
@@ -1065,6 +1174,12 @@ const DATA = {
    "bottom": 34.2,
    "width": 12.5,
    "rotate": -3
+  },
+  "b31": {
+   "left": 34,
+   "bottom": 28,
+   "width": 13.5,
+   "rotate": 1
   },
   "b30": {
    "left": 42,
@@ -1652,36 +1767,6 @@ const DATA = {
   }
  },
  "dist": {
-  "OFFICE": 0,
-  "nDL": 1,
-  "nDR": 1,
-  "n11": 2,
-  "n14": 2,
-  "n15": 2,
-  "n10": 3,
-  "n07": 3,
-  "n12": 3,
-  "n16": 3,
-  "n18": 3,
-  "n17": 3,
-  "n06": 4,
-  "n05": 4,
-  "n09": 4,
-  "n13": 4,
-  "n19": 4,
-  "n26": 4,
-  "n25": 4,
-  "n20": 5,
-  "n21": 5,
-  "n02": 5,
-  "gS": 5,
-  "n04": 6,
-  "n01": 6,
-  "n22": 6,
-  "n03": 6,
-  "gW": 7,
-  "gE": 7,
-  "n08": 7,
   "b02": 4,
   "b03": 5,
   "b04": 6,
@@ -1710,26 +1795,57 @@ const DATA = {
   "b27": 10,
   "b28": 9,
   "b29": 8,
-  "b30": 7
+  "b30": 7,
+  "OFFICE": 0,
+  "nDL": 1,
+  "nDR": 1,
+  "n11": 2,
+  "n15": 2,
+  "n14": 2,
+  "n07": 3,
+  "n10": 3,
+  "n12": 3,
+  "n16": 3,
+  "n17": 3,
+  "n18": 3,
+  "n05": 4,
+  "n09": 4,
+  "n06": 4,
+  "n13": 4,
+  "n26": 4,
+  "n25": 4,
+  "n21": 5,
+  "n20": 5,
+  "n02": 5,
+  "n19": 5,
+  "n22": 6,
+  "n03": 6,
+  "n01": 6,
+  "n04": 6,
+  "gS": 6,
+  "n08": 7,
+  "gE": 7,
+  "gW": 7,
+  "b31": 9
  },
  "roster": [
   {
    "id": "eugene",
-   "art": "images/ani_eugene.png"
+   "art": "images/characters/ani_eugene.png"
   },
   {
    "id": "sloppy",
-   "art": "images/ani_sloppy.png"
+   "art": "images/characters/ani_sloppy.png"
   },
   {
    "id": "gordon",
-   "art": "images/ani_gordon.png"
+   "art": "images/characters/ani_gordon.png"
   }
  ],
  "grade": "brightness(.50) contrast(1.22) saturate(.40) hue-rotate(-10deg)",
  "reach": 0.9,
  "officeDoor": {
-  "x": 39.7,
+  "x": 40.0,
   "w": 5.2,
   "top": 39.1,
   "h": 12
@@ -1741,27 +1857,21 @@ const DATA = {
    "y1": 1.7,
    "x2": 42,
    "y2": 12.2,
-   "name": "OFFICE 1",
-   "hall": false,
-   "you": false
+   "name": "OFFICE 1"
   },
   {
    "x1": 42.7,
    "y1": 1.7,
    "x2": 65.3,
    "y2": 12.2,
-   "name": "OFFICE 2",
-   "hall": false,
-   "you": false
+   "name": "OFFICE 2"
   },
   {
    "x1": 66,
    "y1": 2.3,
    "x2": 86.1,
    "y2": 12.6,
-   "name": "OFFICE 3",
-   "hall": false,
-   "you": false
+   "name": "OFFICE 3"
   },
   {
    "x1": 16.6,
@@ -1769,26 +1879,21 @@ const DATA = {
    "x2": 87.2,
    "y2": 20,
    "name": "NORTH HALL",
-   "hall": true,
-   "you": false
+   "hall": true
   },
   {
    "x1": 29.2,
    "y1": 20.4,
    "x2": 42.7,
    "y2": 35.8,
-   "name": "OFFICE 4",
-   "hall": false,
-   "you": false
+   "name": "OFFICE 4"
   },
   {
    "x1": 43.1,
    "y1": 20.4,
    "x2": 60.1,
    "y2": 35.8,
-   "name": "CENTER",
-   "hall": false,
-   "you": false
+   "name": "CENTER"
   },
   {
    "x1": 74.5,
@@ -1797,27 +1902,21 @@ const DATA = {
    "y2": 27.3,
    "name": "BATHROOM",
    "lx": 0,
-   "ly": 3.6,
-   "hall": false,
-   "you": false
+   "ly": 3.6
   },
   {
    "x1": 60.4,
    "y1": 29.4,
    "x2": 78.6,
    "y2": 35.8,
-   "name": "SERVER ROOM",
-   "hall": false,
-   "you": false
+   "name": "SERVER ROOM"
   },
   {
    "x1": 33.5,
    "y1": 35.8,
    "x2": 45.8,
    "y2": 50.3,
-   "name": "OFFICE 5",
-   "hall": false,
-   "you": false
+   "name": "OFFICE 5"
   },
   {
    "x1": 34.4,
@@ -1825,17 +1924,14 @@ const DATA = {
    "x2": 45.6,
    "y2": 67,
    "name": "YOU",
-   "you": true,
-   "hall": false
+   "you": true
   },
   {
    "x1": 33.5,
    "y1": 67.7,
    "x2": 45.8,
    "y2": 82.5,
-   "name": "OFFICE 7",
-   "hall": false,
-   "you": false
+   "name": "OFFICE 7"
   },
   {
    "x1": 46.1,
@@ -1843,35 +1939,28 @@ const DATA = {
    "x2": 52.9,
    "y2": 83.1,
    "name": "HALL",
-   "hall": true,
-   "you": false
+   "hall": true
   },
   {
    "x1": 53.2,
    "y1": 35.8,
    "x2": 69.5,
    "y2": 58,
-   "name": "BREAK ROOM",
-   "hall": false,
-   "you": false
+   "name": "BREAK ROOM"
   },
   {
    "x1": 53.2,
    "y1": 58.2,
    "x2": 69.5,
    "y2": 69.6,
-   "name": "OFFICE 6",
-   "hall": false,
-   "you": false
+   "name": "OFFICE 6"
   },
   {
    "x1": 53.2,
    "y1": 70.2,
    "x2": 69.5,
    "y2": 82.5,
-   "name": "OFFICE 8",
-   "hall": false,
-   "you": false
+   "name": "OFFICE 8"
   },
   {
    "x1": 28.7,
@@ -1879,8 +1968,7 @@ const DATA = {
    "x2": 70.5,
    "y2": 96.6,
    "name": "ENGINEERING",
-   "hall": true,
-   "you": false
+   "hall": true
   }
  ],
  "roomsB": [
@@ -1890,8 +1978,7 @@ const DATA = {
    "x2": 36,
    "y2": 98.3,
    "name": "NORTH HALL",
-   "hall": true,
-   "you": false
+   "hall": true
   },
   {
    "x1": 36,
@@ -1899,62 +1986,50 @@ const DATA = {
    "x2": 97.5,
    "y2": 98.3,
    "name": "ENGINEERING OFFICE",
-   "hall": false,
-   "you": false
+   "lx": 33.4,
+   "ly": 2.9
   },
   {
    "x1": 60.2,
    "y1": 63,
    "x2": 97.5,
    "y2": 74.9,
-   "name": "ENG OFFICE WEST",
-   "hall": false,
-   "you": false
+   "name": "ENG OFFICE WEST"
   },
   {
    "x1": 36,
    "y1": 63,
    "x2": 60.2,
    "y2": 74.9,
-   "name": "OFFICE A",
-   "hall": false,
-   "you": false
+   "name": "OFFICE A"
   },
   {
    "x1": 55.7,
    "y1": 49.7,
    "x2": 80.9,
    "y2": 63,
-   "name": "OFFICE B",
-   "hall": false,
-   "you": false
+   "name": "OFFICE B"
   },
   {
    "x1": 36,
    "y1": 49.7,
    "x2": 55.7,
    "y2": 63,
-   "name": "OFFICE C",
-   "hall": false,
-   "you": false
+   "name": "OFFICE C"
   },
   {
    "x1": 80.9,
    "y1": 35.9,
    "x2": 97.5,
    "y2": 63,
-   "name": "VAULT",
-   "hall": false,
-   "you": false
+   "name": "VAULT"
   },
   {
    "x1": 80.9,
    "y1": 32.2,
    "x2": 97.5,
    "y2": 35.9,
-   "name": "CLOSET",
-   "hall": false,
-   "you": false
+   "name": "CLOSET"
   },
   {
    "x1": 80.9,
@@ -1962,53 +2037,43 @@ const DATA = {
    "x2": 97.5,
    "y2": 32.2,
    "name": "UTILITY CLOSET",
-   "hall": false,
-   "you": false
+   "lx": 56.2,
+   "ly": 5.8
   },
   {
    "x1": 26.7,
    "y1": 31.2,
    "x2": 80.9,
    "y2": 49.7,
-   "name": "PAYROLL & BILLING",
-   "hall": false,
-   "you": false
+   "name": "PAYROLL & BILLING"
   },
   {
    "x1": 2.5,
    "y1": 31.2,
    "x2": 26.7,
    "y2": 49.7,
-   "name": "NORTH OFFICE",
-   "hall": false,
-   "you": false
+   "name": "NORTH OFFICE"
   },
   {
    "x1": 63.9,
    "y1": 22.3,
    "x2": 80.9,
    "y2": 31.2,
-   "name": "LADIES",
-   "hall": false,
-   "you": false
+   "name": "LADIES"
   },
   {
    "x1": 50,
    "y1": 22.3,
    "x2": 63.9,
    "y2": 31.2,
-   "name": "MENS",
-   "hall": false,
-   "you": false
+   "name": "MENS"
   },
   {
    "x1": 38.5,
    "y1": 22.3,
    "x2": 50,
    "y2": 31.2,
-   "name": "EAST CLOSET",
-   "hall": false,
-   "you": false
+   "name": "EAST CLOSET"
   },
   {
    "x1": 38.5,
@@ -2017,34 +2082,29 @@ const DATA = {
    "y2": 22.3,
    "name": "CENTRE CORRIDOR",
    "hall": true,
-   "you": false
+   "lx": 30.2,
+   "ly": 37.7
   },
   {
    "x1": 78.4,
    "y1": 1.7,
    "x2": 97.5,
    "y2": 17.2,
-   "name": "SALES OFFICE",
-   "hall": false,
-   "you": false
+   "name": "SALES OFFICE"
   },
   {
    "x1": 59.1,
    "y1": 1.7,
    "x2": 78.4,
    "y2": 17.2,
-   "name": "SALES OFFICE 2",
-   "hall": false,
-   "you": false
+   "name": "SALES OFFICE 2"
   },
   {
    "x1": 37.7,
    "y1": 1.7,
    "x2": 59.1,
    "y2": 17.2,
-   "name": "SALES OFFICE 3",
-   "hall": false,
-   "you": false
+   "name": "SALES OFFICE 3"
   },
   {
    "x1": 2.5,
@@ -2052,26 +2112,22 @@ const DATA = {
    "x2": 38.5,
    "y2": 31.2,
    "name": "ATRIUM",
-   "hall": true,
-   "you": false
+   "hall": true
   },
   {
    "x1": 26.1,
    "y1": 1.7,
    "x2": 37.7,
    "y2": 13.6,
-   "name": "ATRIUM SOUTH",
-   "hall": true,
-   "you": false
+   "name": "",
+   "hall": true
   },
   {
    "x1": 2.5,
    "y1": 1.7,
    "x2": 26.1,
    "y2": 13.6,
-   "name": "ENTRY",
-   "hall": false,
-   "you": false
+   "name": "ENTRY"
   }
  ],
  "ducts": [
@@ -2105,336 +2161,487 @@ const DATA = {
    "id": "D1",
    "name": "UTILITY CLOSET DOOR",
    "a": "b23",
-   "b": "b15"
+   "b": "b15",
+   "pin": {
+    "x": 84.9,
+    "y": 22.9
+   }
   },
   {
    "id": "D2",
    "name": "OFFICE A DOOR",
    "a": "b09",
-   "b": "b06"
+   "b": "b06",
+   "pin": {
+    "x": 47.9,
+    "y": 75
+   }
   },
   {
    "id": "D3",
    "name": "ENGINEERING DOOR",
    "a": "b02",
-   "b": "b03"
+   "b": "b03",
+   "pin": {
+    "x": 32,
+    "y": 92.5
+   }
   },
   {
    "id": "D4",
    "name": "ENG OFFICE DOOR",
    "a": "b03",
-   "b": "b06"
+   "b": "b06",
+   "pin": {
+    "x": 37,
+    "y": 84.1
+   }
   },
   {
    "id": "D5",
    "name": "PAYROLL DOOR",
    "a": "b17",
    "b": "b18",
-   "oneShot": true
+   "pin": {
+    "x": 36,
+    "y": 43.8
+   },
+   "oneShot": true,
+   "breakMs": 2800
   },
   {
    "id": "D6",
    "name": "ATRIUM DOOR",
    "a": "b24",
-   "b": "b28"
+   "b": "b31",
+   "pin": {
+    "x": 38.8,
+    "y": 19.5
+   }
   },
   {
    "id": "D7",
    "name": "ENTRY DOOR",
    "a": "b29",
-   "b": "b30"
+   "b": "b30",
+   "pin": {
+    "x": 25.6,
+    "y": 7.9
+   }
   }
  ],
  "nodes": {
   "gW": {
    "x": 6.9,
    "y": 12.9,
-   "floor": 1
+   "edges": [
+    "n04"
+   ],
+   "outside": true
   },
   "gE": {
    "x": 92.9,
    "y": 16.4,
-   "floor": 1
+   "edges": [
+    "n22"
+   ],
+   "outside": true
   },
   "gS": {
    "x": 67.5,
    "y": 99,
-   "floor": 1
+   "edges": [
+    "n19"
+   ],
+   "outside": true
   },
   "n01": {
    "x": 26.6,
    "y": 10.3,
-   "floor": 1
+   "edges": [
+    "n20"
+   ]
   },
   "n02": {
    "x": 50,
    "y": 10.3,
-   "floor": 1
+   "edges": [
+    "n05"
+   ]
   },
   "n03": {
    "x": 71,
    "y": 10.6,
-   "floor": 1
+   "edges": [
+    "n21"
+   ]
   },
   "n04": {
    "x": 17,
    "y": 16.5,
-   "floor": 1
+   "edges": [
+    "n20"
+   ]
   },
   "n20": {
    "x": 30,
    "y": 16.2,
-   "floor": 1
+   "edges": [
+    "n05"
+   ]
   },
   "n05": {
    "x": 50,
    "y": 17.7,
-   "floor": 1
+   "edges": [
+    "n21",
+    "n07"
+   ]
   },
   "n21": {
    "x": 70,
    "y": 17,
-   "floor": 1
+   "edges": [
+    "n22"
+   ]
   },
   "n22": {
    "x": 85,
    "y": 16.5,
-   "floor": 1
+   "edges": [
+    "n08"
+   ]
   },
   "n06": {
    "x": 33.1,
    "y": 22.9,
-   "floor": 1
+   "edges": [
+    "n07"
+   ]
   },
   "n07": {
    "x": 46.4,
    "y": 33.2,
-   "floor": 1
+   "edges": [
+    "n09",
+    "n11"
+   ]
   },
   "n08": {
    "x": 79.2,
    "y": 22.4,
-   "floor": 1
+   "edges": []
   },
   "n09": {
    "x": 75.5,
    "y": 32.9,
-   "floor": 1
+   "edges": []
   },
   "n11": {
    "x": 48.6,
    "y": 43,
-   "floor": 1
+   "edges": [
+    "nDL",
+    "n12",
+    "n10"
+   ]
   },
   "nDL": {
    "x": 48.6,
    "y": 54,
-   "floor": 1
+   "edges": [
+    "nDR",
+    "OFFICE"
+   ]
   },
   "nDR": {
    "x": 48.8,
    "y": 64,
-   "floor": 1
+   "edges": [
+    "n14",
+    "n15",
+    "OFFICE"
+   ]
   },
   "n14": {
    "x": 49.2,
    "y": 74,
-   "floor": 1
+   "edges": [
+    "n15",
+    "n16",
+    "n17",
+    "n18"
+   ]
   },
   "n10": {
    "x": 39.4,
    "y": 44.2,
-   "floor": 1
+   "edges": []
   },
   "n16": {
    "x": 39.7,
    "y": 73.5,
-   "floor": 1
+   "edges": []
   },
   "n12": {
    "x": 57.4,
    "y": 39,
-   "floor": 1
+   "edges": [
+    "n13"
+   ]
   },
   "n13": {
    "x": 57.1,
    "y": 54.8,
-   "floor": 1
+   "edges": []
   },
   "n15": {
    "x": 58.9,
    "y": 65.1,
-   "floor": 1
+   "edges": []
   },
   "n17": {
    "x": 62.7,
    "y": 77.7,
-   "floor": 1
+   "edges": []
   },
   "n25": {
    "x": 33,
    "y": 85,
-   "floor": 1
+   "edges": [
+    "n18",
+    "n19"
+   ]
   },
   "n18": {
    "x": 49.8,
    "y": 84.8,
-   "floor": 1
+   "edges": []
   },
   "n19": {
    "x": 64.2,
    "y": 92.5,
-   "floor": 1
+   "edges": []
   },
   "n26": {
    "x": 59,
    "y": 85.5,
-   "floor": 1
+   "edges": [
+    "n17",
+    "n18"
+   ]
+  },
+  "OFFICE": {
+   "x": 40,
+   "y": 58.8,
+   "edges": []
   },
   "b02": {
    "x": 32,
    "y": 91.6,
-   "floor": 2
+   "edges": [
+    "b03"
+   ]
   },
   "b03": {
    "x": 32,
    "y": 84.3,
-   "floor": 2
+   "edges": [
+    "b04",
+    "b06"
+   ]
   },
   "b04": {
    "x": 32,
    "y": 70.3,
-   "floor": 2
+   "edges": [
+    "b05",
+    "b09"
+   ]
   },
   "b05": {
    "x": 32,
    "y": 56.2,
-   "floor": 2
+   "edges": [
+    "b18"
+   ]
   },
   "b06": {
    "x": 48.1,
    "y": 85.6,
-   "floor": 2
+   "edges": [
+    "b07",
+    "b09"
+   ]
   },
   "b07": {
    "x": 68.8,
    "y": 85.6,
-   "floor": 2
+   "edges": [
+    "b08"
+   ]
   },
   "b08": {
    "x": 89.5,
    "y": 70.3,
-   "floor": 2
+   "edges": []
   },
   "b09": {
    "x": 48.1,
    "y": 69.1,
-   "floor": 2
+   "edges": []
   },
   "b10": {
    "x": 68.8,
    "y": 56.8,
-   "floor": 2
+   "edges": [
+    "b16"
+   ]
   },
   "b11": {
    "x": 45.9,
    "y": 56.8,
-   "floor": 2
+   "edges": [
+    "b17"
+   ]
   },
   "b12": {
    "x": 89.2,
    "y": 58.2,
-   "floor": 2
+   "edges": [
+    "b13"
+   ]
   },
   "b13": {
    "x": 89.2,
    "y": 42.2,
-   "floor": 2
+   "edges": [
+    "b16"
+   ]
   },
   "b14": {
    "x": 89.2,
    "y": 34,
-   "floor": 2
+   "edges": [
+    "b16"
+   ]
   },
   "b15": {
    "x": 89.2,
    "y": 27.2,
-   "floor": 2
+   "edges": [
+    "b23"
+   ]
   },
   "b16": {
    "x": 72,
    "y": 40.8,
-   "floor": 2
+   "edges": [
+    "b17"
+   ]
   },
   "b17": {
    "x": 54.5,
    "y": 40.8,
-   "floor": 2
+   "edges": [
+    "b18"
+   ]
   },
   "b18": {
    "x": 34.5,
    "y": 40.8,
-   "floor": 2
+   "edges": [
+    "b19",
+    "b28"
+   ]
   },
   "b19": {
    "x": 14.6,
    "y": 40.8,
-   "floor": 2
+   "edges": []
   },
   "b20": {
    "x": 72.5,
    "y": 26.8,
-   "floor": 2
+   "edges": [
+    "b23"
+   ]
   },
   "b21": {
    "x": 57,
    "y": 26.8,
-   "floor": 2
+   "edges": [
+    "b24"
+   ]
   },
   "b22": {
    "x": 44.3,
    "y": 26.8,
-   "floor": 2
+   "edges": [
+    "b24"
+   ]
   },
   "b23": {
    "x": 84.7,
    "y": 19.7,
-   "floor": 2
+   "edges": [
+    "b24",
+    "b25",
+    "b26"
+   ]
   },
   "b24": {
    "x": 52.9,
    "y": 19.7,
-   "floor": 2
+   "edges": [
+    "b27",
+    "b31"
+   ]
   },
   "b25": {
    "x": 87.9,
    "y": 9.4,
-   "floor": 2
+   "edges": []
   },
   "b26": {
    "x": 68.8,
    "y": 9.4,
-   "floor": 2
+   "edges": []
   },
   "b27": {
    "x": 48.4,
    "y": 9.4,
-   "floor": 2
+   "edges": []
   },
   "b28": {
    "x": 21,
    "y": 24.1,
-   "floor": 2
+   "edges": [
+    "b31",
+    "b29"
+   ]
   },
   "b29": {
    "x": 32.1,
    "y": 8.1,
-   "floor": 2
+   "edges": [
+    "b30",
+    "b31"
+   ]
+  },
+  "b31": {
+   "x": 36.6,
+   "y": 19.4,
+   "edges": [
+    "b28",
+    "b29",
+    "b24"
+   ]
   },
   "b30": {
    "x": 14.6,
    "y": 8.1,
-   "floor": 2
+   "edges": []
   }
  },
  "doorShots": {
@@ -2494,6 +2701,40 @@ const DATA = {
 const {cams, shots, unit, dist, roster, grade, reach,
        officeDoor, officeArt, doorShots, doorUnit, rooms} = DATA;
 
+/* V2.2.0 additions are kept outside the generated DATA blob so this calibrator
+   can also load an older game.js and then learn the current values from it. */
+let deskRewards = {
+  night5:   {src:"images/desk/reward_night5.png",left:47,bottom:4.8,width:6.5,rotate:-2},
+  night7:   {src:"images/desk/reward_night7.png",left:53.8,bottom:4.5,width:6.8,rotate:1},
+  midnight: {src:"images/desk/reward_midnight.png",left:61,bottom:4.2,width:7.2,rotate:-1},
+  all20:    {src:"images/desk/reward_all20.png",left:68.2,bottom:4,width:7.4,rotate:2}
+};
+let secretNight = {
+  label:"MIDNIGHT SHIFT", combo:{eugene:1,sloppy:9,gordon:8,jeffrey:7}, settingNight:5,
+  moveMs:[30000,28500,27000,25000,23000,21000], watchMs:5000, doorMs:2800,
+  entryDelayMs:[0,2500,5000],
+  sloppyArt:["images/characters/ani_sloppy_midnight_blue.png","images/characters/ani_sloppy_midnight_violet.png","images/characters/ani_sloppy_midnight_green.png"],
+  eyeColors:["#69c9ff","#bd83ff","#72f0b2"],
+  startTrio:[
+    {left:31,top:16,width:28,eyeY:25,eyeL:45,eyeR:56},
+    {left:50,top:10,width:35,eyeY:25,eyeL:45,eyeR:56},
+    {left:69,top:16,width:28,eyeY:25,eyeL:45,eyeR:56}
+  ]
+};
+let buildMeta = {version:"2.2.0", updated:""};
+let drawOrders = {
+  C01:["n01"], C02:["n02"], C03:["n03"],
+  C04:["gW","n04","n20","n05","n21","n22"],
+  C05:["n07"], C06:["n08"],
+  C07:["n18","n26","n14","nDR","nDL","n11"],
+  C08:["nDL","n10"], C09:["n12","n13"], C10:["n15"], C11:["n17"],
+  C12:["nDR","n16"], C14:["b02","n25","n19","n18"],
+  C15:["b05","b03","b04"], C16:["b06","b07"], C25:["b07","b08"], C17:["b09"],
+  C18:["b12","b13"], C19:["b10","b11","b16","b17","b18"], C20:["b19"],
+  C21:["b20","b21","b22"], C22:["b23","b24","b15"],
+  C23:["b25","b26","b27","b23"], C24:["b28","b29","b30","b31"]
+};
+
 /* THE FLOOR BELOW.
 
    roomsB is the lower plan's rectangles, ducts and doorLinks are the two things
@@ -2529,7 +2770,7 @@ doorLinks.forEach(d => { if (d.pin) doorPin[d.id] = { x:d.pin.x, y:d.pin.y }; })
    so seeding them here changes nothing about how it plays: it only makes them
    reachable. Any square added upstairs in future is picked up the same way.
 
-   IT HAS TO RUN AFTER A LOAD AS WELL AS AT BOOT. Loading an index.html wipes
+   IT HAS TO RUN AFTER A LOAD AS WELL AS AT BOOT. Loading a game.js wipes
    `shots` and refills it from the file's SHOTS block — which contains only the
    squares that have ACTUALLY been calibrated, i.e. the upper floor. Seeding
    once at startup therefore looked correct until the first load, at which
@@ -3035,16 +3276,20 @@ const round = v => Math.round(v * 10) / 10;
 const cxOff = s => (s.left + s.width/2) < 0 || (s.left + s.width/2) > 100;
 
 function dump(){
+  if (S.mode2 === "extras"){
+    document.getElementById("out").textContent = blockBuildMeta() + "\n\n" + blockDeskRewards() + "\n\n" + blockSecretNight();
+    return;
+  }
+  if (S.mode2 === "draw"){
+    document.getElementById("out").textContent = blockDrawOrders();
+    return;
+  }
   if (S.mode2 === "art"){
     const n = Object.keys(newArt).length;
-    const curve = darkCurve()
-      .map(c => "night " + c.n + ": " + c.lit + " lit / " + c.dark + " dark")
-      .join("\n  ");
-    document.getElementById("out").textContent =
-      (n ? n + " picture" + (n === 1 ? "" : "s") + " staged.\n\n"
-         : "") +
-      "HOW MUCH OF THE BUILDING YOU CAN STILL SEE\n  " + curve +
-      "\n\n" + blockDark();
+    document.getElementById("out").textContent = n
+      ? n + " picture" + (n === 1 ? "" : "s") + " staged. Press DOWNLOAD PATCHED GAME FILE "
+        + "and they are written into game.js in place."
+      : "Choose a photograph for any camera. Nothing leaves your machine.";
     return;
   }
   document.getElementById("out").textContent = (S.mode2 === "map")
@@ -3055,6 +3300,51 @@ function dump(){
           "\n\n/* camera pins — upper floor */\n" + blockPins(1))
     : blockShots() + "\n\n" + blockUnit() + "\n\n" + blockDoor() +
       "\n\n" + blockDoorBox();
+}
+
+function blockBuildMeta(){
+  return 'const BUILD_META = {\n' +
+    '  version:' + JSON.stringify(String(buildMeta.version || "")) + ',\n' +
+    '  updated:' + JSON.stringify(String(buildMeta.updated || "")) + '\n' +
+    '};';
+}
+function blockDrawOrders(){
+  const rows = Object.keys(cams).map(id => {
+    const arr = Array.isArray(drawOrders[id]) ? drawOrders[id] : [];
+    return '  ' + id + ':[' + arr.map(x=>JSON.stringify(x)).join(',') + ']';
+  });
+  return 'const CAMERA_DRAW_ORDER = {\n' + rows.join(',\n') + '\n};';
+}
+
+function blockDeskRewards(){
+  const rows = Object.entries(deskRewards).map(([id,o]) =>
+    '  ' + id + ':{ src:' + JSON.stringify(o.src) + ', left:' + round(o.left) +
+    ', bottom:' + round(o.bottom) + ', width:' + round(o.width) +
+    ', rotate:' + round(o.rotate || 0) + ' }');
+  return "const DESK_REWARDS = {\n" + rows.join(",\n") + "\n};";
+}
+function blockSecretNight(){
+  const c=secretNight.combo||{};
+  const combo='combo:{ eugene:'+(+c.eugene||0)+', sloppy:'+(+c.sloppy||0)+', gordon:'+(+c.gordon||0)+', jeffrey:'+(+c.jeffrey||0)+' }';
+  const arts=(secretNight.sloppyArt||[]).slice(0,3);
+  while(arts.length<3) arts.push("");
+  const eyes=(secretNight.eyeColors||[]).slice(0,3);
+  while(eyes.length<3) eyes.push("#9ec8ff");
+  const trio=(secretNight.startTrio||[]).slice(0,3);
+  while(trio.length<3) trio.push({});
+  const trioRows=trio.map(o=>'    { left:'+round(o.left??50)+', top:'+round(o.top??12)+', width:'+round(o.width??30)+', eyeY:'+round(o.eyeY??25)+', eyeL:'+round(o.eyeL??45)+', eyeR:'+round(o.eyeR??56)+' }');
+  return 'const SECRET_NIGHT = {\n' +
+    '  label:' + JSON.stringify(secretNight.label || "MIDNIGHT SHIFT") + ',\n' +
+    '  ' + combo + ',\n' +
+    '  settingNight:' + Math.max(1,Math.min(7,Math.round(secretNight.settingNight||5))) + ',\n' +
+    '  moveMs:[' + (secretNight.moveMs||[]).map(v=>Math.round(+v||0)).join(',') + '],\n' +
+    '  watchMs:' + Math.round(secretNight.watchMs||5000) + ',\n' +
+    '  doorMs:' + Math.round(secretNight.doorMs||2800) + ',\n' +
+    '  entryDelayMs:[' + (secretNight.entryDelayMs||[0,2500,5000]).map(v=>Math.round(+v||0)).join(',') + '],\n' +
+    '  sloppyArt:[' + arts.map(x=>JSON.stringify(x)).join(',') + '],\n' +
+    '  eyeColors:[' + eyes.map(x=>JSON.stringify(x)).join(',') + '],\n' +
+    '  startTrio:[\n' + trioRows.join(',\n') + '\n  ]\n' +
+    '};';
 }
 
 function blockShots(){
@@ -3116,7 +3406,7 @@ document.getElementById("copy").onclick = () => {
 function sane(block, label){
   try { new Function("return " + block.replace(/^const \w+ = /, "").replace(/;$/, "")); }
   catch (e){
-    flash("patch", "REFUSED — " + label + " would not parse", "WRITE ALL INTO index.html");
+    flash("patch", "REFUSED — " + label + " would not parse", "WRITE ALL INTO GAME.JS");
     console.error(label, e, block);
     return false;
   }
@@ -3129,7 +3419,8 @@ function patchText(text){
   if (!sane(sb, "SHOTS") || !sane(ub, "SHOTS_UNIT") ||
       !sane(blockRooms(), "ROOMS") || !sane(blockDoorBox(), "OFFICE_DOOR") ||
       !sane(blockRoomsB(), "ROOMS_B") || !sane(blockDoorLinks(), "DOOR_LINKS") ||
-      !sane(blockDark(), "DARK_FROM")) return null;
+      !sane(blockBuildMeta(), "BUILD_META") || !sane(blockDrawOrders(), "CAMERA_DRAW_ORDER") ||
+      !sane(blockDeskRewards(), "DESK_REWARDS") || !sane(blockSecretNight(), "SECRET_NIGHT")) return null;
 
   text = applyTuning(text);
   text = text.replace(/const SHOTS = \{[\s\S]*?\s\};/, () => sb);
@@ -3169,10 +3460,6 @@ function patchText(text){
     text = text.replace(/const ROOMS_B = \[[\s\S]*?\s\];/, () => blockRoomsB());
   if (/const DOOR_LINKS = \[/.test(text))
     text = text.replace(/const DOOR_LINKS = \[[\s\S]*?\s\];/, () => blockDoorLinks());
-  /* The darkness schedule. Written only if the target file has one, so this
-     tool stays usable against a build from before the lights started going. */
-  if (/const DARK_FROM = \{/.test(text))
-    text = text.replace(/const DARK_FROM = \{[\s\S]*?\n\};/, () => blockDark());
 
   // the doorway opening itself
   text = text.replace(/const OFFICE_DOOR = \{[^}]*\};/, () => blockDoorBox());
@@ -3197,41 +3484,51 @@ function patchText(text){
   if (dstart !== -1 && dend !== -1)
     text = text.slice(0, dstart) + db + text.slice(dend + 2);
 
+  if (/const BUILD_META = \{/.test(text))
+    text = text.replace(/const BUILD_META = \{[\s\S]*?\};/, () => blockBuildMeta());
+  if (/const CAMERA_DRAW_ORDER = \{/.test(text))
+    text = text.replace(/const CAMERA_DRAW_ORDER = \{[\s\S]*?\n\};/, () => blockDrawOrders());
+
+  if (/const DESK_REWARDS = \{/.test(text))
+    text = text.replace(/const DESK_REWARDS = \{[\s\S]*?\n\};/, () => blockDeskRewards());
+  if (/const SECRET_NIGHT = \{/.test(text))
+    text = text.replace(/const SECRET_NIGHT = \{[\s\S]*?\n\};/, () => blockSecretNight());
+
   return text;
 }
 
 document.getElementById("patch").onclick = async () => {
   if (!window.showOpenFilePicker){
     navigator.clipboard?.writeText(blockShots() + "\n\n" + blockUnit());
-    flash("patch", "BROWSER CANNOT WRITE FILES — COPIED INSTEAD", "WRITE ALL INTO index.html");
+    flash("patch", "BROWSER CANNOT WRITE FILES — COPIED INSTEAD", "WRITE ALL INTO GAME.JS");
     return;
   }
   try{
     const [h] = await window.showOpenFilePicker({
-      types:[{description:"the game file", accept:{"text/html":[".html"]}}]
+      types:[{description:"the game file", accept:{"text/javascript":[".js"],"text/html":[".html"]}}]
     });
     let text = await (await h.getFile()).text();
     const patched = patchText(text);
     if (!patched){
-      flash("patch", "THAT FILE HAS NO SHOTS BLOCK", "WRITE ALL INTO index.html"); return;
+      flash("patch", "THAT FILE HAS NO SHOTS BLOCK", "WRITE ALL INTO GAME.JS"); return;
     }
     const w = await h.createWritable();
     await w.write(patched); await w.close();
     reSnap();
     flash("patch", "WROTE " + Object.keys(shots).length + " NODES" +
           (tuneCount() ? " AND " + tuneCount() + " TUNING VALUES" : ""),
-          "WRITE ALL INTO index.html");
+          "WRITE ALL INTO GAME.JS");
     return;
   }catch(err){
     /* The picker only exists in a secure context, and anything thrown INSIDE
        the try was previously reported as "cancelled" too — which is why this
        looked like a permissions problem when it was often a code one. */
     if (err && err.name === "AbortError"){
-      flash("patch", "CANCELLED", "WRITE ALL INTO index.html");
+      flash("patch", "CANCELLED", "WRITE ALL INTO GAME.JS");
     } else {
       console.error(err);
       flash("patch", "COULD NOT WRITE — " + (err && err.message ? err.message : "unknown"),
-            "WRITE ALL INTO index.html");
+            "WRITE ALL INTO GAME.JS");
       downloadPatched();
     }
   }
@@ -3242,16 +3539,17 @@ document.getElementById("patch").onclick = async () => {
    involved. */
 function downloadPatched(){
   const inp = document.createElement("input");
-  inp.type = "file"; inp.accept = ".html";
+  inp.type = "file"; inp.accept = ".js,.html";
   inp.onchange = () => {
     inp.files[0].text().then(text => {
       const out = patchText(text);
-      if (!out){ flash("patch", "THAT FILE HAS NO SHOTS BLOCK", "WRITE ALL INTO index.html"); return; }
+      if (!out){ flash("patch", "THAT FILE HAS NO SHOTS BLOCK", "WRITE ALL INTO GAME.JS"); return; }
       const a = document.createElement("a");
-      a.href = URL.createObjectURL(new Blob([out], {type:"text/html"}));
-      a.download = "index.html";
+      const base = (inp.files[0].name || "game.js").toLowerCase().endsWith(".js") ? "game.js" : "index.html";
+      a.href = URL.createObjectURL(new Blob([out], {type:base.endsWith(".js") ? "text/javascript" : "text/html"}));
+      a.download = base;
       a.click();
-      flash("patch", "DOWNLOADED — REPLACE YOUR index.html", "WRITE ALL INTO index.html");
+      flash("patch", "DOWNLOADED — REPLACE YOUR " + base, "WRITE ALL INTO GAME.JS");
     });
   };
   inp.click();
@@ -3295,7 +3593,28 @@ function parseDoorBlocks(text){
   }
 }
 
+function parseExtras(text){
+  const readObject = (name) => {
+    const re = new RegExp('const\\s+' + name + '\\s*=\\s*(\\{[\\s\\S]*?\n\\});');
+    const m = text.match(re);
+    if (!m) return null;
+    try { return (new Function('return (' + m[1] + ')'))(); } catch (e) { console.warn('could not parse '+name,e); return null; }
+  };
+  const d=readObject('DESK_REWARDS');
+  if(d) deskRewards=JSON.parse(JSON.stringify(d));
+  const q=readObject('SECRET_NIGHT');
+  if(q) secretNight=JSON.parse(JSON.stringify(q));
+  const ord=readObject('CAMERA_DRAW_ORDER');
+  if(ord) drawOrders=JSON.parse(JSON.stringify(ord));
+  const bm=text.match(/const\s+BUILD_META\s*=\s*(\{[^}]*\})\s*;/);
+  if(bm){
+    try { buildMeta=(new Function('return ('+bm[1]+')'))(); }
+    catch(e){ console.warn('could not parse BUILD_META',e); }
+  }
+}
+
 function parseWorld(text){
+  parseExtras(text);
   /* Note which cameras already carry a photograph, so the CAMERA ART pane can
      tell you what is actually left to shoot rather than guessing from the
      tool's own summary of the building. */
@@ -3347,15 +3666,22 @@ function parseWorld(text){
     if (list.length){ roomsB.length = 0; list.forEach(r => roomsB.push(r)); }
   }
 
-  /* DOOR_LINKS. Only the pin is read back — the ids and the squares each door
-     joins are structure, not calibration, and this tool has no business
-     rewriting the shape of the building's graph. A door with no pin in the
-     file is left deriving its position from its two squares. */
+  /* DOOR_LINKS. Pins are calibration; oneShot/breakMs are gameplay structure.
+     We do not edit the graph topology here, but we DO preserve those structural
+     fields so WRITE cannot silently turn the Payroll one-shot back into a
+     reusable door. */
   const dlb = text.match(/const DOOR_LINKS = \[([\s\S]*?)\s\];/);
   if (dlb){
     Object.keys(doorPin).forEach(k => delete doorPin[k]);
     dlb[1].replace(/id:"([^"]+)"[^}]*?pin:\{\s*x:(-?[\d.]+),\s*y:(-?[\d.]+)\s*\}/g,
       (_, id, x, y) => { doorPin[id] = { x:+x, y:+y }; return ""; });
+    dlb[1].split(/\n/).forEach(line => {
+      const mi=line.match(/id:"([^"]+)"/); if(!mi) return;
+      const d=doorLinks.find(x=>x.id===mi[1]); if(!d) return;
+      if(/oneShot\s*:\s*true/.test(line)) d.oneShot=true; else delete d.oneShot;
+      const mb=line.match(/breakMs\s*:\s*(-?[\d.]+)/);
+      if(mb) d.breakMs=+mb[1]; else delete d.breakMs;
+    });
   }
 
   /* DOOR_SHOTS and its per-animatronic overrides. Without these a LOAD brought
@@ -3435,11 +3761,11 @@ const normalise = o => Object.assign({}, SHOT_DEFAULT, o);
 document.getElementById("load").onclick = async () => {
   const apply = text => {
     const ms = text.match(/const SHOTS = \{([\s\S]*?)\s\};/);
-    if (!ms){ flash("load", "NO SHOTS BLOCK IN THAT FILE", "LOAD FROM index.html"); return; }
+    if (!ms){ flash("load", "NO SHOTS BLOCK IN THAT FILE", "LOAD GAME.JS / INDEX.HTML"); return; }
 
     const raw = parseBlock(ms[1]);
     const names = Object.keys(raw);
-    if (!names.length){ flash("load", "COULD NOT READ ANY NODES", "LOAD FROM index.html"); return; }
+    if (!names.length){ flash("load", "COULD NOT READ ANY NODES", "LOAD GAME.JS / INDEX.HTML"); return; }
 
     // how many arrived without the numbers that matter — surfaced, not swallowed
     const partial = names.filter(n =>
@@ -3481,7 +3807,7 @@ document.getElementById("load").onclick = async () => {
     flash("load", partial
       ? "LOADED " + names.length + " NODES, " + partial + " INCOMPLETE"
       : "LOADED " + names.length + " NODES AND " + tuned + " TUNING BLOCKS",
-      "LOAD FROM index.html");
+      "LOAD GAME.JS / INDEX.HTML");
     if (!shots[S.node]) S.node = Object.keys(shots)[0];
     select(S.node);
   };
@@ -3490,13 +3816,13 @@ document.getElementById("load").onclick = async () => {
   if (window.showOpenFilePicker){
     try{
       const [h] = await window.showOpenFilePicker({
-        types:[{description:"the game file", accept:{"text/html":[".html"]}}]
+        types:[{description:"the game file", accept:{"text/javascript":[".js"],"text/html":[".html"]}}]
       });
       apply(await (await h.getFile()).text());
-    }catch(e){ flash("load", "CANCELLED", "LOAD FROM index.html"); }
+    }catch(e){ flash("load", "CANCELLED", "LOAD GAME.JS / INDEX.HTML"); }
   } else {
     const inp = document.createElement("input");
-    inp.type = "file"; inp.accept = ".html";
+    inp.type = "file"; inp.accept = ".js,.html";
     inp.onchange = () => inp.files[0].text().then(apply);
     inp.click();
   }
@@ -3734,13 +4060,17 @@ function setMode(m){
   document.body.classList.toggle("mapmode",  m === "map");
   document.body.classList.toggle("tunemode", m === "tuning");
   document.body.classList.toggle("artmode",  m === "art");
-  [["tab-map","map"],["tab-sprites","sprites"],["tab-tuning","tuning"],["tab-art","art"]]
+  document.body.classList.toggle("extrasmode",m === "extras");
+  document.body.classList.toggle("drawmode",m === "draw");
+  [["tab-map","map"],["tab-sprites","sprites"],["tab-tuning","tuning"],["tab-art","art"],["tab-extras","extras"],["tab-draw","draw"]]
     .forEach(([id,k]) => document.getElementById(id).style.color =
       m === k ? "var(--phos)" : "var(--dim)");
   if (m === "map" && !mapBuilt) buildMapEditor();
   else if (m === "map") syncPinScale();
   else if (m === "tuning") buildTuneEditor();
   else if (m === "art") buildArtEditor();
+  else if (m === "extras") buildExtrasEditor();
+  else if (m === "draw") buildDrawEditor();
   dump();
 }
 addEventListener("resize", () => { if (S.mode2 === "map") syncPinScale(); });
@@ -3748,6 +4078,128 @@ document.getElementById("tab-map").onclick     = () => setMode("map");
 document.getElementById("tab-sprites").onclick = () => setMode("sprites");
 document.getElementById("tab-tuning").onclick  = () => setMode("tuning");
 document.getElementById("tab-art").onclick     = () => setMode("art");
+document.getElementById("tab-extras").onclick  = () => setMode("extras");
+document.getElementById("tab-draw").onclick    = () => setMode("draw");
+
+/* ===========================================================================
+   REWARDS / SECRET NIGHT
+   =========================================================================== */
+let extrasBuilt=false;
+function buildExtrasEditor(){
+  const board=document.getElementById("deskBoard");
+  if(!board) return;
+  board.style.backgroundImage='linear-gradient(rgba(0,0,0,.08),rgba(0,0,0,.08)),url("'+officeArt+'")';
+  board.innerHTML="";
+  Object.entries(deskRewards).forEach(([id,o])=>{
+    const box=document.createElement("div"); box.className="rewardCal"; box.dataset.reward=id;
+    box.style.left=o.left+"%"; box.style.bottom=o.bottom+"%"; box.style.width=o.width+"%";
+    box.style.transform="translateX(-50%) rotate("+(o.rotate||0)+"deg)";
+    const img=document.createElement("img"); img.alt=""; img.src=o.src;
+    const fb=document.createElement("div"); fb.className="fallback"; fb.textContent=id.toUpperCase();
+    img.onerror=()=>box.classList.add("missing"); img.onload=()=>box.classList.remove("missing");
+    box.append(img,fb); board.appendChild(box);
+    let drag=null;
+    box.addEventListener("pointerdown",e=>{
+      if(e.button!==0)return; e.preventDefault(); box.setPointerCapture(e.pointerId); box.classList.add("drag");
+      const r=board.getBoundingClientRect(); drag={x:e.clientX,y:e.clientY,left:o.left,bottom:o.bottom,w:r.width,h:r.height};
+    });
+    box.addEventListener("pointermove",e=>{
+      if(!drag)return; o.left=drag.left+(e.clientX-drag.x)/drag.w*100; o.bottom=drag.bottom-(e.clientY-drag.y)/drag.h*100;
+      box.style.left=o.left+"%"; box.style.bottom=o.bottom+"%"; dump();
+    });
+    const end=e=>{if(!drag)return;drag=null;box.classList.remove("drag");};
+    box.addEventListener("pointerup",end); box.addEventListener("pointercancel",end);
+    box.addEventListener("wheel",e=>{
+      e.preventDefault();
+      if(e.shiftKey) o.rotate=(o.rotate||0)+(e.deltaY>0?1:-1);
+      else o.width=Math.max(1,Math.min(40,o.width+(e.deltaY>0?-0.35:0.35)));
+      box.style.width=o.width+"%"; box.style.transform="translateX(-50%) rotate("+(o.rotate||0)+"deg)"; dump();
+    },{passive:false});
+  });
+
+  const combo=document.getElementById("secretCombo"); combo.innerHTML="";
+  [["eugene","EUGENE"],["sloppy","SLOPPY"],["gordon","GORDON"],["jeffrey","JEFFREY"]].forEach(([id,name])=>{
+    const lab=document.createElement("label"); lab.textContent=name;
+    const inp=document.createElement("input"); inp.type="number"; inp.min=0; inp.max=20; inp.step=1; inp.value=secretNight.combo[id]??0;
+    inp.oninput=()=>{secretNight.combo[id]=Math.max(0,Math.min(20,Math.round(+inp.value||0)));dump();};
+    lab.appendChild(inp); combo.appendChild(lab);
+  });
+
+  const cloneHost=document.getElementById("secretCloneConfig");
+  if(cloneHost){
+    cloneHost.innerHTML="";
+    if(!Array.isArray(secretNight.sloppyArt)) secretNight.sloppyArt=["","",""];
+    if(!Array.isArray(secretNight.eyeColors)) secretNight.eyeColors=["#69c9ff","#bd83ff","#72f0b2"];
+    if(!Array.isArray(secretNight.startTrio)) secretNight.startTrio=[{},{},{}];
+    while(secretNight.sloppyArt.length<3) secretNight.sloppyArt.push("");
+    while(secretNight.eyeColors.length<3) secretNight.eyeColors.push("#9ec8ff");
+    while(secretNight.startTrio.length<3) secretNight.startTrio.push({});
+    ["BLUE","VIOLET","GREEN"].forEach((name,i)=>{
+      const wrap=document.createElement("div"); wrap.className="cloneCfg";
+      const title=document.createElement("b"); title.textContent="SLOPPY "+(i+1)+" · "+name; wrap.appendChild(title);
+      const wide=document.createElement("div"); wide.className="wide";
+      const art=document.createElement("input"); art.type="text"; art.spellcheck=false; art.value=secretNight.sloppyArt[i]||""; art.placeholder="sprite path";
+      art.oninput=()=>{secretNight.sloppyArt[i]=art.value.trim();dump();};
+      const color=document.createElement("input"); color.type="color"; color.value=secretNight.eyeColors[i]||"#9ec8ff";
+      color.oninput=()=>{secretNight.eyeColors[i]=color.value;dump();};
+      wide.append(art,color); wrap.appendChild(wide);
+      const nums=document.createElement("div"); nums.className="nums";
+      const keys=["left","top","width","eyeY","eyeL","eyeR"]; const defs=[31,16,28,25,45,56];
+      keys.forEach((k,ki)=>{
+        const inp=document.createElement("input"); inp.type="number"; inp.step=.1; inp.title=k; inp.placeholder=k;
+        const o=secretNight.startTrio[i]||(secretNight.startTrio[i]={}); inp.value=o[k]??defs[ki];
+        inp.oninput=()=>{o[k]=+inp.value||0;dump();}; nums.appendChild(inp);
+      });
+      wrap.appendChild(nums); cloneHost.appendChild(wrap);
+    });
+  }
+
+  const bv=document.getElementById("buildVersion"), bu=document.getElementById("buildUpdated");
+  if(bv){bv.value=buildMeta.version||"";bv.oninput=()=>{buildMeta.version=bv.value.trim();dump();};}
+  if(bu){bu.value=buildMeta.updated||"";bu.oninput=()=>{buildMeta.updated=bu.value.trim();dump();};}
+  const tier=document.getElementById("secretTier"), watch=document.getElementById("secretWatch"), door=document.getElementById("secretDoor");
+  tier.value=secretNight.settingNight||5; watch.value=secretNight.watchMs||5000; door.value=secretNight.doorMs||2800;
+  tier.oninput=()=>{secretNight.settingNight=Math.max(1,Math.min(7,Math.round(+tier.value||1)));dump();};
+  watch.oninput=()=>{secretNight.watchMs=Math.max(500,Math.round(+watch.value||500));dump();};
+  door.oninput=()=>{secretNight.doorMs=Math.max(500,Math.round(+door.value||500));dump();};
+  const ints=document.getElementById("secretIntervals"); ints.innerHTML="";
+  (secretNight.moveMs||[]).forEach((v,i)=>{
+    const inp=document.createElement("input"); inp.type="number"; inp.min=1000; inp.step=100; inp.value=v; inp.title=(i===0?"12 AM":i+" AM")+" movement interval";
+    inp.oninput=()=>{secretNight.moveMs[i]=Math.max(1000,Math.round(+inp.value||1000));dump();}; ints.appendChild(inp);
+  });
+  extrasBuilt=true; dump();
+}
+
+/* ===========================================================================
+   PER-CAMERA DRAW ORDER
+   =========================================================================== */
+let drawBuilt=false;
+function buildDrawEditor(){
+  const grid=document.getElementById("drawOrderGrid");
+  if(!grid) return;
+  grid.innerHTML="";
+  Object.keys(cams).forEach(id=>{
+    const c=cams[id]||{};
+    const row=document.createElement("div"); row.className="drawOrderRow";
+    const title=document.createElement("b"); title.textContent=id+"  "+(c.name||"");
+    const note=document.createElement("small");
+    const visible=[...(c.peek||[]),...(c.sees||[])];
+    note.textContent="Visible positions: "+visible.join(", ");
+    const input=document.createElement("input"); input.type="text"; input.spellcheck=false;
+    if(!Array.isArray(drawOrders[id])) drawOrders[id]=visible.slice();
+    input.value=drawOrders[id].join(", ");
+    input.addEventListener("change",()=>{
+      const vals=input.value.split(",").map(x=>x.trim()).filter(Boolean);
+      const allowed=new Set(visible);
+      const clean=[];
+      vals.forEach(x=>{if(allowed.has(x)&&!clean.includes(x))clean.push(x);});
+      visible.forEach(x=>{if(!clean.includes(x))clean.push(x);});
+      drawOrders[id]=clean; input.value=clean.join(", "); dump();
+    });
+    row.append(title,note,input); grid.appendChild(row);
+  });
+  drawBuilt=true; dump();
+}
 
 /* ===========================================================================
    CAMERA ART
@@ -3758,13 +4210,14 @@ document.getElementById("tab-art").onclick     = () => setMode("art");
 const newArt = {};
 
 
+
 /* WHICH CAMERAS ALREADY HAVE A PHOTOGRAPH, read from the file you loaded.
 
    Not from `cams[].art`. The DATA block in this tool carries the on-disk path
    for every camera — that is what makes the preview pane able to name them —
    so asking it would report all twenty-five as missing, including the thirteen
    that have had art since the first build. The authoritative answer is in
-   index.html, where a camera with a picture carries a data URI inline.
+   index.html, where a camera with an embedded picture carries a data URI inline.
 
    Empty until a file is loaded, and the pane says so rather than lying. */
 const artInFile = {};
@@ -3880,12 +4333,6 @@ function buildArtEditor(){
         ' \u00b7 pan ' + c.pan +
         (newArt[id] ? ' \u00b7 <em>' + kb(newArt[id]) + ' staged</em>' : '') +
       '</span></div>' +
-      '<div class="artDark"><label>GOES DARK</label>' +
-        '<select data-dark="' + id + '">' +
-          [1,2,3,4,5,6,7].map(nn => '<option value="' + nn + '"' +
-            (darkFrom(id) === nn ? " selected" : "") + '>night ' + nn +
-            (nn === 7 ? " (last)" : "") + '</option>').join("") +
-        '</select></div>' +
       '<div class="artBtns">' +
         '<label class="act">CHOOSE\u2026<input type="file" accept="image/*" hidden></label>' +
         (newArt[id] ? '<button class="act artUndo">UNDO</button>' : '') +
@@ -3901,11 +4348,6 @@ function buildArtEditor(){
         buildArtEditor(); dump();
       } catch (err){ alert(err.message); }
     });
-    const dsel = card.querySelector("select[data-dark]");
-    if (dsel) dsel.addEventListener("change", () => {
-      DARK[id] = parseInt(dsel.value, 10);
-      buildArtEditor(); dump();
-    });
     const undo = card.querySelector(".artUndo");
     if (undo) undo.addEventListener("click", () => { delete newArt[id]; buildArtEditor(); dump(); });
 
@@ -3917,12 +4359,12 @@ function buildArtEditor(){
   document.getElementById("artCount").textContent = artScanned
     ? staged + " staged \u00b7 " + missing + " still missing \u00b7 " +
       (staged ? kb(Object.values(newArt).join("")) + " to add" : "nothing to add")
-    : "load index.html to see which cameras already have art";
+    : "load game.js to see which cameras already have art";
 }
 
 /* 1280 wide at quality 0.82 is roughly 150-250 KB a frame, which is the same
    order as the thirteen already in the file. Raise these if the feeds look
-   soft; the only cost is the size of index.html. */
+   soft; the only cost is the size of game.js. */
 const ART_MAX_W = 1280, ART_QUALITY = 0.82;
 
 document.getElementById("artFilter").onchange = buildArtEditor;
@@ -4497,7 +4939,7 @@ function buildTuneEditor(){
   host.innerHTML = "";
 
   if (!tuneRead){
-    host.innerHTML = '<div class="empty">Press <b>LOAD FROM index.html</b> first.<br>' +
+    host.innerHTML = '<div class="empty">Press <b>LOAD GAME.JS / INDEX.HTML</b> first.<br>' +
       'These are read out of the game file rather than baked into this tool, so ' +
       'what you see is always what the game is actually running — and writing ' +
       'back can never revert a number you changed by hand.</div>';
@@ -4749,6 +5191,11 @@ function blockDoorLinks(){
     const p = [`id:"${d.id}"`, `name:"${d.name}"`, `a:"${d.a}"`, `b:"${d.b}"`];
     const pin = doorPin[d.id];
     if (pin) p.push(`pin:{x:${round(pin.x)},y:${round(pin.y)}}`);
+    /* These are gameplay structure, not calibration, but they MUST survive a
+       round-trip. V2.1.13+ makes D5 a one-shot Payroll door; the old writer
+       silently stripped those fields and recreated the Gordon-stuck bug. */
+    if (d.oneShot) p.push("oneShot:true");
+    if (d.breakMs !== undefined) p.push(`breakMs:${round(d.breakMs)}`);
     return "  { " + p.join(", ") + " }";
   });
   return "const DOOR_LINKS = [\n" + rows.join(",\n") + "\n];";
