@@ -13,5 +13,13 @@ window.TANK_UNITS = {
  black:{name:'Black ace',color:'#444946',speed:155,shot:430,bounce:0,cap:3,mines:2,cool:.5,threat:2,help:'Fast movement, rockets and mines.'},
  bulwark:{name:'Azure bulwark',color:'#4ebce1',speed:53,shot:220,bounce:1,cap:2,mines:0,cool:1.8,threat:2,help:'Its forward turret shield absorbs shells. Flank it or use mines.'},
  scatter:{name:'Coral scattergun',color:'#f18a61',speed:78,shot:230,bounce:1,cap:6,mines:0,cool:1.65,threat:1,help:'Fires a three-shell fan and keeps its distance. Rush between volleys.'},
+ mortar:{name:'Copper mortar',color:'#c68c50',speed:0,shot:0,bounce:0,cap:2,mines:0,cool:3.8,threat:2,help:'Lobs a shell over cover at a marked location. Leave the warning ring before impact; the stationary launcher is vulnerable.'},
  dash:{name:'Crimson lancer',color:'#cf4d64',speed:87,shot:300,bounce:0,cap:2,mines:0,cool:1.5,threat:2,help:'Flashes for 0.7 seconds, then dashes on a locked heading. Cannot fire while charging or dashing.'}
 };
+
+// Shared tuning in world pixels per second: player and enemies scale together.
+for(const [type,unit] of Object.entries(TANK_UNITS)){
+ unit.speed=Math.round(unit.speed*.85*100)/100;
+ if(unit.shot>0&&unit.shot<=245)unit.shot=Math.round(unit.shot*.90);
+ unit.reaction=type==='ash'?.34:type==='black'?.18:unit.threat===2?.24:.30;
+}
