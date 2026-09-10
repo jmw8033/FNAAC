@@ -155,28 +155,57 @@
   }
   return true;
  }
+ function greenAngle(t,target){
+  const dx=target.x-t.x,dy=target.y-t.y;
+  // Check direct and bank shots independently of the turret's current heading.
+  const angles=[Math.atan2(dy,dx),Math.atan2(dy,80-target.x-t.x),
+   Math.atan2(dy,2*(W-40)-target.x-t.x),Math.atan2(80-target.y-t.y,dx),
+   Math.atan2(2*(H-40)-target.y-t.y,dx),t.angle,t.angle-.035,t.angle+.035];
+  return angles.find(a=>rayHits(t,a,target)&&!risksAlly(t,a));
+ }
  function greenScan(t,targets,dt){
+  if(!targets.length)return;
   if(defensiveFire(t,dt)){t.scanLock=null;return;}
-  // Sweep independently of player position. Only inspect the narrow sector
-  // currently under the turret, including paths that bank off walls.
-  if(t.scanDirection===undefined){t.scanDirection=t.uid%2?1:-1;t.scanHold=0;t.scanCheck=0;}
+  if(t.scanDirection===undefined){t.scanDirection=Math.random()<.5?1:-1;t.scanHold=0;t.scanCheck=0;}
+  t.scanCheck-=dt;
+  const ready=t.cool<=0&&shells.filter(s=>s.owner===t.uid&&!s.dead).length<t.cfg.cap;
+  // A brief perception interval gives an opening time to register, even behind us.
+  if(t.scanCheck<=0){
+   t.scanCheck=.16+Math.random()*.08;
+   let found=null;
+   if(ready){
+    const ordered=[...targets].sort((a,b)=>dist(t,a)-dist(t,b));
+    for(const target of ordered){const angle=greenAngle(t,target);if(angle!==undefined){found={target,angle};break;}}
+   }
+   if(found){
+    if(t.scanLock&&t.scanLock.target===found.target){t.scanLock.angle=found.angle;}
+    else t.scanLock={...found,settle:.18+Math.random()*.08};
+   }else t.scanLock=null;
+  }
   if(t.scanLock){
-   const lock=t.scanLock;lock.remaining-=dt;
-   if(!lock.target.alive||!rayHits(t,lock.angle,lock.target)||lock.remaining<=0){t.scanLock=null;t.scanHold=.15;}
-   else {t.angle+=clamp(wrap(lock.angle-t.angle),-dt*1.8,dt*1.8);lock.settle-=dt;
-    if(lock.settle<=0&&Math.abs(wrap(lock.angle-t.angle))<.025&&fire(t)){t.scanLock=null;t.scanHold=.35;}
+   const lock=t.scanLock;
+   if(!ready||!lock.target.alive){t.scanLock=null;}
+   else {
+    t.angle=wrap(t.angle+clamp(wrap(lock.angle-t.angle),-dt*2.4,dt*2.4));
+    lock.settle-=dt;
+    if(lock.settle<=0&&Math.abs(wrap(lock.angle-t.angle))<.025&&rayHits(t,t.angle,lock.target)&&fire(t)){
+     t.scanLock=null;t.scanAim=undefined;t.scanHold=.2+Math.random()*.25;
+    }
     return;
    }
   }
+  // Sample the player's bearing for each glance, then finish that glance and
+  // pause. Alternating random offsets avoids continuous spinning or exact tracking.
   if(t.scanHold>0){t.scanHold-=dt;return;}
-  t.angle=wrap(t.angle+t.scanDirection*.72*dt);
-  t.scanCheck-=dt;if(t.scanCheck>0)return;t.scanCheck=.07;
-  const sector=[t.angle,t.angle-.035,t.angle+.035];
-  for(const angle of sector)for(const target of targets){
-   if(rayHits(t,angle,target)&&!risksAlly(t,angle)){
-    t.scanLock={target,angle,settle:.16,remaining:.65};return;
-   }
+  if(t.scanAim===undefined){
+   const target=targets.reduce((a,b)=>dist(t,a)<dist(t,b)?a:b);
+   t.scanDirection*=-1;
+   t.scanAim=wrap(Math.atan2(target.y-t.y,target.x-t.x)+t.scanDirection*(.25+Math.random()*.75));
+   t.scanSpeed=.8+Math.random()*.55;
   }
+  const delta=wrap(t.scanAim-t.angle);
+  t.angle=wrap(t.angle+clamp(delta,-dt*t.scanSpeed,dt*t.scanSpeed));
+  if(Math.abs(delta)<=dt*t.scanSpeed){t.scanAim=undefined;t.scanHold=.15+Math.random()*.45;}
  }
  function enemy(t,dt){const targets=tanks.filter(p=>p.player&&p.alive);if(!targets.length)return {x:0,y:0};if(t.type==='green'){greenScan(t,targets,dt);return {x:0,y:0};}const p=targets.sort((a,b)=>dist(t,a)-dist(t,b))[0];
  if(t.type==='dash'){
