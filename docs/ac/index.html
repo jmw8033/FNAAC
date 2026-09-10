@@ -1097,13 +1097,17 @@ body.camsup #powerBtn{opacity:0; pointer-events:none}
 #secretPreNightTrio{position:absolute;inset:0;z-index:3;display:none;pointer-events:none;overflow:hidden}
 #titleScreen.secret-preNight #secretPreNightTrio{display:block}
 #titleScreen.secret-preNight #titleFace,#titleScreen.secret-preNight #titleEyes{opacity:0!important}
-.secretStartClone{position:absolute;transform:translateX(-50%);height:82%;filter:blur(.35px) brightness(.50) contrast(1.35);opacity:.32;transform-origin:center top}
-.secretStartClone:nth-child(2){opacity:.46;filter:blur(.15px) brightness(.58) contrast(1.38)}
+.secretStartClone{position:absolute;transform:translateX(-50%);height:82%;filter:blur(.35px) brightness(.42) contrast(1.32);opacity:.25;transform-origin:center top}
+.secretStartClone:nth-child(2){opacity:.36;filter:blur(.15px) brightness(.49) contrast(1.35)}
 .secretStartClone img{display:block;width:100%;height:100%;object-fit:contain;object-position:top center;filter:none}
-.secretCloneEyes{position:absolute;inset:0;opacity:0;pointer-events:none}
-.secretCloneEyes i{position:absolute;top:var(--eye-y,25%);width:clamp(8px,1.75vh,16px);height:clamp(8px,1.75vh,16px);border-radius:50%;transform:translate(-50%,-50%);background:var(--eye-color,#9ec8ff);box-shadow:0 0 7px var(--eye-color,#9ec8ff),0 0 20px var(--eye-color,#9ec8ff)}
-.secretCloneEyes i:first-child{left:var(--eye-l,45%)}
-.secretCloneEyes i:last-child{left:var(--eye-r,56%)}
+/* The image is height-constrained inside a wider positioning box. Give the eye
+   layer Sloppy's real 520:1150 aspect ratio and centre it over the rendered
+   image so the percentages below refer to actual sprite pixels, not the empty
+   side padding of the object-fit container. */
+.secretCloneEyes{position:absolute;top:0;left:50%;height:100%;aspect-ratio:520/1150;width:auto;transform:translateX(-50%);opacity:0;pointer-events:none}
+.secretCloneEyes i{position:absolute;width:var(--eye-w,4.1%);height:var(--eye-h,1.8%);border-radius:50%;transform:translate(-50%,-50%);background:var(--eye-color,#9ec8ff);box-shadow:0 0 7px var(--eye-color,#9ec8ff),0 0 20px var(--eye-color,#9ec8ff)}
+.secretCloneEyes i:first-child{left:var(--eye-lx,42.7%);top:var(--eye-ly,20.2%)}
+.secretCloneEyes i:last-child{left:var(--eye-rx,52.7%);top:var(--eye-ry,18.8%)}
 .secretCloneEyes.flash{animation:secretEyeFlash .28s steps(2,end) both}
 @keyframes secretEyeFlash{0%,100%{opacity:0}16%{opacity:1}31%{opacity:.16}46%{opacity:1}63%{opacity:.22}78%{opacity:1}100%{opacity:0}}
 @keyframes faceDrift{

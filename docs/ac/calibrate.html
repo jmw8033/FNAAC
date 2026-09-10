@@ -290,7 +290,7 @@ button.act:hover{color:var(--phos);border-color:var(--dim)}
         <p>The exact four A.I. values below activate the hidden Midnight Shift. The challenge itself replaces the roster with three Sloppys; these values are only the easter-egg key.</p>
         <div class="comboGrid" id="secretCombo"></div>
         <h3>MIDNIGHT SLOPPY ART / START SCREEN</h3>
-        <p>Each clone uses a separate PNG and eye color. The numeric trio fields are LEFT, TOP, WIDTH, EYE Y, EYE L, EYE R percentages.</p>
+        <p>Each clone uses a separate PNG and eye color. Fields are LEFT, TOP, WIDTH, LEFT-EYE X/Y, RIGHT-EYE X/Y, EYE WIDTH/HEIGHT. Defaults are measured from the 520×1150 Sloppy sprite.</p>
         <div id="secretCloneConfig"></div>
         <h3>BUILD METADATA</h3>
         <p>These are release labels, not automatic counters. Leave LAST UPDATED blank to hide it on the title screen.</p>
@@ -299,9 +299,10 @@ button.act:hover{color:var(--phos);border-color:var(--dim)}
         <h3>THREE-SLOPPY TUNING</h3>
         <div class="xrow"><span>Environment tier (1-7)</span><input id="secretTier" type="number" min="1" max="7" step="1"></div>
         <div class="xrow"><span>Watch requirement (ms)</span><input id="secretWatch" type="number" min="500" step="100"></div>
-        <div class="xrow"><span>Door time (ms)</span><input id="secretDoor" type="number" min="500" step="100"></div>
-        <p style="margin-top:12px">Movement opportunity interval by hour:</p>
+        <p style="margin-top:12px">Visible deadline / hidden cooldown by hour:</p>
         <div class="intervals" id="secretIntervals"></div>
+        <p style="margin-top:12px">Clone activation (hour, earliest ms, latest ms):</p>
+        <div id="secretActivation"></div>
       </div>
     </div>
     <div id="drawEdit">
@@ -1176,9 +1177,9 @@ const DATA = {
    "rotate": -3
   },
   "b31": {
-   "left": 34,
-   "bottom": 28,
-   "width": 13.5,
+   "left": 39,
+   "bottom": 20.4,
+   "width": 15.3,
    "rotate": 1
   },
   "b30": {
@@ -1845,7 +1846,7 @@ const DATA = {
  "grade": "brightness(.50) contrast(1.22) saturate(.40) hue-rotate(-10deg)",
  "reach": 0.9,
  "officeDoor": {
-  "x": 40.0,
+  "x": 39.7,
   "w": 5.2,
   "top": 39.1,
   "h": 12
@@ -2711,14 +2712,14 @@ let deskRewards = {
 };
 let secretNight = {
   label:"MIDNIGHT SHIFT", combo:{eugene:1,sloppy:9,gordon:8,jeffrey:7}, settingNight:5,
-  moveMs:[30000,28500,27000,25000,23000,21000], watchMs:5000, doorMs:2800,
-  entryDelayMs:[0,2500,5000],
+  moveMs:[22000,20000,18000,16000,14000,12000], watchMs:5000,
+  activationHours:[0,2,4], activationWindowMs:[[5000,30000],[2500,12000],[2500,12000]],
   sloppyArt:["images/characters/ani_sloppy_midnight_blue.png","images/characters/ani_sloppy_midnight_violet.png","images/characters/ani_sloppy_midnight_green.png"],
   eyeColors:["#69c9ff","#bd83ff","#72f0b2"],
   startTrio:[
-    {left:31,top:16,width:28,eyeY:25,eyeL:45,eyeR:56},
-    {left:50,top:10,width:35,eyeY:25,eyeL:45,eyeR:56},
-    {left:69,top:16,width:28,eyeY:25,eyeL:45,eyeR:56}
+    {left:31,top:16,width:28,eyeLX:42.7,eyeLY:20.2,eyeRX:52.7,eyeRY:18.8,eyeW:4.1,eyeH:1.8},
+    {left:50,top:10,width:35,eyeLX:42.7,eyeLY:20.2,eyeRX:52.7,eyeRY:18.8,eyeW:4.1,eyeH:1.8},
+    {left:69,top:16,width:28,eyeLX:42.7,eyeLY:20.2,eyeRX:52.7,eyeRY:18.8,eyeW:4.1,eyeH:1.8}
   ]
 };
 let buildMeta = {version:"2.2.0", updated:""};
@@ -3326,21 +3327,22 @@ function blockDeskRewards(){
 function blockSecretNight(){
   const c=secretNight.combo||{};
   const combo='combo:{ eugene:'+(+c.eugene||0)+', sloppy:'+(+c.sloppy||0)+', gordon:'+(+c.gordon||0)+', jeffrey:'+(+c.jeffrey||0)+' }';
-  const arts=(secretNight.sloppyArt||[]).slice(0,3);
-  while(arts.length<3) arts.push("");
-  const eyes=(secretNight.eyeColors||[]).slice(0,3);
-  while(eyes.length<3) eyes.push("#9ec8ff");
-  const trio=(secretNight.startTrio||[]).slice(0,3);
-  while(trio.length<3) trio.push({});
-  const trioRows=trio.map(o=>'    { left:'+round(o.left??50)+', top:'+round(o.top??12)+', width:'+round(o.width??30)+', eyeY:'+round(o.eyeY??25)+', eyeL:'+round(o.eyeL??45)+', eyeR:'+round(o.eyeR??56)+' }');
+  const arts=(secretNight.sloppyArt||[]).slice(0,3); while(arts.length<3) arts.push("");
+  const eyes=(secretNight.eyeColors||[]).slice(0,3); while(eyes.length<3) eyes.push("#9ec8ff");
+  const trio=(secretNight.startTrio||[]).slice(0,3); while(trio.length<3) trio.push({});
+  const trioRows=trio.map(o=>'    { left:'+round(o.left??50)+', top:'+round(o.top??12)+', width:'+round(o.width??30)+
+    ', eyeLX:'+round(o.eyeLX??42.7)+', eyeLY:'+round(o.eyeLY??20.2)+', eyeRX:'+round(o.eyeRX??52.7)+', eyeRY:'+round(o.eyeRY??18.8)+
+    ', eyeW:'+round(o.eyeW??4.1)+', eyeH:'+round(o.eyeH??1.8)+' }');
+  const hours=(secretNight.activationHours||[0,2,4]).slice(0,3); while(hours.length<3) hours.push((hours.length)*2);
+  const wins=(secretNight.activationWindowMs||[[5000,30000],[2500,12000],[2500,12000]]).slice(0,3); while(wins.length<3) wins.push([2500,12000]);
   return 'const SECRET_NIGHT = {\n' +
     '  label:' + JSON.stringify(secretNight.label || "MIDNIGHT SHIFT") + ',\n' +
     '  ' + combo + ',\n' +
     '  settingNight:' + Math.max(1,Math.min(7,Math.round(secretNight.settingNight||5))) + ',\n' +
     '  moveMs:[' + (secretNight.moveMs||[]).map(v=>Math.round(+v||0)).join(',') + '],\n' +
     '  watchMs:' + Math.round(secretNight.watchMs||5000) + ',\n' +
-    '  doorMs:' + Math.round(secretNight.doorMs||2800) + ',\n' +
-    '  entryDelayMs:[' + (secretNight.entryDelayMs||[0,2500,5000]).map(v=>Math.round(+v||0)).join(',') + '],\n' +
+    '  activationHours:[' + hours.map(v=>Math.max(0,Math.min(5,Math.round(+v||0)))).join(',') + '],\n' +
+    '  activationWindowMs:[' + wins.map(w=>'['+Math.round(+w[0]||0)+','+Math.round(+w[1]||0)+']').join(',') + '],\n' +
     '  sloppyArt:[' + arts.map(x=>JSON.stringify(x)).join(',') + '],\n' +
     '  eyeColors:[' + eyes.map(x=>JSON.stringify(x)).join(',') + '],\n' +
     '  startTrio:[\n' + trioRows.join(',\n') + '\n  ]\n' +
@@ -4144,7 +4146,8 @@ function buildExtrasEditor(){
       color.oninput=()=>{secretNight.eyeColors[i]=color.value;dump();};
       wide.append(art,color); wrap.appendChild(wide);
       const nums=document.createElement("div"); nums.className="nums";
-      const keys=["left","top","width","eyeY","eyeL","eyeR"]; const defs=[31,16,28,25,45,56];
+      const keys=["left","top","width","eyeLX","eyeLY","eyeRX","eyeRY","eyeW","eyeH"];
+      const defs=[31,16,28,42.7,20.2,52.7,18.8,4.1,1.8];
       keys.forEach((k,ki)=>{
         const inp=document.createElement("input"); inp.type="number"; inp.step=.1; inp.title=k; inp.placeholder=k;
         const o=secretNight.startTrio[i]||(secretNight.startTrio[i]={}); inp.value=o[k]??defs[ki];
@@ -4157,16 +4160,30 @@ function buildExtrasEditor(){
   const bv=document.getElementById("buildVersion"), bu=document.getElementById("buildUpdated");
   if(bv){bv.value=buildMeta.version||"";bv.oninput=()=>{buildMeta.version=bv.value.trim();dump();};}
   if(bu){bu.value=buildMeta.updated||"";bu.oninput=()=>{buildMeta.updated=bu.value.trim();dump();};}
-  const tier=document.getElementById("secretTier"), watch=document.getElementById("secretWatch"), door=document.getElementById("secretDoor");
-  tier.value=secretNight.settingNight||5; watch.value=secretNight.watchMs||5000; door.value=secretNight.doorMs||2800;
+  const tier=document.getElementById("secretTier"), watch=document.getElementById("secretWatch");
+  tier.value=secretNight.settingNight||5; watch.value=secretNight.watchMs||5000;
   tier.oninput=()=>{secretNight.settingNight=Math.max(1,Math.min(7,Math.round(+tier.value||1)));dump();};
   watch.oninput=()=>{secretNight.watchMs=Math.max(500,Math.round(+watch.value||500));dump();};
-  door.oninput=()=>{secretNight.doorMs=Math.max(500,Math.round(+door.value||500));dump();};
   const ints=document.getElementById("secretIntervals"); ints.innerHTML="";
   (secretNight.moveMs||[]).forEach((v,i)=>{
-    const inp=document.createElement("input"); inp.type="number"; inp.min=1000; inp.step=100; inp.value=v; inp.title=(i===0?"12 AM":i+" AM")+" movement interval";
+    const inp=document.createElement("input"); inp.type="number"; inp.min=1000; inp.step=100; inp.value=v; inp.title=(i===0?"12 AM":i+" AM")+" visible deadline / hidden cooldown";
     inp.oninput=()=>{secretNight.moveMs[i]=Math.max(1000,Math.round(+inp.value||1000));dump();}; ints.appendChild(inp);
   });
+  const act=document.getElementById("secretActivation"); if(act){
+    act.innerHTML="";
+    if(!Array.isArray(secretNight.activationHours)) secretNight.activationHours=[0,2,4];
+    if(!Array.isArray(secretNight.activationWindowMs)) secretNight.activationWindowMs=[[5000,30000],[2500,12000],[2500,12000]];
+    for(let i=0;i<3;i++){
+      const row=document.createElement("div"); row.className="wide";
+      const lab=document.createElement("span"); lab.textContent="SLOPPY "+(i+1); row.appendChild(lab);
+      const h=document.createElement("input"); h.type="number"; h.min=0; h.max=5; h.step=1; h.title="activation hour"; h.value=secretNight.activationHours[i]??(i*2);
+      const lo=document.createElement("input"); lo.type="number"; lo.min=0; lo.step=100; lo.title="earliest ms into hour"; lo.value=(secretNight.activationWindowMs[i]||[0,0])[0];
+      const hi=document.createElement("input"); hi.type="number"; hi.min=0; hi.step=100; hi.title="latest ms into hour"; hi.value=(secretNight.activationWindowMs[i]||[0,0])[1];
+      h.oninput=()=>{secretNight.activationHours[i]=Math.max(0,Math.min(5,Math.round(+h.value||0)));dump();};
+      const syncWin=()=>{let a=Math.max(0,Math.round(+lo.value||0)),b=Math.max(a,Math.round(+hi.value||0));secretNight.activationWindowMs[i]=[a,b];dump();};
+      lo.oninput=syncWin; hi.oninput=syncWin; row.append(h,lo,hi); act.appendChild(row);
+    }
+  }
   extrasBuilt=true; dump();
 }
 

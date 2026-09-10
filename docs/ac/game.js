@@ -11,7 +11,10 @@ const asset = p => p;
    calibrator owns these values so development builds do not have to pretend
    they are public releases. `updated` is optional; leave it blank to hide the
    LAST UPDATED line on the title screen. */
-const BUILD_META = { version:"2.2.0", updated:"" };
+const BUILD_META = {
+  version:"2.2.0",
+  updated:""
+};
 
 
 /* ===========================================================================
@@ -328,10 +331,10 @@ const OFFICE_ART   = "images/office.jpg";
    against office.jpg so the final art can be positioned without touching code.
 --------------------------------------------------------------------------- */
 const DESK_REWARDS = {
-  night5:   { src:"images/desk/reward_night5.png",   left:47.0, bottom:4.8, width:6.5, rotate:-2 },
-  night7:   { src:"images/desk/reward_night7.png",   left:53.8, bottom:4.5, width:6.8, rotate: 1 },
-  midnight: { src:"images/desk/reward_midnight.png", left:61.0, bottom:4.2, width:7.2, rotate:-1 },
-  all20:    { src:"images/desk/reward_all20.png",    left:68.2, bottom:4.0, width:7.4, rotate: 2 }
+  night5:{ src:"images/desk/reward_night5.png", left:47, bottom:4.8, width:6.5, rotate:-2 },
+  night7:{ src:"images/desk/reward_night7.png", left:53.8, bottom:4.5, width:6.8, rotate:1 },
+  midnight:{ src:"images/desk/reward_midnight.png", left:61, bottom:4.2, width:7.2, rotate:-1 },
+  all20:{ src:"images/desk/reward_all20.png", left:68.2, bottom:4, width:7.4, rotate:2 }
 };
 /* Optional sketch behind the floorplan on the map. Empty by default: probing
    for a file that is not in the project logs a 404 on every single load, which
@@ -404,11 +407,11 @@ const SHOTS = {
   "n18@C07":{ left:42, bottom:12, width:16 },
   "n18@C13":{ left:41.5, bottom:23, width:7.5 },
   b01 :{ left:42, bottom:12, width:16 },
-  b03 :{ left:42, bottom:12, width:16 },
-  b04 :{ left:56.7, bottom:20.5, width:12.5 },
+  b03 :{ left:55.1, bottom:19.8, width:11 },
+  b04 :{ left:68, bottom:38.4, width:6.3 },
   b05 :{ left:42, bottom:12, width:16 },
-  b06 :{ left:4.2, bottom:-231.3, width:85.4 },
-  b07 :{ left:14.9, bottom:30.1, width:12.4, rotate:-4.7 },
+  b06 :{ left:4.6, bottom:-274.8, width:85.4 },
+  b07 :{ left:14.9, bottom:30.1, width:10.3, rotate:-4.7 },
   b08 :{ left:75.1, bottom:36.5, width:14.1, rotate:-3 },
   b09 :{ left:54.6, bottom:13, width:19.3 },
   b12 :{ left:21.4, bottom:25.2, width:17, rotate:3.8 },
@@ -429,7 +432,7 @@ const SHOTS = {
   b27 :{ left:42, bottom:12, width:16, clipT:16, clipB:95 },
   b28 :{ left:69.6, bottom:-20, width:26.3 },
   b29 :{ left:18.5, bottom:34.2, width:12.5, rotate:-3 },
-  b31 :{ left:34.0, bottom:28.0, width:13.5, rotate:1 },
+  b31 :{ left:39, bottom:20.4, width:15.3, rotate:1 },
   b30 :{ left:42, bottom:12, width:16, clipT:14, clipB:95 },
   "b02@C14":{ left:42, bottom:12, width:16 },
   "b02@C15":{ left:76.1, bottom:47.5, width:4.6 },
@@ -483,7 +486,27 @@ const SHOTS_UNIT = {
     n26 :{ left:36.1, bottom:41.6, width:4.9 },
     "n18@C14":{ left:7.4, bottom:-156.2, width:52 },
     "b02@C14":{ left:42, bottom:12, width:16, clipT:95, clipB:24 },
-    "b02@C15":{ left:76.1, bottom:47.5, width:3.6 }
+    "b02@C15":{ left:76.1, bottom:47.5, width:3.6 },
+    b03 :{ left:55.1, bottom:19.8, width:11 },
+    b13 :{ left:7.5, bottom:38.6, width:14.1, rotate:3.3, clipT:2, clipR:2, clipB:44, clipL:78 },
+    b18 :{ left:57.3, bottom:-40.7, width:28 },
+    b16 :{ left:20.3, bottom:32, width:8.1, rotate:-3, clipT:2, clipB:38 },
+    b19 :{ left:2.1, bottom:-202, width:90.9 },
+    b20 :{ left:41.2, bottom:-6.6, width:21.8, rotate:2, clipT:40, clipB:95, clipL:52 },
+    b21 :{ left:36, bottom:-0.5, width:19.3, rotate:2.3, clipL:52 },
+    b22 :{ left:42, bottom:12, width:16, clipT:18, clipB:95 },
+    b15 :{ left:41.8, bottom:11.9, width:16, clipT:95, clipB:44 },
+    "b23@C22":{ left:50.6, bottom:39.5, width:6.7, rotate:6 },
+    b24 :{ left:32.2, bottom:-35.8, width:26.3, rotate:6 },
+    "b23@C23":{ left:58.8, bottom:19.9, width:11, rotate:-1.5, clipT:4, clipL:56 },
+    b25 :{ left:-0.6, bottom:-282.5, width:96.7 },
+    b26 :{ left:42, bottom:12, width:16, clipT:16, clipB:95 },
+    b27 :{ left:42, bottom:12, width:16, clipT:16, clipB:95 },
+    b30 :{ left:42, bottom:12, width:16, clipT:14, clipB:95 },
+    b29 :{ left:18.5, bottom:34.2, width:11.7, rotate:-3 },
+    b28 :{ left:69.6, bottom:-20, width:26.3 },
+    b31 :{ left:39, bottom:20.4, width:15.3, rotate:1 },
+    b08 :{ left:75.1, bottom:36.5, width:14.1, rotate:-3 }
   },
   sloppy: {
     nDR :{ left:38.8, bottom:15.3, width:12.6, flip:true },
@@ -513,7 +536,33 @@ const SHOTS_UNIT = {
     gW  :{ left:30.8, bottom:53.5, width:3.1, dim:0.55, clipR:36, clipB:54, clipL:36 },
     "n18@C14":{ left:-2.9, bottom:-205.9, width:71 },
     "b02@C14":{ left:42, bottom:12, width:16, clipT:95, clipB:24 },
-    "b02@C15":{ left:75.9, bottom:47.8, width:4.1 }
+    "b02@C15":{ left:72.8, bottom:47.6, width:3.6 },
+    b09 :{ left:54.6, bottom:13, width:17 },
+    b06 :{ left:4.6, bottom:-274.8, width:85.4 },
+    b07 :{ left:14.9, bottom:30.1, width:10.3, rotate:-4.7 },
+    b04 :{ left:68, bottom:38.4, width:5.9 },
+    b03 :{ left:55.1, bottom:19.8, width:11 },
+    b13 :{ left:5.8, bottom:38, width:16, rotate:3.3, clipT:2, clipR:2, clipB:44, clipL:78 },
+    b12 :{ left:21.4, bottom:25.2, width:14.1, rotate:3.8 },
+    b18 :{ left:57.3, bottom:-40.7, width:24.7 },
+    b17 :{ left:16.8, bottom:-5.7, width:15, rotate:-8.2, clipB:36 },
+    b16 :{ left:20.1, bottom:28.1, width:8.1, rotate:-3, clipT:2, clipB:38 },
+    b19 :{ left:2.1, bottom:-202, width:80.3 },
+    b20 :{ left:41.2, bottom:-6.6, width:21.8, rotate:2, clipT:40, clipB:95, clipL:52 },
+    b21 :{ left:38, bottom:-1.1, width:18.1, rotate:2.3, clipL:52 },
+    b22 :{ left:42, bottom:12, width:16, clipT:18, clipB:95 },
+    b15 :{ left:41.8, bottom:11.9, width:16, clipT:95, clipB:44 },
+    "b23@C22":{ left:50.6, bottom:39.5, width:5.6, rotate:6 },
+    b24 :{ left:32.1, bottom:-49, width:24.7, rotate:6 },
+    "b23@C23":{ left:59.4, bottom:19, width:9.7, rotate:-1.5, clipT:4, clipL:56 },
+    b25 :{ left:-0.6, bottom:-282.5, width:85.4 },
+    b26 :{ left:42, bottom:12, width:16, clipT:16, clipB:95 },
+    b27 :{ left:42, bottom:12, width:16, clipT:16, clipB:95 },
+    b30 :{ left:42, bottom:12, width:16, clipT:14, clipB:95 },
+    b29 :{ left:18.5, bottom:34.2, width:11, rotate:-3 },
+    b28 :{ left:69.6, bottom:-20, width:23.2 },
+    b31 :{ left:39, bottom:20.4, width:13.5, rotate:1 },
+    b08 :{ left:75.1, bottom:36.5, width:12.5, rotate:-3 }
   },
   gordon: {
     n01 :{ left:-8.2, bottom:-259.4, width:109.3 },
@@ -543,8 +592,31 @@ const SHOTS_UNIT = {
     n19 :{ left:18.7, bottom:22.1, width:8.6, flip:true, rotate:-9 },
     "n18@C14":{ left:1.5, bottom:-254.8, width:90.9 },
     "b02@C14":{ left:42, bottom:12, width:16, clipT:95, clipB:22 },
-    "b02@C15":{ left:72.5, bottom:47.1, width:4.1 },
-    b03 :{ left:68.7, bottom:39, width:6.7 }
+    "b02@C15":{ left:72.7, bottom:47.1, width:4.4 },
+    b03 :{ left:56.4, bottom:20.2, width:12.5 },
+    b06 :{ left:2.3, bottom:-259.1, width:90.9 },
+    b07 :{ left:14.9, bottom:30.1, width:12.4, rotate:-4.7 },
+    b04 :{ left:67.4, bottom:38, width:6.7 },
+    b13 :{ left:7.5, bottom:38.6, width:14.1, rotate:3.3, clipT:2, clipR:2, clipB:44, clipL:78 },
+    b18 :{ left:57.3, bottom:-40.7, width:28 },
+    b17 :{ left:14.5, bottom:-2.3, width:17, rotate:-8.2, clipB:36 },
+    b16 :{ left:20.3, bottom:32, width:8.1, rotate:-3, clipT:2, clipB:38 },
+    b19 :{ left:2.1, bottom:-202, width:90.9 },
+    b20 :{ left:41.2, bottom:-6.6, width:21.8, rotate:2, clipT:40, clipB:95, clipL:52 },
+    b21 :{ left:36, bottom:-0.5, width:21.8, rotate:2.3, clipL:52 },
+    b22 :{ left:42, bottom:12, width:16, clipT:18, clipB:95 },
+    b15 :{ left:41.8, bottom:11.9, width:16, clipT:95, clipB:44 },
+    "b23@C22":{ left:50.6, bottom:39.5, width:6.7, rotate:6 },
+    b24 :{ left:32.2, bottom:-35.8, width:26.3, rotate:6 },
+    "b23@C23":{ left:58.8, bottom:19.9, width:11, rotate:-1.5, clipT:4, clipL:56 },
+    b25 :{ left:-0.6, bottom:-282.5, width:96.7 },
+    b26 :{ left:42, bottom:12, width:16, clipT:16, clipB:95 },
+    b27 :{ left:42, bottom:12, width:16, clipT:16, clipB:95 },
+    b30 :{ left:42, bottom:12, width:16, clipT:14, clipB:95 },
+    b29 :{ left:18.5, bottom:34.2, width:12.5, rotate:-3 },
+    b28 :{ left:69.6, bottom:-20, width:26.3 },
+    b31 :{ left:39, bottom:20.4, width:15.3, rotate:1 },
+    b08 :{ left:75.1, bottom:36.5, width:15, rotate:-3 }
   }
 };
 
@@ -847,29 +919,16 @@ const SECRET_NIGHT = {
   label:"MIDNIGHT SHIFT",
   combo:{ eugene:1, sloppy:9, gordon:8, jeffrey:7 },
   settingNight:5,
-  moveMs:[30000,28500,27000,25000,23000,21000],
+  moveMs:[22000,20000,18000,16000,14000,12000],
   watchMs:5000,
-  doorMs:2800,
-  entryDelayMs:[0,2500,5000],
-
-  /* Midnight Shift never uses ordinary Sloppy art. These are intentionally
-     separate asset slots so each clone can have a distinct eye colour / face.
-     Missing files fall back to a simple coloured-eye placeholder, not the
-     normal Sloppy sprite. */
-  sloppyArt:[
-    "images/characters/ani_sloppy_midnight_blue.png",
-    "images/characters/ani_sloppy_midnight_violet.png",
-    "images/characters/ani_sloppy_midnight_green.png"
-  ],
+  activationHours:[0,2,4],
+  activationWindowMs:[[5000,30000],[2500,12000],[2500,12000]],
+  sloppyArt:["images/characters/ani_sloppy_midnight_blue.png","images/characters/ani_sloppy_midnight_violet.png","images/characters/ani_sloppy_midnight_green.png"],
   eyeColors:["#69c9ff","#bd83ff","#72f0b2"],
-
-  /* Title handoff composition. left/top/width are percentages of the title
-     screen. Eye coordinates are percentages inside each clone box and are
-     editable in the calibrator once the final three PNGs exist. */
   startTrio:[
-    { left:31, top:16, width:28, eyeY:25, eyeL:45, eyeR:56 },
-    { left:50, top:10, width:35, eyeY:25, eyeL:45, eyeR:56 },
-    { left:69, top:16, width:28, eyeY:25, eyeL:45, eyeR:56 }
+    { left:31, top:16, width:28, eyeLX:42.7, eyeLY:20.2, eyeRX:52.7, eyeRY:18.8, eyeW:4.1, eyeH:1.8 },
+    { left:50, top:10, width:35, eyeLX:42.7, eyeLY:20.2, eyeRX:52.7, eyeRY:18.8, eyeW:4.1, eyeH:1.8 },
+    { left:69, top:16, width:28, eyeLX:42.7, eyeLY:20.2, eyeRX:52.7, eyeRY:18.8, eyeW:4.1, eyeH:1.8 }
   ]
 };
 
@@ -1133,7 +1192,7 @@ const SLOPPY = {
 function sloppyCfg(){
   if (secretNightMode()) {
     return {
-      doorMs: SECRET_NIGHT.doorMs,
+      doorMs: 2800, // legacy field; Midnight Shift never uses doorway pathing
       moveMult: 1,
       moveBaseMs: SECRET_NIGHT.moveMs[Math.min(5, S.hour)] || SECRET_NIGHT.moveMs.at(-1),
       watchMs: SECRET_NIGHT.watchMs,
@@ -3629,7 +3688,7 @@ function buildPanel(){
    part of half a minute — so her delay is a floor on when she starts walking,
    not on when she is first seen. */
 function entryDelay(u, i){
-  if (secretNightMode()) return SECRET_NIGHT.entryDelayMs[i] || 0;
+  if (secretNightMode()) return 0;
   if (S.night === 8){
     if (u.commitModel)
       return customPairCfg("sloppy").enterMs + Math.random() * 2500;
@@ -3690,6 +3749,7 @@ function startNight(n){
 
   const makeRoamer = (a, node, i, special=false) => ({
     ...a,
+    name:special ? "Sloppy " + String.fromCharCode(65+i) : a.name,
     node,
     specialSloppy:special,
     cloneIndex:special ? i : null,
@@ -3699,10 +3759,14 @@ function startNight(n){
     rhythm: special ? [0.96,1.00,1.04][i % 3] : ROSTER_RHYTHM[i % ROSTER_RHYTHM.length],
     speedMod: special ? 1 : a.speedMod,
     jitter: special ? (0.94 + Math.random() * 0.12) : 1,
-    acc: -(special ? (SECRET_NIGHT.entryDelayMs[i] || 0) : entryDelay(a, i)),
+    acc: special ? 0 : -entryDelay(a, i),
     breaching:false, breachAcc:0, commit:0, respite:0, lastLure:0, darkTried:false,
     lureTarget:null, lureMoves:0, pendingLure:null, watchProgress:0, watchReadyTell:false, watchAcc:0,
-    cutFrac:null, seenBySensor:false
+    cutFrac:null, seenBySensor:false,
+    midnightActive:false, midnightHidden:!!special, midnightElapsed:0, midnightCooldown:0,
+    midnightPressure:0, midnightDeadlineMs:0,
+    midnightActivationHour:special ? (SECRET_NIGHT.activationHours[i] ?? i*2) : null,
+    midnightActivationAt:special ? midnightActivationAt(i) : 0
   });
 
   if (secret){
@@ -3918,6 +3982,7 @@ function viewCam(id){
 
 function playCue(){
   if (!S.running || !S.power || !S.monUp) return;
+  if (secretNightMode()){ buzz(); return; }
   if (!S.sys.audio.ok) { buzz(); return; }
   if (performance.now() < S.lureReadyAt) { buzz(); return; }
 
@@ -4509,9 +4574,12 @@ function prepareSecretStartTrio(){
     const eyes=box.querySelector(".secretCloneEyes");
     if(eyes){
       eyes.style.setProperty("--eye-color",secretSloppyEyeColor(i));
-      eyes.style.setProperty("--eye-y",(cfg.eyeY ?? 25)+"%");
-      eyes.style.setProperty("--eye-l",(cfg.eyeL ?? 45)+"%");
-      eyes.style.setProperty("--eye-r",(cfg.eyeR ?? 56)+"%");
+      eyes.style.setProperty("--eye-lx",(cfg.eyeLX ?? cfg.eyeL ?? 42.7)+"%");
+      eyes.style.setProperty("--eye-ly",(cfg.eyeLY ?? cfg.eyeY ?? 20.2)+"%");
+      eyes.style.setProperty("--eye-rx",(cfg.eyeRX ?? cfg.eyeR ?? 52.7)+"%");
+      eyes.style.setProperty("--eye-ry",(cfg.eyeRY ?? cfg.eyeY ?? 18.8)+"%");
+      eyes.style.setProperty("--eye-w",(cfg.eyeW ?? 4.1)+"%");
+      eyes.style.setProperty("--eye-h",(cfg.eyeH ?? 1.8)+"%");
     }
   });
 }
@@ -5142,6 +5210,107 @@ function offerLure(){
   });
 }
 
+function midnightActivationAt(i){
+  const pair=(SECRET_NIGHT.activationWindowMs||[])[i] || [0,0];
+  const lo=Math.max(0,Number(pair[0])||0), hi=Math.max(lo,Number(pair[1])||lo);
+  return lo + Math.random()*(hi-lo);
+}
+function midnightInterval(u){
+  const base=(SECRET_NIGHT.moveMs||[])[Math.min(5,S.hour)] || 16000;
+  return base * (u&&u.rhythm?u.rhythm:1) * (0.92 + Math.random()*0.16);
+}
+function midnightCoveredNodes(floor){
+  const set=new Set();
+  Object.entries(CAMERAS).forEach(([id,c]) => {
+    if(floor && !camOnFloor(id,floor)) return;
+    (c.sees||[]).forEach(n => {
+      const g=GRAPH[n]; if(!g || g.outside || n==="OFFICE") return;
+      if(floor && floorOf(n)!==floor) return; set.add(n);
+    });
+  });
+  return [...set];
+}
+function midnightOccupiedNodes(except){
+  return new Set(S.units.filter(x=>x!==except && x.specialSloppy && x.midnightActive && !x.midnightHidden).map(x=>x.node));
+}
+function midnightPick(candidates,u){
+  const occ=midnightOccupiedNodes(u), free=candidates.filter(n=>!occ.has(n));
+  return free.length ? pick(free) : null;
+}
+function midnightPrimaryCam(node){
+  return Object.keys(CAMERAS).find(id=>(CAMERAS[id].sees||[]).includes(node)) || null;
+}
+function midnightSafeRandomNode(u){
+  const oldNode=u&&u.node, oldCam=oldNode?midnightPrimaryCam(oldNode):null;
+  const fresh=n=>n!==oldNode && (!oldCam || midnightPrimaryCam(n)!==oldCam);
+  const down=midnightCoveredNodes(2).filter(fresh);
+  const up=midnightCoveredNodes(1).filter(n=>(DO[n]??99)>=3 && fresh(n));
+  let pool=(Math.random()<0.50 && down.length)?down:up;
+  return midnightPick(pool,u) || midnightPick([...up,...down],u) ||
+         midnightPick(midnightCoveredNodes().filter(n=>n!==oldNode),u);
+}
+function midnightCloserUpperNode(u){
+  const current=DO[u.node];
+  const all=midnightCoveredNodes(1).filter(n=>Number.isFinite(DO[n]) && DO[n]>0);
+  if(floorOf(u.node)===2 || current===undefined){
+    let moderate=all.filter(n=>DO[n]>=4 && DO[n]<=7);
+    if(!moderate.length) moderate=all.filter(n=>DO[n]>=3);
+    return midnightPick(moderate,u) || midnightPick(all,u);
+  }
+  if(current<=1) return null;
+  let closer=all.filter(n=>DO[n]===Math.max(1,current-1));
+  if(!closer.length) closer=all.filter(n=>DO[n]<current).sort((a,b)=>DO[b]-DO[a]);
+  return midnightPick(closer,u);
+}
+function midnightResetWatch(u){
+  u.watchProgress=0; u.watchReadyTell=false; u.watchAcc=0;
+  u.pendingLure=null; u.lureMoves=0; u.lureTarget=null;
+}
+function midnightPlace(u,node,reason){
+  node=node||midnightSafeRandomNode(u); if(!node) return false;
+  u.node=node; u.midnightHidden=false; u.midnightElapsed=0; u.midnightDeadlineMs=midnightInterval(u);
+  midnightResetWatch(u);
+  if(reason==="activate") play(u.enterSfx,{vol:0.72});
+  return true;
+}
+function midnightHideSuccess(u){
+  u.midnightHidden=true; u.midnightElapsed=0; u.midnightDeadlineMs=0;
+  u.midnightCooldown=midnightInterval(u); u.midnightPressure=Math.max(0,(u.midnightPressure||0)-1);
+  midnightResetWatch(u); play("sloppyBlocked",{vol:0.82}); S.sloppyConfirmFlicker=140;
+}
+function midnightMiss(u){
+  const next=midnightCloserUpperNode(u);
+  if(!next) return kill(u,u.name+" closed in during MIDNIGHT SHIFT.");
+  u.midnightPressure=(u.midnightPressure||0)+1;
+  midnightPlace(u,next,"miss");
+  cameraStabilityEvent(999,"midnight_miss");
+}
+function stepMidnightSloppy(u,dt){
+  if(!u||!u.specialSloppy) return;
+  if(!u.midnightActive){
+    const h=u.midnightActivationHour??0;
+    if(S.hour<h || (S.hour===h && S.hourAcc<(u.midnightActivationAt||0))) return;
+    u.midnightActive=true; u.midnightHidden=true; u.midnightCooldown=0;
+    if(S.sys.cam.ok) midnightPlace(u,midnightSafeRandomNode(u),"activate");
+    return;
+  }
+  if(u.midnightHidden){
+    u.midnightCooldown=Math.max(0,(u.midnightCooldown||0)-dt);
+    if(u.midnightCooldown<=0 && S.sys.cam.ok) midnightPlace(u,midnightSafeRandomNode(u),"respawn");
+    return;
+  }
+  if(!S.sys.cam.ok) return;
+  if(watchingNode(u.node) && !S.doom){
+    const before=u.watchProgress||0, required=SECRET_NIGHT.watchMs||5000;
+    u.watchProgress=Math.min(required,before+dt);
+    if(before<required && u.watchProgress>=required){
+      play("sloppyReady",{vol:0.84}); midnightHideSuccess(u); return;
+    }
+  }
+  u.midnightElapsed=(u.midnightElapsed||0)+dt;
+  if(u.midnightElapsed>=(u.midnightDeadlineMs||midnightInterval(u))) midnightMiss(u);
+}
+
 function moveUnit(u, targetLure = null, forceOffice = false){
   const T = tuned();
   const approach = forceOffice
@@ -5168,6 +5337,7 @@ function moveUnit(u, targetLure = null, forceOffice = false){
 
 function stepUnits(dt){
   for (const u of S.units){
+    if(secretNightMode() && u.specialSloppy){ stepMidnightSloppy(u,dt); if(!S.running)return; continue; }
 
     if (u.respite > 0){ u.respite -= dt; continue; }
 
@@ -5331,8 +5501,8 @@ function stepUnits(dt){
   }
 }
 
-const unitsOn = node => S.units.filter(u => u.node === node);
-const unitsSeenBy = camId => S.units.filter(u => CAMERAS[camId].sees.includes(u.node));
+const unitsOn = node => S.units.filter(u => !u.midnightHidden && u.node === node);
+const unitsSeenBy = camId => S.units.filter(u => !u.midnightHidden && CAMERAS[camId].sees.includes(u.node));
 
 /* ===========================================================================
    10b. GORDON
@@ -6700,9 +6870,11 @@ function render(dt){
     el.sensorBtn.textContent = dead ? "FEED BURNED OUT"
       : cam.unstable ? "FEED TOO WEAK FOR SENSOR"
       : S.sensorOn === S.activeCam ? "REMOVE SENSOR  [M]" : "MOUNT SENSOR  [M]";
-    el.audioBtn.disabled = !S.sys.audio.ok || performance.now() < S.lureReadyAt;
-    el.audioBtn.classList.toggle("audio-error", !S.sys.audio.ok);
-    el.audioBtn.textContent = !S.sys.audio.ok ? "AUDIO RELAY DOWN"
+    const secretAudioOff=secretNightMode();
+    el.audioBtn.disabled = secretAudioOff || !S.sys.audio.ok || performance.now() < S.lureReadyAt;
+    el.audioBtn.classList.toggle("audio-error", !secretAudioOff && !S.sys.audio.ok);
+    el.audioBtn.textContent = secretAudioOff ? "AUDIO LURE DISABLED"
+      : !S.sys.audio.ok ? "AUDIO RELAY DOWN"
       : performance.now() < S.lureReadyAt
         ? "RECHARGING " + Math.ceil((S.lureReadyAt - performance.now())/1000) + "s"
         : "PLAY AUDIO CUE  [F]";
@@ -6752,7 +6924,6 @@ const CAMERA_DRAW_ORDER = {
   C11:["n17"],
   C12:["nDR","n16"],
   C14:["b02","n25","n19","n18"],
-
   C15:["b05","b03","b04"],
   C16:["b06","b07"],
   C25:["b07","b08"],
@@ -6783,7 +6954,7 @@ function drawSubjects(force){
 
   const solid = unitsSeenBy(S.activeCam);
   const faint = (cam.peek || []).length
-    ? S.units.filter(u => cam.peek.includes(u.node)) : [];
+    ? S.units.filter(u => !u.midnightHidden && cam.peek.includes(u.node)) : [];
 
   /* GORDON. He is not in S.units — he is not half of a pair and none of the
      movement code above applies to him — so he is gathered separately and
