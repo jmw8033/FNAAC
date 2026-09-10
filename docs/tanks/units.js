@@ -7,7 +7,7 @@ window.TANK_UNITS = {
  marine:{name:'Marine rocketeer',color:'#48a6a4',speed:65,shot:430,bounce:0,cap:1,mines:0,cool:2.3,threat:1,help:'Fast rockets that cannot bounce.'},
  yellow:{name:'Yellow minelayer',color:'#e6bc39',speed:108,shot:245,bounce:1,cap:1,mines:4,cool:2.2,threat:1,help:'Approaches and lays mines frequently.'},
  pink:{name:'Pink gunner',color:'#dc7894',speed:65,shot:245,bounce:1,cap:3,mines:0,cool:.65,threat:1,help:'Quick fire with three active shells.'},
- green:{name:'Green sniper',color:'#69a758',speed:0,shot:430,bounce:2,cap:2,mines:0,cool:1.1,threat:2,help:'Predictive aim and two-bounce rockets.'},
+ green:{name:'Green sniper',color:'#69a758',speed:0,shot:430,bounce:2,cap:2,mines:0,cool:1.1,threat:2,help:'Scans for firing angles; fast shells bounce twice. Can shoot down incoming shells.'},
  violet:{name:'Violet hunter',color:'#9479ba',speed:108,shot:245,bounce:1,cap:5,mines:2,cool:.6,threat:2,help:'Pursues players, dodges and lays mines.'},
  white:{name:'White ghost',color:'#dddace',speed:65,shot:245,bounce:1,cap:5,mines:2,cool:.7,threat:2,help:'Invisible after deployment; watch its tracks.'},
  black:{name:'Black ace',color:'#444946',speed:155,shot:430,bounce:0,cap:3,mines:2,cool:.5,threat:2,help:'Fast movement, rockets and mines.'},

@@ -18,11 +18,11 @@
  function sound(f=220,d=.1,type='square',vol=.035){if(muted)return;try{audio??=new (window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();const o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.setValueAtTime(f,audio.currentTime);o.frequency.exponentialRampToValueAtTime(Math.max(30,f*.35),audio.currentTime+d);g.gain.setValueAtTime(vol,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+d);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+d);}catch{}}
  function makeTank(type,x,y,player=0,id=0){return {uid:uid++,id,type,x,y,player,cfg:TYPES[type],angle:player?-.7:2.4,body:player?-.7:2.4,alive:true,cool:player?0:1.5+Math.random(),mineCool:player?0:3+Math.random()*4,stop:0,vx:0,vy:0,think:0,path:[],wander:Math.random()*TAU,track:0,score:0};}
  function load(retry=false){const level=missionData();grid=level.grid;H=grid.length*CELL;W=grid[0].length*CELL;canvas.width=W;canvas.height=H;canvas.style.aspectRatio=W+' / '+H;pointer.x=W*.75;pointer.y=H*.25;const starts=level.players||[{x:100,y:500},{x:180,y:500}];currentSong=level.music&&level.music!=='auto'?level.music:['march','citadel','night'][(mission-1)%3];tanks=[makeTank('player',starts[0].x,starts[0].y,1)];if(mode===2)tanks.push(makeTank('player',starts[1].x,starts[1].y,2));for(const e of level.spawns)if(!defeated.has(e.id))tanks.push(makeTank(e.type,e.x,e.y,0,e.id));shells=[];mines=[];artillery=[];fx=[];tracks=[];wrecks=[];time=0;pointer.down=false;gamepadMine.clear();$('field-name').textContent=level.name.toUpperCase();hud();}
- function panel(tag,title,text,label,fn,secondary=false){$('overlay').hidden=false;$('overlay-tag').textContent=tag;$('overlay-title').innerHTML=title;$('overlay-text').innerHTML=text;$('action').textContent=label;$('secondary').hidden=!secondary;$('mode-row').hidden=phase!=='menu';$('mode-row').style.display=phase==='menu'?'flex':'none';$('campaign-row').hidden=phase!=='menu';$('record').textContent=phase==='menu'?(campaign?`${campaign.name} · ${limit} missions`:`Best: ${best} cleared · ${unlocked?'100 missions unlocked':'20 missions · 3 lives · one hit'}`):'';action=fn;}
- function menu(){phase='menu';mission=1;lives=3;kills=0;defeated.clear();limit=campaignLimit();load();panel('MISSION CONTROL','Small tanks.<br>Big trouble.','Clear the arena. Bank your shots.<br>Watch out for your own ricochets.','Deploy tank →',start);}
+ function panel(tag,title,text,label,fn,secondary=false){$('overlay').hidden=false;$('overlay-tag').textContent=tag;$('overlay-tag').hidden=!tag;$('overlay-title').innerHTML=title;$('overlay-text').innerHTML=text;$('overlay-text').hidden=!text;$('action').textContent=label;$('secondary').hidden=!secondary;$('mode-row').hidden=phase!=='menu';$('mode-row').style.display=phase==='menu'?'flex':'none';$('campaign-row').hidden=phase!=='menu';$('record').textContent=phase==='menu'?(campaign?`${campaign.name} · ${limit} missions`:`Best: ${best} cleared · ${unlocked?'100 missions unlocked':'20 missions · 3 lives · one hit'}`):'';action=fn;}
+ function menu(){phase='menu';mission=1;lives=3;kills=0;defeated.clear();limit=campaignLimit();load();panel('','Tanks!','','Start',start);}
  function start(){mission=1;lives=3;kills=0;limit=campaignLimit();defeated.clear();load();brief();sound(400,.15);}
- function brief(){phase='brief';panel(`MISSION ${String(mission).padStart(2,'0')}`,escapeHTML(missionData().name),`${tanks.filter(t=>!t.player).length} enemy tanks. Make every shot count.`,'Roll out →',()=>{phase='play';$('overlay').hidden=true;keys.clear();canvas.focus();});}
- function pause(){if(phase==='play'){phase='pause';pointer.down=false;keys.clear();moveTouch={x:0,y:0};held.clear();panel('TAKE A BREATHER','Paused','Your battlefield will be right here.','Resume →',()=>{phase='play';$('overlay').hidden=true;canvas.focus();},true);}else if(phase==='pause'){phase='play';$('overlay').hidden=true;canvas.focus();}}
+ function brief(){phase='brief';panel(`MISSION ${String(mission).padStart(2,'0')}`,escapeHTML(missionData().name),`${tanks.filter(t=>!t.player).length} enemies.`,'Start mission',()=>{phase='play';$('overlay').hidden=true;keys.clear();canvas.focus();});}
+ function pause(){if(phase==='play'){phase='pause';pointer.down=false;keys.clear();moveTouch={x:0,y:0};held.clear();panel('','Paused','','Resume',()=>{phase='play';$('overlay').hidden=true;canvas.focus();},true);}else if(phase==='pause'){phase='play';$('overlay').hidden=true;canvas.focus();}}
  function hud(){const p=tanks.find(t=>t.player===1),n=tanks.filter(t=>!t.player&&t.alive).length;$('mission').innerHTML=`${String(mission).padStart(2,'0')} <em>/ ${limit}</em>`;$('lives-label').textContent=mode===2?'BLUE / RED':'LIVES';$('lives').textContent=mode===2?tanks.filter(t=>t.player).map(t=>t.alive?'●':'×').join(' / '):lives;$('score').textContent=mode===2?tanks.filter(t=>t.player).map(t=>t.score).join(' / '):String(kills).padStart(2,'0');$('enemies').textContent=`${n} ${n===1?'enemy':'enemies'} remaining`;$('shells').textContent=Array.from({length:5},(_,i)=>i<5-shells.filter(s=>s.owner===p?.uid&&!s.dead).length?'●':'○').join(' ');$('mines').textContent=Array.from({length:2},(_,i)=>i<2-mines.filter(m=>m.owner===p?.uid&&!m.dead).length?'◆':'◇').join(' ');}
  function tile(x,y){return grid[Math.floor(y/CELL)]?.[Math.floor(x/CELL)]??1;}
  function solid(x,y,r=R,holes=true){if(x-r<40||y-r<40||x+r>W-40||y+r>H-40)return true;for(let j=Math.floor((y-r)/40);j<=Math.floor((y+r)/40);j++)for(let i=Math.floor((x-r)/40);i<=Math.floor((x+r)/40);i++){const v=grid[j]?.[i]??1;if(v&&(holes||v!==3)){const nx=clamp(x,i*40,(i+1)*40),ny=clamp(y,j*40,(j+1)*40);if((nx-x)**2+(ny-y)**2<r*r)return true;}}return false;}
@@ -121,7 +121,64 @@
   // Commit to the observed side, without reading future shell/player motion.
   t.pendingDodge={shell:s,left:t.cfg.reaction+Math.random()*.08,x:s.vy/v*sign,y:-s.vx/v*sign};return null;
  }
- function enemy(t,dt){const targets=tanks.filter(p=>p.player&&p.alive);if(!targets.length)return {x:0,y:0};const p=targets.sort((a,b)=>dist(t,a)-dist(t,b))[0];
+ const DEFENDERS=new Set(['green','violet','white','black','bulwark']);
+ function incoming(t,s){
+  if(s.dead||!s.player||dist(t,s)>280||!visibleShot(t,s))return false;
+  const dx=t.x-s.x,dy=t.y-s.y,v=Math.hypot(s.vx,s.vy);
+  return v>0&&(dx*s.vx+dy*s.vy)/v>0&&Math.abs((dx*s.vy-dy*s.vx)/v)<45;
+ }
+ function intercept(t,s){
+  // Solve where the incoming shell and a new shot meet, including muzzle offset.
+  const rx=s.x-t.x,ry=s.y-t.y,q=t.cfg.shot,m=23;
+  const a=s.vx*s.vx+s.vy*s.vy-q*q,b=2*(rx*s.vx+ry*s.vy-m*q),c=rx*rx+ry*ry-m*m;
+  let roots=[];if(Math.abs(a)<.001){if(Math.abs(b)>.001)roots=[-c/b];}else{const d=b*b-4*a*c;if(d>=0)roots=[(-b-Math.sqrt(d))/(2*a),(-b+Math.sqrt(d))/(2*a)];}
+  const seconds=roots.filter(v=>v>.025&&v<1.5).sort((a,b)=>a-b)[0];if(seconds===undefined)return null;
+  const point={x:s.x+s.vx*seconds,y:s.y+s.vy*seconds};
+  if(solid(point.x,point.y,4,false)||!visibleShot(t,point)||!visibleShot(s,point))return null;
+  return {angle:Math.atan2(point.y-t.y,point.x-t.x),seconds};
+ }
+ function defensiveFire(t,dt){
+  if(!DEFENDERS.has(t.type))return false;
+  t.defenseRest=Math.max(0,(t.defenseRest||0)-dt);
+  if(t.defenseRest>0||t.cool>0||shells.filter(s=>s.owner===t.uid&&!s.dead).length>=t.cfg.cap){t.defense=null;return false;}
+  if(t.defense&&!incoming(t,t.defense.shell))t.defense=null;
+  if(!t.defense){
+   t.defenseSense=(t.defenseSense||0)-dt;if(t.defenseSense>0)return false;t.defenseSense=.1;
+   const shell=shells.filter(s=>incoming(t,s)).sort((a,b)=>dist(t,a)-dist(t,b))[0];if(!shell)return false;
+   t.defense={shell,wait:t.type==='black'?.1:.15};
+  }
+  const d=t.defense;d.wait-=dt;if(d.wait>0)return true;
+  const aim=intercept(t,d.shell);if(!aim){t.defense=null;t.defenseRest=.15;return false;}
+  t.angle+=clamp(wrap(aim.angle-t.angle),-dt*3.5,dt*3.5);
+  if(Math.abs(wrap(aim.angle-t.angle))<.025){
+   const fired=fire(t);t.defense=null;t.defenseRest=fired?.3:.16;
+  }
+  return true;
+ }
+ function greenScan(t,targets,dt){
+  if(defensiveFire(t,dt)){t.scanLock=null;return;}
+  // Sweep independently of player position. Only inspect the narrow sector
+  // currently under the turret, including paths that bank off walls.
+  if(t.scanDirection===undefined){t.scanDirection=t.uid%2?1:-1;t.scanHold=0;t.scanCheck=0;}
+  if(t.scanLock){
+   const lock=t.scanLock;lock.remaining-=dt;
+   if(!lock.target.alive||!rayHits(t,lock.angle,lock.target)||lock.remaining<=0){t.scanLock=null;t.scanHold=.15;}
+   else {t.angle+=clamp(wrap(lock.angle-t.angle),-dt*1.8,dt*1.8);lock.settle-=dt;
+    if(lock.settle<=0&&Math.abs(wrap(lock.angle-t.angle))<.025&&fire(t)){t.scanLock=null;t.scanHold=.35;}
+    return;
+   }
+  }
+  if(t.scanHold>0){t.scanHold-=dt;return;}
+  t.angle=wrap(t.angle+t.scanDirection*.72*dt);
+  t.scanCheck-=dt;if(t.scanCheck>0)return;t.scanCheck=.07;
+  const sector=[t.angle,t.angle-.035,t.angle+.035];
+  for(const angle of sector)for(const target of targets){
+   if(rayHits(t,angle,target)&&!risksAlly(t,angle)){
+    t.scanLock={target,angle,settle:.16,remaining:.65};return;
+   }
+  }
+ }
+ function enemy(t,dt){const targets=tanks.filter(p=>p.player&&p.alive);if(!targets.length)return {x:0,y:0};if(t.type==='green'){greenScan(t,targets,dt);return {x:0,y:0};}const p=targets.sort((a,b)=>dist(t,a)-dist(t,b))[0];
  if(t.type==='dash'){
   t.dashCool=(t.dashCool??2)-dt;t.recover=Math.max(0,(t.recover||0)-dt);
   if(t.charge>0){t.charge-=dt;t.angle=t.dashAngle;if(t.charge<=0){t.dashing=.48;sound(120,.2,'sawtooth',.025);}return {x:0,y:0};}
@@ -129,8 +186,8 @@
   if(t.recover>0)return {x:0,y:0};
   if(t.dashCool<=0&&dist(t,p)<430&&rayHits(t,Math.atan2(p.y-t.y,p.x-t.x),p)){t.charge=.7;t.dashAngle=Math.atan2(p.y-t.y,p.x-t.x);return {x:0,y:0};}
  }
- t.think-=dt;if(t.think<=0){t.think=.38+Math.random()*.17;const lead=t.type==='green'?Math.min(1.1,dist(t,p)/t.cfg.shot):0;const target={x:clamp(p.x+p.vx*lead,56,W-56),y:clamp(p.y+p.vy*lead,56,H-56)};const direct=Math.atan2(target.y-t.y,target.x-t.x);let angles=[direct];if(t.type==='green'){for(let i=0;i<48;i++)angles.push(i*TAU/48);}else if(t.cfg.bounce)angles.push(Math.atan2(target.y-t.y,80-target.x-t.x),Math.atan2(target.y-t.y,2*(W-40)-target.x-t.x),Math.atan2(80-target.y-t.y,target.x-t.x),Math.atan2(2*(H-40)-target.y-t.y,target.x-t.x));const aim=angles.find(a=>rayHits(t,a,target));t.aimPoint=target;t.aim=aim??direct;t.canShoot=t.type==='mortar'?dist(t,p)>120&&dist(t,p)<850:aim!==undefined;if(t.cfg.speed){if(['violet','white','black','yellow','bulwark','scatter','dash'].includes(t.type))t.path=pathTo(t,p);else if(!t.path.length||Math.random()<.08){const spaces=[];for(let y=2;y<grid.length-2;y++)for(let x=2;x<grid[0].length-2;x++)if(!grid[y][x])spaces.push({x:x*40+20,y:y*40+20});t.path=pathTo(t,spaces[Math.floor(Math.random()*spaces.length)]);}}}
- t.angle+=clamp(wrap((t.aim??t.angle)-t.angle),-dt*3.5,dt*3.5);if(t.canShoot&&Math.abs(wrap((t.aim??t.angle)-t.angle))<.08)fire(t);
+ t.think-=dt;if(t.think<=0){t.think=.38+Math.random()*.17;const lead=0;const target={x:clamp(p.x+p.vx*lead,56,W-56),y:clamp(p.y+p.vy*lead,56,H-56)};const direct=Math.atan2(target.y-t.y,target.x-t.x);let angles=[direct];if(t.cfg.bounce)angles.push(Math.atan2(target.y-t.y,80-target.x-t.x),Math.atan2(target.y-t.y,2*(W-40)-target.x-t.x),Math.atan2(80-target.y-t.y,target.x-t.x),Math.atan2(2*(H-40)-target.y-t.y,target.x-t.x));const aim=angles.find(a=>rayHits(t,a,target));t.aimPoint=target;t.aim=aim??direct;t.canShoot=t.type==='mortar'?dist(t,p)>120&&dist(t,p)<850:aim!==undefined;if(t.cfg.speed){if(['violet','white','black','yellow','bulwark','scatter','dash'].includes(t.type))t.path=pathTo(t,p);else if(!t.path.length||Math.random()<.08){const spaces=[];for(let y=2;y<grid.length-2;y++)for(let x=2;x<grid[0].length-2;x++)if(!grid[y][x])spaces.push({x:x*40+20,y:y*40+20});t.path=pathTo(t,spaces[Math.floor(Math.random()*spaces.length)]);}}}
+ if(!defensiveFire(t,dt)){t.angle+=clamp(wrap((t.aim??t.angle)-t.angle),-dt*3.5,dt*3.5);if(t.canShoot&&Math.abs(wrap((t.aim??t.angle)-t.angle))<.08)fire(t);}
  let x=0,y=0;if(t.path.length){let node=t.path[0];if(dist(t,node)<7){t.path.shift();node=t.path[0];}if(node){x=node.x-t.x;y=node.y-t.y;const d=Math.hypot(x,y);x/=d;y/=d;}}
  // Dodge only after recognizing a visible threat and waiting out reaction time.
  const dodge=reactToShells(t,dt);if(dodge){x=dodge.x;y=dodge.y;}
@@ -144,8 +201,8 @@
  t.vx=(t.x-old.x)/dt;t.vy=(t.y-old.y)/dt;}
  updateShells(dt);updateArtillery(dt);for(const m of mines){if(m.dead)continue;m.age+=dt;m.fuse-=dt;if(m.age>1.3&&tanks.some(t=>t.alive&&dist(t,m)<43))m.fuse=Math.min(m.fuse,.55);if(m.fuse<=0)explode(m);}mines=mines.filter(m=>!m.dead);
  const alive=tanks.filter(t=>t.player&&t.alive),enemyAlive=tanks.some(t=>!t.player&&t.alive);if(!alive.length||!enemyAlive){phase='settle';transition=1;pointer.down=false;}hud();}
- function finishRound(){const alive=tanks.some(t=>t.player&&t.alive),enemies=tanks.some(t=>!t.player&&t.alive);if(!alive){if(mode===1)lives--;if(mode===2||lives<=0){phase='over';panel('RUN COMPLETE','Out of action',`Mission ${mission} · ${kills} enemy tanks destroyed${mode===2?'<br>'+duoScore():''}`,'Try again →',start,true);}else{phase='retry';panel('TANK LOST',`${lives} ${lives===1?'life':'lives'} remaining`,`${defeated.size} defeated enemies stay defeated.`,'Retry mission →',()=>{load(true);brief();},true);}hud();return;}
- if(!enemies){if(!campaign)best=Math.max(best,mission);if(mode===1&&mission%5===0)lives++;if(!campaign&&mode===1&&mission>=20)unlocked=true;save();phase='clear';if(mission===limit){panel('CAMPAIGN COMPLETE',mission===100?'Platinum performance.':'Mission accomplished.',mode===2?duoScore():campaign?`You cleared all ${limit} missions in ${escapeHTML(campaign.name)}.`:limit===20?'You cleared 20 missions.<br>The 100-mission campaign is now unlocked.':'All 100 missions cleared. Incredible shooting.','New campaign →',start,true);}else{const scores=tanks.filter(t=>t.player).map(t=>t.score);panel('AREA SECURED','Mission clear',`${kills} tanks destroyed${mode===1&&mission%5===0?' · extra life earned':''}`,'Next mission →',()=>{mission++;defeated.clear();load();tanks.filter(t=>t.player).forEach((t,i)=>t.score=scores[i]);brief();},true);}sound(700,.25,'triangle');}}
+ function finishRound(){const alive=tanks.some(t=>t.player&&t.alive),enemies=tanks.some(t=>!t.player&&t.alive);if(!alive){if(mode===1)lives--;if(mode===2||lives<=0){phase='over';panel('','Game over',`Mission ${mission} · ${kills} enemy tanks destroyed${mode===2?'<br>'+duoScore():''}`,'Try again',start,true);}else{phase='retry';panel('TANK LOST',`${lives} ${lives===1?'life':'lives'} remaining`,'','Retry mission',()=>{load(true);brief();},true);}hud();return;}
+ if(!enemies){if(!campaign)best=Math.max(best,mission);if(mode===1&&mission%5===0)lives++;if(!campaign&&mode===1&&mission>=20)unlocked=true;save();phase='clear';if(mission===limit){panel('','Campaign complete',mode===2?duoScore():campaign?`${limit} missions cleared.`:limit===20?'100-mission campaign unlocked.':'100 missions cleared.','New campaign',start,true);}else{const scores=tanks.filter(t=>t.player).map(t=>t.score);panel('','Mission clear',`${kills} tanks destroyed${mode===1&&mission%5===0?' · extra life earned':''}`,'Next mission',()=>{mission++;defeated.clear();load();tanks.filter(t=>t.player).forEach((t,i)=>t.score=scores[i]);brief();},true);}sound(700,.25,'triangle');}}
  function duoScore(){const p=tanks.filter(t=>t.player);return `Blue ${p[0].score} · Red ${p[1].score}<br>${p[0].score===p[1].score?'A draw!':p[0].score>p[1].score?'Blue wins!':'Red wins!'}`;}
  function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h);}function circle(x,y,r,c){ctx.fillStyle=c;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();}
  function drawTank(t){if(!t.alive)return;if(t.type==='white'&&phase==='play'&&time>1.6)return;ctx.save();ctx.translate(t.x+3,t.y+4);ctx.rotate(t.body);ctx.fillStyle='#503b2870';ctx.fillRect(-19,-17,39,36);ctx.restore();ctx.save();ctx.translate(t.x,t.y);ctx.rotate(t.body);rect(-19,-18,37,10,'#394344');rect(-19,8,37,10,'#394344');for(let x=-17;x<19;x+=6){rect(x,-17,3,8,'#647071');rect(x,9,3,8,'#647071');}const color=t.player===2?'#db6e58':t.cfg.color;rect(-17,-12,33,24,color);rect(-15,-11,28,3,'#ffffff40');rect(-17,9,33,3,'#0003');rect(-13,-7,8,14,'#0002');ctx.restore();ctx.save();ctx.translate(t.x,t.y);ctx.rotate(t.angle);rect(0,-5,30,10,'#303b3b');rect(0,-4,29,6,color);rect(25,-4,5,8,'#2d3939');circle(0,0,12,'#0004');circle(-1,-2,11,color);circle(-3,-4,6,'#ffffff28');rect(-5,-6,7,3,'#ffffff35');ctx.restore();
@@ -184,6 +241,6 @@
  $('music-toggle').onclick=()=>{music.enabled=!music.enabled;musicLabel();try{localStorage.setItem('fnaac-tanks-music-enabled',music.enabled?'1':'0');}catch{}sound(400,.04,'sine',.01);};
  $('music-volume').oninput=()=>{music.volume=Number($('music-volume').value)/100;try{localStorage.setItem('fnaac-tanks-music-volume',String(music.volume));}catch{}};musicLabel();
  // Opt-in test surface; absent during ordinary visits.
- if(new URLSearchParams(location.search).has('test'))window.__tanks={get state(){return {tanks,shells,mines,artillery,W,H,grid,phase,mission,lives,kills,defeated,limit};},step:update,fire,lay,kill,explode,solid,rayHits,shellHit,enemy,render,risksAlly,safeToFire,reactToShells,updateArtillery,pathTo,point,selectPack(pack){campaign=pack?TankPacks.validate(pack):null;limit=campaignLimit();},loadMission(n){mission=n;defeated.clear();load();phase='play';$('overlay').hidden=true;},finishRound};
+ if(new URLSearchParams(location.search).has('test'))window.__tanks={get state(){return {tanks,shells,mines,artillery,W,H,grid,phase,mission,lives,kills,defeated,limit};},step:update,fire,lay,kill,explode,solid,rayHits,shellHit,enemy,render,risksAlly,safeToFire,intercept,defensiveFire,greenScan,reactToShells,updateArtillery,pathTo,point,selectPack(pack){campaign=pack?TankPacks.validate(pack):null;limit=campaignLimit();},loadMission(n){mission=n;defeated.clear();load();phase='play';$('overlay').hidden=true;},finishRound};
  menu();requestAnimationFrame(frame);
 })();
