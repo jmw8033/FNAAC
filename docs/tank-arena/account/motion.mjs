@@ -1,0 +1,4 @@
+const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
+// Render at display refresh rate while simulation and networking stay fixed-rate.
+export function smoothPose(view,target,dt,snapDistance=140){if(!view||Math.hypot(target.x-view.x,target.y-view.y)>snapDistance)return {...target};const f=1-Math.exp(-25*Math.min(.1,Math.max(0,dt)));return {...target,x:view.x+(target.x-view.x)*f,y:view.y+(target.y-view.y)*f,body:view.body+wrap(target.body-view.body)*f,angle:view.angle+wrap(target.angle-view.angle)*f};}
+export function snapshotPair(snapshots,now,delay=100){if(!snapshots.length)return {};const last=snapshots.at(-1),target=last.state.tick*1000/30+Math.min(100,now-last.at)-delay;let a=snapshots[0],b=a;for(let i=0;i<snapshots.length-1;i++){if(snapshots[i+1].state.tick*1000/30>=target){a=snapshots[i];b=snapshots[i+1];break;}a=b=snapshots[i+1];}return {a,b,f:Math.max(0,Math.min(1,(target-a.state.tick*1000/30)/Math.max(1,(b.state.tick-a.state.tick)*1000/30)))};}
